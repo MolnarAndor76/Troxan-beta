@@ -1,0 +1,9 @@
+@import "tailwindcss";
+
+@Tailwind base;
+@Tailwind components;
+@Tailwind utilities;
+
+@layer components{
+    
+}

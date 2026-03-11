@@ -1,0 +1,74 @@
+@import "tailwindcss";
+
+@Tailwind base;
+@Tailwind components;
+@Tailwind utilities;
+
+@layer components {
+    /* --- FŐ KONTÉNER --- */
+    /* Reszponzív szélesség: mobilon 90%, nagy gépen max 4xl. A színek a főoldalhoz igazítva. */
+    .login-site {
+        @apply w-[90%] max-w-4xl min-h-[50vh] max-h-[85vh] mx-auto bg-orange-50 border-4 border-orange-950 shadow-[8px_8px_0px_rgba(0,0,0,1)] rounded-xl p-8 md:p-12 flex items-center justify-center;
+    }
+
+    .login-main {
+        @apply w-full h-full flex flex-col justify-center;
+    }
+
+    /* --- ELRENDEZÉS (FLEXBOX MÁGIA) --- */
+    /* Mobilon oszlop (egymás alatt), md-től felfelé sor (egymás mellett) */
+    .login-box {
+        @apply flex flex-col md:flex-row w-full h-full gap-8 md:gap-12;
+    }
+
+    /* A flex-1 miatt pontosan 50%-ot kapnak asztalin. */
+    .login-left-page {
+        @apply flex-1 flex flex-col justify-evenly items-center md:items-start gap-6;
+    }
+
+    .login-right-page {
+        @apply flex-1 flex flex-col justify-evenly items-center gap-8;
+    }
+
+    /* Középső halvány vonal */
+    .login-divider {
+        @apply hidden md:block w-1 bg-orange-950/10 rounded-full;
+    }
+
+    /* --- MEZŐK ÉS CÍMKÉK --- */
+    .login-field-group {
+        @apply w-full flex flex-col gap-2 text-center md:text-left;
+    }
+
+    .login-field-group label {
+        @apply text-xl font-bold text-orange-950 tracking-wider;
+    }
+
+    /* Vastag keretes, retro input mezők */
+    .login-field-group input {
+        @apply w-full bg-white border-4 border-orange-950 p-3 rounded-md text-lg text-gray-800 font-medium focus:outline-none focus:border-yellow-500 focus:ring-4 focus:ring-yellow-500/30 transition-all shadow-[inset_0_4px_4px_rgba(0,0,0,0.05)];
+    }
+
+    /* --- GOMBOK ÉS LINKEK --- */
+    .login-link-style-btn {
+        @apply text-orange-800 font-bold underline hover:text-yellow-600 transition-colors text-lg cursor-pointer;
+    }
+
+    /* A brutális Arcade stílusú Login gomb */
+    .login-primary-btn {
+        @apply w-full md:w-auto bg-yellow-500 hover:bg-yellow-400 text-orange-950 font-extrabold text-3xl py-4 px-12 rounded-md border-4 border-orange-950 shadow-[6px_6px_0px_rgba(0,0,0,1)] transition-transform hover:translate-y-1 hover:shadow-[2px_2px_0px_rgba(0,0,0,1)] tracking-widest cursor-pointer;
+    }
+
+    /* Regisztrációs felhívás */
+    .switch-prompt {
+        @apply flex flex-col items-center gap-2 text-orange-950 font-medium text-lg bg-orange-200/50 p-4 rounded border-2 border-orange-950/20 w-full md:w-auto;
+    }
+
+    .login-secondary-btn {
+        @apply text-blue-700 font-bold hover:text-blue-500 underline transition-colors cursor-pointer;
+    }
+
+    .error-message {
+        @apply text-red-600 font-bold text-center w-full;
+    }
+}

@@ -1,0 +1,72 @@
+/* 1. Importáljuk a Tailwind-et */
+@import "tailwindcss";
+
+@Tailwind base;
+@Tailwind components;
+@Tailwind utilities;
+
+@layer components{
+/* --- ÁLTALÁNOS & LAYOUT --- */
+  .basesite-main-wrapper { @apply w-full max-w-5xl h-[80vh] mx-auto bg-white rounded-xl shadow-2xl flex flex-col overflow-hidden border-4 border-orange-950; }
+  .basesite-content-wrapper { @apply flex-1 overflow-y-auto p-6 md:p-10 bg-orange-50/50; }
+
+  /* --- MENÜ (TABS) --- */
+  .basesite-nav { @apply flex-none flex w-full gap-1 md:gap-2 p-2 bg-orange-950 border-b-4 border-yellow-600; }
+  .basesite-tab-btn { @apply flex-1 font-bold py-2 md:py-3 rounded-sm transition-colors flex items-center justify-center cursor-pointer; }
+  .basesite-tab-active { @apply bg-yellow-500 text-orange-950 hover:bg-yellow-400; }
+  .basesite-tab-inactive { @apply bg-orange-900 text-white hover:bg-yellow-600; }
+  .basesite-tab-text { @apply hidden md:block text-lg tracking-wider; }
+  .basesite-tab-icon { @apply block md:hidden w-6 h-6 fill-current; }
+
+  /* --- TARTALOM (SECTION) LÁTHATÓSÁG --- */
+  /* A hiba itt volt: az animate-fade-in kikerült az apply-ból */
+  .basesite-tab-content {}
+  .basesite-hidden { display: none !important; }
+  .basesite-block { @apply block; }
+
+  /* --- TIPOGRÁFIA & ELEMEK --- */
+  .basesite-title-main { @apply text-4xl font-bold mb-6 text-center text-orange-950; }
+  .basesite-title-sub { @apply text-3xl font-bold mb-6 text-orange-950 border-b-2 border-orange-900 pb-2; }
+  .basesite-text { @apply mb-4 text-lg text-gray-800 leading-relaxed; }
+  .basesite-text-highlight { @apply font-bold text-orange-900; }
+  .basesite-link { @apply text-blue-600 font-bold hover:underline cursor-pointer; }
+
+  /* --- KÜLÖNLEGES DOBOZOK --- */
+  .basesite-video-container { @apply relative overflow-hidden border-4 border-orange-950 aspect-video w-full md:w-[80%] mx-auto mb-6 shadow-xl; }
+  .basesite-video-iframe { @apply absolute top-0 left-0 w-full h-full pointer-events-none; }
+  .basesite-dl-layout { @apply flex flex-col items-center gap-4; }
+  .basesite-dl-btn { @apply bg-blue-600 hover:bg-blue-500 text-white text-xl font-bold py-3 px-8 rounded border-2 border-orange-950 shadow-[4px_4px_0px_rgba(0,0,0,1)] transition-transform hover:translate-y-1 hover:shadow-[2px_2px_0px_rgba(0,0,0,1)] flex items-center gap-2; }
+  .basesite-placeholder-box { @apply h-96 mt-4 border-2 border-dashed border-gray-400 flex items-center justify-center text-gray-500; }
+  .basesite-about-box { @apply mt-8 p-6 bg-orange-200 border-2 border-orange-900 rounded; }
+  .basesite-about-title { @apply font-bold text-xl mb-4 text-orange-950; }
+  .basesite-about-list { @apply list-disc list-inside space-y-2 text-gray-800; }
+
+  /* --- MODAL (POP-UP) --- */
+  .basesite-modal-overlay { @apply fixed inset-0 z-50 bg-black/80 flex items-center justify-center p-4; }
+  /* A hiba itt is megvolt: a legvégéről kikerült az animate-fade-in */
+  .basesite-modal-window { @apply bg-orange-50 border-4 border-orange-950 rounded-xl shadow-2xl w-full max-w-3xl max-h-[90vh] flex flex-col overflow-hidden; }
+  .basesite-modal-header { @apply flex-none flex justify-between items-center p-4 bg-orange-950 text-white border-b-4 border-yellow-600; }
+  .basesite-modal-title { @apply text-2xl font-bold tracking-wider text-yellow-400; }
+  .basesite-modal-close { @apply text-white hover:text-red-500 font-bold text-3xl leading-none transition-colors cursor-pointer; }
+  .basesite-modal-body { @apply flex-1 overflow-y-auto p-4 md:p-8; }
+
+  /* --- TÁBLÁZAT --- */
+  .basesite-table { @apply w-full text-left border-collapse; }
+  .basesite-thead { @apply hidden md:table-header-group; }
+  .basesite-tr-head { @apply border-b-2 border-orange-900 text-orange-950 text-xl; }
+  .basesite-th { @apply p-3; }
+  .basesite-th-yellow { @apply p-3 text-yellow-600; }
+  .basesite-tbody { @apply text-gray-800 flex flex-col md:table-row-group text-lg; }
+  .basesite-tr-split { @apply border-b border-orange-200 flex flex-col md:table-row mb-6 md:mb-0; }
+  .basesite-tr-hidden-mobile { @apply hidden md:table-row border-b border-orange-200; }
+  .basesite-tr-hidden-desktop { @apply hidden md:table-row; }
+  .basesite-td-hide-mobile { @apply p-3 font-bold text-orange-950 hidden md:table-cell; }
+  .basesite-td-block-mobile { @apply p-3 block md:table-cell; }
+  .basesite-mobile-label-top { @apply md:hidden font-bold text-orange-900 block border-b border-orange-200 mb-1; }
+  .basesite-mobile-label-inline { @apply font-bold md:hidden; }
+  .basesite-mobile-label-yellow { @apply font-bold md:hidden text-yellow-600; }
+  .basesite-td { @apply p-3; }
+  .basesite-td-gray { @apply p-3 text-gray-400; }
+  .basesite-td-label { @apply p-3 font-bold text-orange-950; }
+
+}

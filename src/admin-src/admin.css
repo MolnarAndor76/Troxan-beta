@@ -1,0 +1,142 @@
+@import "tailwindcss";
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer components {
+    /* --- FŐ KONTÉNER --- */
+    .admin-site-wrapper {
+        @apply w-[95%] max-w-[1200px] min-h-[80vh] mx-auto bg-white border-4 border-orange-950 shadow-[8px_8px_0px_rgba(0,0,0,1)] rounded-xl p-4 md:p-8 my-8 text-gray-800;
+    }
+
+    /* --- HEADER ÉS KERESŐ --- */
+    .admin-header {
+        @apply flex flex-col md:flex-row justify-between items-center mb-8 pb-4 border-b-4 border-yellow-400 gap-4;
+    }
+
+    .admin-title {
+        @apply text-xl md:text-2xl text-orange-950 font-['Press_Start_2P',_monospace] text-center md:text-left;
+    }
+
+    .admin-search-wrapper {
+        @apply flex w-full md:w-auto gap-2;
+    }
+
+    .admin-search-input {
+        @apply flex-1 md:flex-none p-3 rounded-md bg-gray-50 border-4 border-orange-950 text-gray-800 font-medium focus:outline-none focus:border-yellow-500 focus:ring-4 focus:ring-yellow-500/30 transition-all shadow-[inset_0_4px_4px_rgba(0,0,0,0.05)];
+    }
+
+    .admin-search-btn {
+        @apply bg-yellow-500 hover:bg-yellow-400 text-orange-950 font-bold px-6 py-3 rounded-md border-4 border-orange-950 shadow-[4px_4px_0px_rgba(0,0,0,1)] transition-transform hover:translate-y-1 hover:shadow-[2px_2px_0px_rgba(0,0,0,1)] cursor-pointer;
+    }
+
+    /* --- JÁTÉKOSOK LISTÁJA --- */
+    .admin-list {
+        @apply flex flex-col gap-5;
+    }
+
+    .admin-empty-msg {
+        @apply text-center text-gray-500 font-bold text-lg mt-10;
+    }
+
+    /* --- EGY JÁTÉKOS KÁRTYÁJA --- */
+    .admin-user-card {
+        @apply relative bg-orange-50 border-4 border-orange-950 rounded-xl p-4 flex flex-col md:flex-row justify-between items-start md:items-center shadow-[4px_4px_0px_rgba(0,0,0,1)] transition-all duration-200 hover:-translate-y-1 hover:shadow-[6px_6px_0px_rgba(0,0,0,1)] gap-4;
+    }
+
+    /* 1. Avatar + Név (Most már több helye van) */
+    .admin-card-profile {
+        @apply flex items-center gap-4 w-full md:w-1/2;
+    }
+
+    .admin-avatar {
+        @apply w-14 h-14 rounded-full object-cover border-4;
+    }
+
+    .admin-avatar-admin {
+        @apply border-yellow-500;
+    }
+
+    .admin-avatar-player {
+        @apply border-orange-950;
+    }
+
+    .admin-profile-details {
+        @apply flex flex-col items-start gap-1;
+    }
+
+    .admin-profile-role {
+        @apply text-[0.7rem] bg-orange-200 text-orange-900 border-2 border-orange-950 px-2 py-0.5 rounded-md w-max font-bold uppercase;
+    }
+
+    /* --- ÚJ: FELHASZNÁLÓNÉV GOMB --- */
+    .admin-username-btn {
+        @apply text-lg font-extrabold tracking-wide cursor-pointer text-left px-3 py-1 rounded-md border-2 shadow-[2px_2px_0px_rgba(0,0,0,1)] hover:translate-y-[1px] hover:shadow-[1px_1px_0px_rgba(0,0,0,1)] transition-all;
+    }
+    
+    .admin-username-admin {
+        @apply bg-yellow-400 text-orange-950 border-orange-950;
+    }
+    
+    .admin-username-player {
+        @apply bg-white text-orange-950 border-orange-950;
+    }
+
+    /* --- ÚJ: RÉSZLETEK MODÁL (POP-UP) --- */
+    .admin-details-modal {
+        @apply fixed top-0 left-0 w-[100vw] h-[100vh] z-[200] flex items-center justify-center;
+    }
+
+    .admin-details-modal::before {
+        content: '';
+        @apply absolute top-0 left-0 w-full h-full bg-black/80 cursor-pointer;
+    }
+
+    .admin-details-content {
+        @apply relative z-10 w-[90%] max-w-[400px] bg-orange-50 border-4 border-orange-950 p-6 rounded-xl shadow-[8px_8px_0px_rgba(0,0,0,1)] flex flex-col;
+    }
+
+    .admin-close-details-btn {
+        @apply absolute top-3 right-4 text-3xl text-orange-950 font-black cursor-pointer hover:text-red-600 transition-colors z-20;
+    }
+
+    /* --- MOBIL HAMBURGER GOMB --- */
+    .admin-hamburger-btn {
+        @apply md:hidden absolute top-6 right-4 text-3xl text-orange-950 cursor-pointer transition-transform hover:scale-110;
+    }
+
+    /* --- AKCIÓGOMBOK KONTÉNERE --- */
+    .admin-card-actions {
+        @apply hidden md:flex md:static md:bg-transparent md:border-none md:p-0 md:shadow-none md:flex-row md:w-auto md:translate-x-0 md:translate-y-0 justify-end items-center gap-2;
+    }
+
+    .admin-card-actions.menu-open {
+        @apply fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-[100] flex flex-col w-[85%] max-w-[320px] bg-orange-50 border-4 border-orange-950 p-6 pt-12 rounded-xl shadow-[8px_8px_0px_rgba(0,0,0,1)] gap-4 items-stretch;
+    }
+
+    .admin-card-actions.menu-open::before {
+        content: '';
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100vw;
+        height: 100vh;
+        background-color: rgba(0, 0, 0, 0.7);
+        z-index: -1;
+        pointer-events: all;
+    }
+
+    .admin-close-menu-btn {
+        @apply md:hidden absolute top-2 right-4 text-3xl text-orange-950 font-black cursor-pointer hover:text-red-600 transition-colors z-10;
+    }
+
+    .admin-action-btn {
+        @apply px-4 py-2 rounded-md font-bold text-sm border-2 border-orange-950 shadow-[2px_2px_0px_rgba(0,0,0,1)] transition-transform hover:-translate-y-0.5 hover:shadow-[4px_4px_0px_rgba(0,0,0,1)] cursor-pointer w-full md:w-auto text-center;
+    }
+
+    .admin-btn-yellow { @apply bg-yellow-400 text-orange-950; }
+    .admin-btn-gray   { @apply bg-gray-300 text-orange-950; }
+    .admin-btn-blue   { @apply bg-blue-400 text-orange-950; }
+    .admin-btn-red    { @apply bg-red-500 text-white; }
+}

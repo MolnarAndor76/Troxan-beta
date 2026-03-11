@@ -1,0 +1,100 @@
+/* 1. Importáljuk a Tailwind-et */
+@import "tailwindcss";
+
+@Tailwind base;
+@Tailwind components;
+@Tailwind utilities;
+
+/* 2. Formázzuk a body-t */
+@layer base {
+    body {
+        /* Tailwind osztályok a simításhoz, méretezéshez és rögzítéshez */
+        @apply antialiased bg-cover bg-center bg-fixed w-full h-screen;
+
+        /* A háttérkép behívása tisztán, hagyományos CSS-sel (ez működik a Vite-tal) */
+        background-image: url('./ai-var.jpg');
+
+        /* Tisztázzuk az alap Tailwind háttérszínt, ha lenne */
+        background-color: transparent;
+
+        /* A pixel art varázslat, amitől nem lesz homályos a nagyítás: */
+        image-rendering: pixelated;
+    }
+}
+
+@layer components {
+    .main-site {
+        @apply h-[90vh] w-[90%] bg-white shadow-xl rounded-2xl p-6 overflow-auto flex items-center justify-center;
+    }
+
+    .main-download-btn {
+        @apply bg-yellow-300 text-black px-6 py-3 font-bold shadow-md transition-all duration-300 ease-in-out hover:-translate-y-2 hover:shadow-lg hover:bg-yellow-400 cursor-pointer;
+    }
+
+.troxan-logo {
+        /* Bekerült az inline-block és a fix méretezés! */
+        @apply inline-block text-2xl px-[88px] py-2 font-bold tracking-wide border-2 border-white rounded-sm 
+               bg-orange-950 text-yellow-400 shadow-[2px_2px_0px_#000] 
+               transition-all cursor-pointer
+               hover:bg-yellow-500 hover:text-orange-950 hover:translate-y-[1px] hover:shadow-[1px_1px_0px_#000];
+    }
+
+    .troxan-desktop-menu {
+        @apply hidden md:flex gap-6;
+    }
+
+
+
+
+    .troxan-footer {
+        @apply fixed bottom-0 left-0 h-[6vh] w-full text-white flex items-center justify-center z-50;
+    }
+
+/* --- FOOTER DOBOZ (A kis "címke" lent középen) --- */
+    .troxan-footer-div {
+        /* Betűméret és keret méret maradt! A pointer-events-auto visszadja a kattinthatóságot a doboznak */
+        @apply text-sm font-bold flex items-center gap-2 border-2 border-white pointer-events-auto
+               /* Retro színek és árnyék */
+               bg-orange-950 text-white px-4 py-1.5 rounded-sm shadow-[2px_2px_0px_rgba(0,0,0,1)] tracking-wider;
+    }
+
+/* A fő konténer (Visszaraktam az eredeti gap-6 távolságot) */
+.troxan-nav-link {
+        @apply bg-orange-950 text-white text-sm font-medium px-4 py-1.5 rounded-sm 
+               border-2 border-white shadow-[3px_3px_0px_rgba(0,0,0,1)] 
+               transition-all cursor-pointer
+               hover:bg-yellow-500 hover:text-orange-950 hover:translate-y-[2px] hover:shadow-[1px_1px_0px_rgba(0,0,0,1)];
+    }
+
+    /* AZ AKTÍV MENÜPONT (Benyomott állapot) */
+    .troxan-nav-active {
+        @apply bg-yellow-500 text-orange-950 translate-y-[2px] shadow-[1px_1px_0px_rgba(0,0,0,1)] pointer-events-none;
+    }
+
+        .troxan-hamnav-btn {
+        @apply md:hidden flex flex-col justify-center items-center gap-1.5 focus:outline-none 
+               p-2 rounded-sm border-2 border-white bg-orange-950 
+               /* Itt a javított árnyék! */
+               shadow-[3px_3px_0px_rgba(0,0,0,1)] transition-all cursor-pointer
+               /* HOVER / AKTÍV ÁLLAPOT */
+               hover:bg-yellow-500 hover:translate-y-[2px] hover:shadow-[1px_1px_0px_rgba(0,0,0,1)];
+    }
+
+    /* A benne lévő 3 vonal */
+    .troxan-hamnav-btn span {
+        @apply w-6 h-1 bg-white rounded-full transition-colors;
+    }
+
+    /* Hover esetén a vonalak színe */
+    .troxan-hamnav-btn:hover span {
+        @apply bg-orange-950;
+    }
+
+/* --- MOBIL MENÜ KONTÉNER --- */
+    .troxan-mobile-menu {
+        /* Visszaraktuk a bg-black/50-et (félig átlátszó sötétszürke), levettük a kereteket és az árnyékot */
+        @apply absolute top-[6vh] left-0 w-full flex flex-col items-center gap-4 py-6 md:hidden
+               bg-black/50 backdrop-blur-sm z-40;
+    }
+    
+}

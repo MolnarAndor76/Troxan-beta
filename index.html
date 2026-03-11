@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8" />
+  <link rel="icon" type="image/svg+xml" href="/vite.svg" />
+  <link rel="stylesheet" href="./src/tailwind.css" />
+  <link rel="stylesheet" href="./src/style.css" />
+  <link rel="stylesheet" href="./src/basesite-src/basesite.css" />
+  <link rel="stylesheet" href="./src/leaderboard-src/leaderboard.css" />
+  <link rel="stylesheet" href="./src/maps-src/maps.css" />
+  <link rel="stylesheet" href="./src/login-src/login.css" />
+  <link rel="stylesheet" href="./src/register-src/register.css" />
+  <link rel="stylesheet" href="./src/profile-src/profile.css" />
+  <link rel="stylesheet" href="./src/admin-src/admin.css" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Pixelify+Sans:wght@400..700&display=swap" rel="stylesheet">
+</head>
+
+<body class="min-h-screen w-screen bg-gray-100 font-['Pixelify_Sans'] relative">
+
+  <!-- Fixed Menu (5% height, always on top) -->
+  <header class="fixed top-0 left-0 h-[6vh] w-full text-white flex items-center px-6 z-50">
+    <nav class="w-full flex items-center justify-between">
+      <!-- Left Container -->
+      <div class="flex items-center">
+        <a href="/" class="troxan-logo">
+          Troxan
+        </a>
+      </div>
+
+      <!-- Desktop Menu -->
+      <div class="troxan-desktop-menu">
+        <a href="/editor" class="troxan-nav-link">Editor</a>
+        <a href="/maps" class="troxan-nav-link">Maps</a>
+        <a href="/leaderboard" class="troxan-nav-link">Leaderboard</a>
+        <a href="/login" class="troxan-nav-link">Login</a>
+      </div>
+
+      <!-- Hamburger Button -->
+      <button id="menu-btn" class="troxan-hamnav-btn">
+        <span class="w-6 h-0.5 bg-white"></span>
+        <span class="w-6 h-0.5 bg-white"></span>
+        <span class="w-6 h-0.5 bg-white"></span>
+      </button>
+    </nav>
+
+    <!-- Mobile Menu -->
+<div id="mobile-menu" class="troxan-mobile-menu hidden">
+  <a href="/editor" class="troxan-nav-link">Editor</a>
+  <a href="/maps" class="troxan-nav-link">Maps</a>
+  <a href="/leaderboard" class="troxan-nav-link">Leaderboard</a>
+  <a href="/login" class="troxan-nav-link">Login</a>
+</div>
+  </header>
+
+  <!-- Main Content (offset so it does not overlap header/footer) -->
+  <main id="main-content" class="pt-[5vh] pb-[5vh] min-h-screen flex items-center justify-center">
+
+  </main>
+
+  <!-- Fixed Footer (5% height, always visible) -->
+  <footer class="troxan-footer">
+    <div class="troxan-footer-div">
+      <span>&copy;</span>
+      <span>Copyright 2026 Troxan</span>
+    </div>
+  </footer>
+
+  <script>
+    const menuBtn = document.getElementById('menu-btn');
+    const mobileMenu = document.getElementById('mobile-menu');
+
+    menuBtn.addEventListener('click', () => {
+      mobileMenu.classList.toggle('hidden');
+    });
+  </script>
+  <script type="module" src="./src/main.js"></script>
+  <script src="./src/basesite-src/basesite.js"></script>
+  <script src="./src/leaderboard-src/leaderboard.js"></script>
+    <script src="./src/maps-src/maps.js"></script>
+    <script type="module" src="./src/login-src/login.js"></script>
+    <script src="./src/register-src/register.js"></script>
+    <script src="./src/profile-src/profile.js"></script>
+    <script src="./src/admin-src/admin.js"></script>
+    <script src="./src/isBanned-src/isBanned.js"></script>
+</body>
+<!---->
+</html>
