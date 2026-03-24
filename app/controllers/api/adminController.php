@@ -14,8 +14,8 @@ function getContent() {
     try {
         $checkStmt = $pdo->prepare("SELECT r.role_name FROM `User` u JOIN Roles r ON u.role_id = r.id WHERE u.user_id = ?");
         $checkStmt->execute([$_SESSION['user_id']]);
-        if ($checkStmt->fetchColumn() !== 'Admin') {
-            json_response(["status" => "error", "message" => "Ide csak Adminok léphetnek be!"], 403);
+        if (!in_array($checkStmt->fetchColumn(), ['Admin', 'Engineer'])) {
+            json_response(["status" => "error", "message" => "Ide csak Adminok és Engineerek léphetnek be!"], 403);
             return;
         }
 
@@ -63,34 +63,32 @@ function getContent() {
 // ==========================================
 function toggleBan() {
     global $pdo;
-
-    if (!isset($_SESSION['user_id']) || !isset($_SESSION['logged_in'])) { json_response(["status" => "error", "message" => "Nincs jogosultságod!"], 401); return; }
-
+    if (!isset($_SESSION['user_id'])) { json_response(["status" => "error", "message" => "Nincs jogosultságod!"], 401); return; }
     $input = json_decode(file_get_contents('php://input'), true);
-    if (!isset($input['action']) || $input['action'] !== 'toggle_ban' || empty($input['target_user_id'])) { json_response(["status" => "error", "message" => "Érvénytelen kérés!"], 400); return; }
-
+    
     $targetUserId = (int)$input['target_user_id'];
+    $myUserId = $_SESSION['user_id'];
 
     try {
         $checkStmt = $pdo->prepare("SELECT r.role_name FROM `User` u JOIN Roles r ON u.role_id = r.id WHERE u.user_id = ?");
-        $checkStmt->execute([$_SESSION['user_id']]);
-        if ($checkStmt->fetchColumn() !== 'Admin') { json_response(["status" => "error", "message" => "Csak Adminok használhatják ezt a funkciót!"], 403); return; }
+        $checkStmt->execute([$myUserId]);
+        $myRole = $checkStmt->fetchColumn();
 
-        if ($targetUserId === $_SESSION['user_id']) { json_response(["status" => "error", "message" => "Magadat nem tilthatod ki, te zseni!"], 400); return; }
+        if (!in_array($myRole, ['Admin', 'Engineer'])) { json_response(["status" => "error", "message" => "Csak Adminok használhatják ezt!"], 403); return; }
+        if ($targetUserId === $myUserId) { json_response(["status" => "error", "message" => "Magadat nem tilthatod ki, te zseni!"], 400); return; }
 
-        $statusStmt = $pdo->prepare("SELECT is_banned FROM `User` WHERE user_id = ?");
+        $statusStmt = $pdo->prepare("SELECT u.is_banned, r.role_name FROM `User` u JOIN Roles r ON u.role_id = r.id WHERE u.user_id = ?");
         $statusStmt->execute([$targetUserId]);
-        $currentStatus = $statusStmt->fetchColumn();
+        $targetData = $statusStmt->fetch(PDO::FETCH_ASSOC);
 
-        if ($currentStatus === false) { json_response(["status" => "error", "message" => "Nem található ilyen játékos!"], 404); return; }
+        if (!$targetData) { json_response(["status" => "error", "message" => "Nem található ilyen játékos!"], 404); return; }
+        if ($targetData['role_name'] === 'Engineer') { json_response(["status" => "error", "message" => "Vigyázz! Engineert nem lehet kitiltani!"], 403); return; }
+        if ($targetData['role_name'] === 'Admin' && $myRole !== 'Engineer') { json_response(["status" => "error", "message" => "Adminokat csak egy Engineer tilthat ki!"], 403); return; }
 
-        $newStatus = ($currentStatus == 1) ? 0 : 1;
-        $updateStmt = $pdo->prepare("UPDATE `User` SET is_banned = ? WHERE user_id = ?");
-        $updateStmt->execute([$newStatus, $targetUserId]);
+        $newStatus = ($targetData['is_banned'] == 1) ? 0 : 1;
+        $pdo->prepare("UPDATE `User` SET is_banned = ? WHERE user_id = ?")->execute([$newStatus, $targetUserId]);
 
-        $message = ($newStatus == 1) ? "Játékos sikeresen kitiltva!" : "A kitiltás sikeresen feloldva!";
-        json_response(["status" => "success", "message" => $message], 200);
-
+        json_response(["status" => "success", "message" => ($newStatus == 1) ? "Játékos sikeresen kitiltva!" : "A kitiltás sikeresen feloldva!"], 200);
     } catch (Exception $e) { json_response(["status" => "error", "message" => "Adatbázis hiba: " . $e->getMessage()], 500); }
 }
 
@@ -99,70 +97,60 @@ function toggleBan() {
 // ==========================================
 function changeRole() {
     global $pdo;
-
-    if (!isset($_SESSION['user_id']) || !isset($_SESSION['logged_in'])) { json_response(["status" => "error", "message" => "Nincs jogosultságod!"], 401); return; }
-
+    if (!isset($_SESSION['user_id'])) { json_response(["status" => "error", "message" => "Nincs jogosultságod!"], 401); return; }
     $input = json_decode(file_get_contents('php://input'), true);
-    if (!isset($input['action']) || $input['action'] !== 'change_role' || empty($input['target_user_id']) || empty($input['role_action'])) { json_response(["status" => "error", "message" => "Érvénytelen kérés!"], 400); return; }
-
+    
     $targetUserId = (int)$input['target_user_id'];
     $roleAction = $input['role_action']; 
+    $myUserId = $_SESSION['user_id'];
 
     try {
         $checkStmt = $pdo->prepare("SELECT r.role_name FROM `User` u JOIN Roles r ON u.role_id = r.id WHERE u.user_id = ?");
-        $checkStmt->execute([$_SESSION['user_id']]);
-        if ($checkStmt->fetchColumn() !== 'Admin') { json_response(["status" => "error", "message" => "Csak Adminok használhatják ezt a funkciót!"], 403); return; }
+        $checkStmt->execute([$myUserId]);
+        $myRole = $checkStmt->fetchColumn();
 
-        if ($targetUserId === $_SESSION['user_id']) { json_response(["status" => "error", "message" => "A saját rangodat nem módosíthatod!"], 400); return; }
+        if (!in_array($myRole, ['Admin', 'Engineer'])) { json_response(["status" => "error", "message" => "Csak Adminok használhatják ezt!"], 403); return; }
+        if ($targetUserId === $myUserId) { json_response(["status" => "error", "message" => "A saját rangodat nem módosíthatod!"], 400); return; }
 
         $targetStmt = $pdo->prepare("SELECT r.role_name FROM `User` u JOIN Roles r ON u.role_id = r.id WHERE u.user_id = ?");
         $targetStmt->execute([$targetUserId]);
         $currentRole = $targetStmt->fetchColumn();
 
-        if (!$currentRole) { json_response(["status" => "error", "message" => "Felhasználó nem található!"], 404); return; }
+        if ($currentRole === 'Engineer') { json_response(["status" => "error", "message" => "Egy Engineer rangjához senki nem nyúlhat!"], 403); return; }
+        if ($currentRole === 'Admin' && $myRole !== 'Engineer') { json_response(["status" => "error", "message" => "Másik Admin rangját csak egy Engineer módosíthatja!"], 403); return; }
 
         $newRoleName = '';
         if ($roleAction === 'promote') {
             if ($currentRole === 'Player') $newRoleName = 'Moderator';
-            elseif ($currentRole === 'Moderator') $newRoleName = 'Admin';
-            else { json_response(["status" => "error", "message" => "Őt már nem lehet feljebb léptetni!"], 400); return; }
+            elseif ($currentRole === 'Moderator') {
+                if ($myRole !== 'Engineer') { json_response(["status" => "error", "message" => "Moderátort csak a Teremtő léptethet elő Adminná!"], 403); return; }
+                $newRoleName = 'Admin';
+            } else { json_response(["status" => "error", "message" => "Őt már nem lehet feljebb léptetni!"], 400); return; }
         } elseif ($roleAction === 'demote') {
             if ($currentRole === 'Admin') $newRoleName = 'Moderator';
             elseif ($currentRole === 'Moderator') $newRoleName = 'Player';
             else { json_response(["status" => "error", "message" => "Őt már nem lehet lejjebb fokozni!"], 400); return; }
-        } else { json_response(["status" => "error", "message" => "Ismeretlen művelet!"], 400); return; }
+        }
 
         $roleIdStmt = $pdo->prepare("SELECT id FROM Roles WHERE role_name = ?");
         $roleIdStmt->execute([$newRoleName]);
         $newRoleId = $roleIdStmt->fetchColumn();
 
-        $updateStmt = $pdo->prepare("UPDATE `User` SET role_id = ? WHERE user_id = ?");
-        $updateStmt->execute([$newRoleId, $targetUserId]);
-
+        $pdo->prepare("UPDATE `User` SET role_id = ? WHERE user_id = ?")->execute([$newRoleId, $targetUserId]);
         json_response(["status" => "success", "message" => "Sikeres művelet! Új rang: " . $newRoleName], 200);
-
     } catch (Exception $e) { json_response(["status" => "error", "message" => "Adatbázis hiba: " . $e->getMessage()], 500); }
 }
 
 // ==========================================
-// 4. LOGOK LEKÉRÉSE (POST) - ÚJ!
+// 4. LOGOK LEKÉRÉSE (POST)
 // ==========================================
 function getLogs() {
     global $pdo;
-
-    if (!isset($_SESSION['user_id']) || !isset($_SESSION['logged_in'])) { json_response(["status" => "error", "message" => "Nincs jogosultságod!"], 401); return; }
-
+    if (!isset($_SESSION['user_id'])) { json_response(["status" => "error"], 401); return; }
     $input = json_decode(file_get_contents('php://input'), true);
-    $targetUserId = (int)($input['target_user_id'] ?? 0);
-
-    if (!$targetUserId) { json_response(["status" => "error", "message" => "Érvénytelen felhasználó ID!"], 400); return; }
+    $targetUserId = (int)$input['target_user_id'];
 
     try {
-        $checkStmt = $pdo->prepare("SELECT r.role_name FROM `User` u JOIN Roles r ON u.role_id = r.id WHERE u.user_id = ?");
-        $checkStmt->execute([$_SESSION['user_id']]);
-        if ($checkStmt->fetchColumn() !== 'Admin') { json_response(["status" => "error", "message" => "Csak Adminok használhatják ezt a funkciót!"], 403); return; }
-
-        // Lekérjük az összes logot időrendben visszafelé (legújabb legelöl)
         $stmt = $pdo->prepare("SELECT id, statistics_file, last_updated FROM `Statistics` WHERE user_id = ? ORDER BY id DESC");
         $stmt->execute([$targetUserId]);
         $logs = $stmt->fetchAll(PDO::FETCH_ASSOC);
@@ -170,8 +158,6 @@ function getLogs() {
         $parsedLogs = [];
         foreach ($logs as $log) {
             $stats = !empty($log['statistics_file']) ? json_decode($log['statistics_file'], true) : [];
-            
-            // Kinyerjük a specifikus adatokat (kezelve a régi és az új JSON formátumokat is)
             $parsedLogs[] = [
                 'id' => $log['id'],
                 'date' => $log['last_updated'] ? date('Y.m.d H:i', strtotime($log['last_updated'])) : 'Unknown',
@@ -184,39 +170,108 @@ function getLogs() {
                 ]
             ];
         }
-
         json_response(["status" => "success", "logs" => $parsedLogs], 200);
-
-    } catch (Exception $e) {
-        json_response(["status" => "error", "message" => "Adatbázis hiba: " . $e->getMessage()], 500);
-    }
+    } catch (Exception $e) { json_response(["status" => "error"], 500); }
 }
 
 // ==========================================
-// 5. ROUTER
+// 5. ÚJ: ADMIN MAPS FUNKCIÓK (GET MAPS, REMOVE, EDIT)
+// ==========================================
+function getUserMaps() {
+    global $pdo;
+    if (!isset($_SESSION['user_id'])) { json_response(["status" => "error"], 401); return; }
+    $input = json_decode(file_get_contents('php://input'), true);
+    $targetUserId = (int)$input['target_user_id'];
+
+    try {
+        $query = "SELECT m.*, u.username as creator_name, r.role_name as creator_role, 
+                         COALESCE(uml.added_at, m.created_at) as added_at 
+                  FROM `Maps` m 
+                  LEFT JOIN `User_Map_Library` uml ON m.id = uml.map_id AND uml.user_id = ?
+                  JOIN `User` u ON m.creator_user_id = u.user_id 
+                  JOIN Roles r ON u.role_id = r.id
+                  WHERE (
+                      (m.creator_user_id = ? AND m.status IN (0, 1, 3)) 
+                      OR 
+                      (uml.user_id = ? AND m.status IN (1, 3, 5))
+                  ) ORDER BY added_at DESC";
+        $stmt = $pdo->prepare($query);
+        $stmt->execute([$targetUserId, $targetUserId, $targetUserId]);
+        $maps = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+        json_response(["status" => "success", "maps" => $maps], 200);
+    } catch (Exception $e) { json_response(["status" => "error", "message" => $e->getMessage()], 500); }
+}
+
+function adminRemoveMap() {
+    global $pdo;
+    if (!isset($_SESSION['user_id'])) { json_response(["status" => "error"], 401); return; }
+    $input = json_decode(file_get_contents('php://input'), true);
+    
+    $targetUserId = (int)$input['target_user_id'];
+    $mapId = (int)$input['map_id'];
+
+    try {
+        // Pálya adatainak lekérése
+        $stmt = $pdo->prepare("SELECT creator_user_id FROM `Maps` WHERE id = ?");
+        $stmt->execute([$mapId]);
+        $mapData = $stmt->fetch(PDO::FETCH_ASSOC);
+
+        if (!$mapData) { json_response(["status" => "error", "message" => "Pálya nem található!"], 404); return; }
+
+        // 1. Töröljük a kapcsolatot a könyvtárból
+        $delStmt = $pdo->prepare("DELETE FROM `User_Map_Library` WHERE user_id = ? AND map_id = ?");
+        $delStmt->execute([$targetUserId, $mapId]);
+
+        if ($delStmt->rowCount() > 0) {
+            $pdo->prepare("UPDATE `Maps` SET downloads = GREATEST(downloads - 1, 0) WHERE id = ?")->execute([$mapId]);
+        }
+
+        // 2. Ha ő csinálta, akkor Admin BANNED (4) státuszt kap!
+        if ($mapData['creator_user_id'] == $targetUserId) {
+            $pdo->prepare("UPDATE `Maps` SET status = 4 WHERE id = ?")->execute([$mapId]);
+            json_response(["status" => "success", "message" => "Pálya sikeresen kitiltva (Banned)!"], 200);
+        } else {
+            json_response(["status" => "success", "message" => "Pálya eltávolítva a játékos könyvtárából!"], 200);
+        }
+
+    } catch (Exception $e) { json_response(["status" => "error", "message" => $e->getMessage()], 500); }
+}
+
+function adminEditMapName() {
+    global $pdo;
+    if (!isset($_SESSION['user_id'])) { json_response(["status" => "error"], 401); return; }
+    $input = json_decode(file_get_contents('php://input'), true);
+    
+    $mapId = (int)$input['map_id'];
+    $newName = trim($input['new_name']);
+
+    if (empty($newName)) { json_response(["status" => "error", "message" => "A név nem lehet üres!"], 400); return; }
+
+    try {
+        $pdo->prepare("UPDATE `Maps` SET map_name = ? WHERE id = ?")->execute([$newName, $mapId]);
+        json_response(["status" => "success", "message" => "Pálya neve frissítve!"], 200);
+    } catch (Exception $e) { json_response(["status" => "error", "message" => $e->getMessage()], 500); }
+}
+
+
+// ==========================================
+// 6. ROUTER
 // ==========================================
 switch ($data["method"]) {
-    case 'GET': 
-        getContent(); 
-        break;
+    case 'GET': getContent(); break;
     case 'POST':
         $input = json_decode(file_get_contents('php://input'), true);
         if (isset($input['action'])) {
-            if ($input['action'] === 'toggle_ban') {
-                toggleBan();
-            } elseif ($input['action'] === 'change_role') {
-                changeRole();
-            } elseif ($input['action'] === 'get_logs') { // ÚJ RÉSZ A ROUTERBEN!
-                getLogs();
-            } else {
-                json_response(["status" => "error", "message" => "Ismeretlen POST akció"], 400);
-            }
-        } else {
-            json_response(["status" => "error", "message" => "Hiányzó action paraméter"], 400);
-        }
+            if ($input['action'] === 'toggle_ban') toggleBan();
+            elseif ($input['action'] === 'change_role') changeRole();
+            elseif ($input['action'] === 'get_logs') getLogs();
+            elseif ($input['action'] === 'get_user_maps') getUserMaps();
+            elseif ($input['action'] === 'admin_remove_map') adminRemoveMap();
+            elseif ($input['action'] === 'admin_edit_map_name') adminEditMapName();
+            else json_response(["status" => "error", "message" => "Ismeretlen POST akció"], 400);
+        } else json_response(["status" => "error", "message" => "Hiányzó action paraméter"], 400);
         break;
-    default: 
-        json_response(["status" => "error", "message" => "Method not allowed"], 405); 
-        break;
+    default: json_response(["status" => "error", "message" => "Method not allowed"], 405); break;
 }
 ?>

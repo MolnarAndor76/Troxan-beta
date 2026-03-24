@@ -139,4 +139,31 @@
     .admin-btn-gray   { @apply bg-gray-300 text-orange-950; }
     .admin-btn-blue   { @apply bg-blue-400 text-orange-950; }
     .admin-btn-red    { @apply bg-red-500 text-white; }
+
+    /* Ezeket tedd be az admin-avatar osztályokhoz: */
+    .admin-avatar-engineer {
+        @apply border-cyan-400;
+    }
+
+    /* Ezeket tedd be az admin-username osztályokhoz: */
+    .admin-username-engineer {
+        @apply bg-cyan-200 text-cyan-950 border-cyan-950;
+    }
+    /* ========================================= */
+    /* --- ÚJ: ADMIN MAPS KÁRTYA STÍLUSOK --- */
+    /* ========================================= */
+    
+    .admin-map-card {
+        background-image: url('./img/map2card-bg.png');
+        background-size: 100% 100%;
+        background-repeat: no-repeat;
+        background-color: transparent;
+        image-rendering: pixelated;
+    }
+
+    /* Görgetősáv a Maps Gridhez, hogy szép retro maradjon */
+    #admin-maps-grid::-webkit-scrollbar { width: 14px; }
+    #admin-maps-grid::-webkit-scrollbar-track { @apply bg-orange-200 border-l-4 border-orange-950; }
+    #admin-maps-grid::-webkit-scrollbar-thumb { @apply bg-orange-900 border-2 border-orange-950; }
+    #admin-maps-grid::-webkit-scrollbar-thumb:hover { @apply bg-yellow-600; }
 }

@@ -1,9 +1,12 @@
+//url
+const logoutUrl = `${window.location.protocol}//${window.location.hostname}/troxan/app/api.php?path=logout`;
+
 document.addEventListener('click', (event) => {
 
     const bannedLogoutBtn = event.target.closest('#isBanned-logout-btn');
 
     if (bannedLogoutBtn) {
-        fetch('http://localhost/troxan/app/api.php?path=logout', {
+        fetch(logoutUrl, {
             method: 'POST',
             credentials: 'include'
         })
@@ -21,7 +24,9 @@ document.addEventListener('click', (event) => {
                 console.error('Logout error:', err);
                 // Hiba esetén is takarítsunk ki és dobjuk ki a júzert
                 localStorage.clear();
-                window.location.href = 'http://localhost/troxan/';
+                
+                // ITT A CSERE: A localhost helyett dinamikusan a gyökérre dobjuk!
+                window.location.href = '/'; 
             });
 
         return;

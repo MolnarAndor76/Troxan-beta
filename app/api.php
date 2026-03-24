@@ -6,8 +6,9 @@
 // --- 1. DINAMIKUS CORS LEKEZELÉS ---
 $origin = $_SERVER['HTTP_ORIGIN'] ?? '';
 
-// Csak akkor engedjük át, ha localhostról jön (bármelyik porton: 5173, 5174, stb.)
-if (empty($origin) || str_contains($origin, 'localhost')) {
+// KIVETTÜK A LOCALHOST KORLÁTOZÁST! 
+// Most már dinamikusan beenged mindenkit (a haverod IP-jét is), aki a hálózatról kopogtat!
+if (!empty($origin)) {
     header("Access-Control-Allow-Origin: $origin");
 }
 

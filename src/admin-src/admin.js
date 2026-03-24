@@ -1,90 +1,225 @@
-// --- ADMIN AREA: Menük, Modálok és Akciók logikája ---
-document.addEventListener('click', (event) => {
+console.log("🟢 Admin JS Betöltve és harcra kész!");
+
+// ==========================================
+// 0. GLOBÁLIS VÁLTOZÓK ÉS UTILITIES
+// ==========================================
+const adminUrl = `${window.location.protocol}//${window.location.hostname}/troxan/app/api.php?path=admin`;
+
+window.alertCallback = null;
+window.confirmCallback = null;
+
+let currentAdminMaps = []; // Itt tároljuk a letöltött kártyákat a gyors szűréshez
+let currentAdminTargetUser = { id: null, username: '' };
+
+function showCustomAlert(title, message, type = 'info', callback = null) {
+    const modal = document.getElementById('basesite-alert-modal');
+    if (!modal) {
+        alert(title + ": " + message); 
+        if (callback) callback();
+        return;
+    }
+    document.getElementById('basesite-alert-title').innerText = title;
+    document.getElementById('basesite-alert-message').innerHTML = message;
     
-    // ==========================================
-    // 1. HAMBURGER MENÜ LOGIKÁJA
-    // ==========================================
-    const hamburgerBtn = event.target.closest('.admin-hamburger-btn');
-    const closeBtn = event.target.closest('.admin-close-menu-btn');
-    const clickedInsideMenu = event.target.closest('.admin-card-actions');
+    const titleEl = document.getElementById('basesite-alert-title');
+    if (type === 'error') titleEl.className = 'text-xl font-bold text-red-600';
+    else if (type === 'success') titleEl.className = 'text-xl font-bold text-green-600';
+    else titleEl.className = 'text-xl font-bold text-orange-950';
+
+    window.alertCallback = callback;
+    modal.classList.remove('hidden');
+}
+
+function showCustomConfirm(title, message, type = 'danger', onConfirm = null) {
+    const modal = document.getElementById('basesite-confirm-modal');
+    if (!modal) {
+        if (confirm(title + " - " + message)) onConfirm();
+        return;
+    }
+    document.getElementById('basesite-confirm-title').innerText = title;
+    document.getElementById('basesite-confirm-message').innerHTML = message;
     
-    if (hamburgerBtn) {
-        document.querySelectorAll('.admin-card-actions.menu-open').forEach(menu => {
-            menu.classList.remove('menu-open');
-            menu.closest('.admin-user-card').style.zIndex = '1';
+    const headerEl = document.getElementById('basesite-confirm-header');
+    const okBtn = document.getElementById('basesite-confirm-ok-btn');
+
+    if (type === 'danger') {
+        headerEl.className = 'border-b-4 border-red-950 pb-2 mb-4';
+        document.getElementById('basesite-confirm-title').className = 'text-xl font-bold text-red-600';
+        okBtn.className = 'admin-action-btn admin-btn-red py-2 px-6';
+    } else {
+        headerEl.className = 'border-b-4 border-orange-950 pb-2 mb-4';
+        document.getElementById('basesite-confirm-title').className = 'text-xl font-bold text-orange-950';
+        okBtn.className = 'admin-action-btn admin-btn-yellow py-2 px-6';
+    }
+
+    window.confirmCallback = onConfirm;
+    modal.classList.remove('hidden');
+}
+
+// ==========================================
+// 1. VALÓS IDEJŰ KERESŐ (Event Delegation)
+// ==========================================
+document.addEventListener('input', function(event) {
+    if (event.target && event.target.id === 'admin-search-input') {
+        const filterText = event.target.value.toLowerCase().trim();
+        const cards = document.querySelectorAll('.admin-user-card');
+        let hasVisibleCard = false;
+
+        cards.forEach(card => {
+            const nameEl = card.querySelector('.admin-username-btn') || card.querySelector('span[title="Védett profil!"]');
+            if (nameEl) {
+                const username = nameEl.innerText.replace('🔒', '').toLowerCase().trim();
+                if (username.includes(filterText)) {
+                    card.style.display = ''; 
+                    hasVisibleCard = true;
+                } else {
+                    card.style.display = 'none';
+                }
+            }
         });
 
-        const userCard = hamburgerBtn.closest('.admin-user-card');
-        const actionsMenu = userCard.querySelector('.admin-card-actions');
-        
-        if (actionsMenu) {
-            const isOpen = actionsMenu.classList.toggle('menu-open');
-            userCard.style.zIndex = isOpen ? '50' : '1';
+        const listContainer = document.querySelector('.admin-list');
+        let emptyMsg = document.getElementById('live-search-empty-msg');
+
+        if (!hasVisibleCard && cards.length > 0) {
+            if (!emptyMsg && listContainer) {
+                emptyMsg = document.createElement('p');
+                emptyMsg.id = 'live-search-empty-msg';
+                emptyMsg.className = 'admin-empty-msg text-center text-gray-500 font-bold text-lg mt-10';
+                emptyMsg.innerText = 'No players found matching your search.';
+                listContainer.appendChild(emptyMsg);
+            }
+            if (emptyMsg) emptyMsg.style.display = 'block';
+        } else if (emptyMsg) {
+            emptyMsg.style.display = 'none';
         }
+    }
+});
+
+document.addEventListener('keypress', function(event) {
+    if (event.key === 'Enter' && event.target && event.target.id === 'admin-search-input') {
+        event.preventDefault();
+    }
+});
+
+// ==========================================
+// 2. ADMIN MAPS RENDERELŐ FUNKCIÓ
+// ==========================================
+function renderAdminMaps() {
+    const grid = document.getElementById('admin-maps-grid');
+    const isFilterOn = document.getElementById('admin-maps-own-filter').checked;
+    grid.innerHTML = '';
+
+    let filteredMaps = currentAdminMaps;
+    if (isFilterOn) {
+        filteredMaps = currentAdminMaps.filter(m => m.creator_name.toLowerCase() === currentAdminTargetUser.username.toLowerCase());
+    }
+
+    if (filteredMaps.length === 0) {
+        grid.innerHTML = '<p class="col-span-full text-center font-bold text-orange-900 text-xl mt-10">A könyvtár üres vagy nincs a szűrésnek megfelelő pálya. 🏝️</p>';
         return;
     }
 
-    if (closeBtn) {
-        const actionsMenu = closeBtn.closest('.admin-card-actions');
-        if (actionsMenu) {
-            actionsMenu.classList.remove('menu-open');
-            actionsMenu.closest('.admin-user-card').style.zIndex = '1';
+    filteredMaps.forEach(map => {
+        let statusBadge = '';
+        if (map.status == 1) statusBadge = '<span class="bg-green-600 text-white text-[10px] px-1.5 py-0.5 rounded-sm border border-green-900 absolute top-1 right-1 font-bold shadow-md z-10 uppercase">Pub</span>';
+        else if (map.status == 0) statusBadge = '<span class="bg-gray-500 text-white text-[10px] px-1.5 py-0.5 rounded-sm border border-gray-900 absolute top-1 right-1 font-bold shadow-md z-10 uppercase">Draft</span>';
+        else if (map.status == 3) statusBadge = '<span class="bg-orange-500 text-white text-[10px] px-1.5 py-0.5 rounded-sm border border-orange-900 absolute top-1 right-1 font-bold shadow-md z-10 uppercase">Unpub</span>';
+        else if (map.status == 4) statusBadge = '<span class="bg-red-600 text-white text-[10px] px-1.5 py-0.5 rounded-sm border border-red-900 absolute top-1 right-1 font-bold shadow-md z-10 uppercase">Banned</span>';
+        else if (map.status == 5) statusBadge = '<span class="bg-gray-700 text-white text-[10px] px-1.5 py-0.5 rounded-sm border border-black absolute top-1 right-1 font-bold shadow-md z-10 uppercase">Scrap</span>';
+
+        const isCreatorEngineer = (map.creator_role === 'Engineer');
+        const cardBorder = isCreatorEngineer ? 'border-cyan-900 shadow-cyan-900/50' : 'border-orange-950 shadow-[2px_2px_0px_#000]';
+        const nameColor = isCreatorEngineer ? 'text-cyan-950' : 'text-orange-950';
+
+        const cardHtml = `
+            <article class="admin-map-card relative w-[240px] h-[340px] p-4 flex flex-col items-center justify-between transition-transform duration-300 hover:-translate-y-1" data-mapid="${map.id}">
+                <div class="w-full h-28 border-4 ${cardBorder} rounded-sm overflow-hidden mb-2 relative shadow-[2px_2px_0px_#000]">
+                    ${statusBadge}
+                    <img src="${map.map_picture}" class="w-full h-full object-cover">
+                </div>
+                <div class="w-full flex flex-col items-center flex-1 justify-center">
+                    <p class="font-extrabold text-lg text-yellow-400 drop-shadow-[2px_2px_0px_#000] text-center w-full truncate mb-1 admin-map-name-text">${map.map_name}</p>
+                    <p class="text-xs font-bold text-white drop-shadow-[1px_1px_0px_#000] text-center w-full mb-auto truncate">
+                        ${isCreatorEngineer ? '🛠️ ' : ''}By: ${map.creator_name}
+                    </p>
+                    <div class="mt-2 flex justify-between items-center w-full gap-2 p-2 bg-orange-950/30 rounded-sm border border-orange-950/50">
+                        <button class="admin-edit-map-name-btn bg-blue-600 hover:bg-blue-500 text-white font-extrabold py-1.5 px-3 border-2 border-blue-950 rounded-sm shadow-[2px_2px_0px_#000] text-[10px] uppercase" data-mapid="${map.id}">✏️ Edit</button>
+                        <button class="admin-remove-map-btn text-xl hover:scale-110 transition-transform cursor-pointer drop-shadow-md ml-auto" data-mapid="${map.id}" title="Remove / Ban">🗑️</button>
+                    </div>
+                </div>
+            </article>
+        `;
+        grid.insertAdjacentHTML('beforeend', cardHtml);
+    });
+}
+
+// Ha a checkbox változik, azonnal újrarenderelünk
+document.addEventListener('change', (event) => {
+    if (event.target.id === 'admin-maps-own-filter') {
+        renderAdminMaps();
+    }
+});
+
+function fetchAdminMaps(userId) {
+    const grid = document.getElementById('admin-maps-grid');
+    grid.innerHTML = '<p class="col-span-full text-center font-bold text-orange-900 text-xl animate-pulse mt-10">Pályák betöltése...</p>';
+    
+    fetch(adminUrl, {
+        method: 'POST', credentials: 'include', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'get_user_maps', target_user_id: userId })
+    }).then(res => res.json()).then(data => {
+        if (data.status === 'success') {
+            currentAdminMaps = data.maps;
+            renderAdminMaps();
+        } else {
+            grid.innerHTML = `<p class="col-span-full text-center font-bold text-red-600 text-xl mt-10">Hiba: ${data.message}</p>`;
         }
+    }).catch(err => {
+        grid.innerHTML = '<p class="col-span-full text-center font-bold text-red-600 text-xl mt-10">Hálózati hiba történt.</p>';
+    });
+}
+
+// ==========================================
+// 3. ESEMÉNYEK KEZELÉSE (MINDEN KATTINTÁS)
+// ==========================================
+document.addEventListener('click', function(event) {
+    if (!event.target) return;
+
+    if (event.target.closest('#admin-search-btn')) { event.preventDefault(); return; }
+
+    // --- ALERT / CONFIRM BEZÁRÁSOK ---
+    if (event.target.closest('#basesite-alert-close-btn') || event.target.closest('#basesite-alert-ok-btn')) {
+        const modal = document.getElementById('basesite-alert-modal');
+        if (modal) { modal.classList.add('hidden'); if (window.alertCallback) { window.alertCallback(); window.alertCallback = null; } }
+        return;
+    }
+    if (event.target.closest('#basesite-confirm-close-btn') || event.target.closest('#basesite-confirm-cancel-btn')) {
+        const modal = document.getElementById('basesite-confirm-modal');
+        if (modal) { modal.classList.add('hidden'); window.confirmCallback = null; }
+        return;
+    }
+    if (event.target.closest('#basesite-confirm-ok-btn')) {
+        const modal = document.getElementById('basesite-confirm-modal');
+        if (modal) { modal.classList.add('hidden'); if (window.confirmCallback) { window.confirmCallback(); window.confirmCallback = null; } }
         return;
     }
 
-    if (!clickedInsideMenu && !event.target.closest('.admin-action-btn')) {
-        document.querySelectorAll('.admin-card-actions.menu-open').forEach(menu => {
-            menu.classList.remove('menu-open');
-            menu.closest('.admin-user-card').style.zIndex = '1';
-        });
-    }
-
-    // ==========================================
-    // 2. FELHASZNÁLÓI RÉSZLETEK MODÁL LOGIKÁJA
-    // ==========================================
-    const usernameBtn = event.target.closest('.admin-username-btn');
-    if (usernameBtn) {
-        const userId = usernameBtn.getAttribute('data-userid');
-        const modal = document.getElementById(`details-modal-${userId}`);
-        if (modal) modal.classList.remove('hidden');
-        return;
-    }
-
-    const closeDetailsBtn = event.target.closest('.admin-close-details-btn');
-    if (closeDetailsBtn) {
-        const modal = closeDetailsBtn.closest('.admin-details-modal');
-        if (modal) modal.classList.add('hidden');
-        return;
-    }
-
-    // Zárás, ha a sötét háttérre kattint (a sima és a logs modálnál is)
-    if (event.target.classList.contains('admin-details-modal')) {
-        event.target.classList.add('hidden');
-    }
-
-    // ==========================================
-    // 3. BAN ÉS ROLE LOGIKA
-    // ==========================================
+    // --- BAN / PROMOTE LOGIKA ---
     const banToggleBtn = event.target.closest('.admin-ban-toggle-btn');
     if (banToggleBtn) {
         const userId = banToggleBtn.getAttribute('data-userid');
         const action = banToggleBtn.getAttribute('data-action'); 
-        
-        const confirmMsg = action === 'ban' 
-            ? 'Are you sure you want to BAN this player?' 
-            : 'Are you sure you want to UNBAN this player?';
-
-        if (confirm(confirmMsg)) {
-            fetch('http://localhost/troxan/app/api.php?path=admin', {
-                method: 'POST', credentials: 'include',
-                headers: { 'Content-Type': 'application/json' },
+        const msg = action === 'ban' ? 'Are you sure you want to BAN this player?' : 'Are you sure you want to UNBAN this player?';
+        showCustomConfirm("Biztos vagy benne?", msg, "danger", function() {
+            fetch(adminUrl, {
+                method: 'POST', credentials: 'include', headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ action: 'toggle_ban', target_user_id: userId })
             }).then(res => res.json()).then(data => {
-                if (data.status === 'success') { alert(data.message); location.reload(); } 
-                else { alert('Error: ' + data.message); }
-            }).catch(err => { console.error(err); alert('Network error occurred.'); });
-        }
+                if (data.status === 'success') { showCustomAlert("Siker", data.message, "success", () => location.reload()); } 
+                else { showCustomAlert("Hiba", data.message, "error"); }
+            });
+        });
         return;
     }
 
@@ -92,59 +227,85 @@ document.addEventListener('click', (event) => {
     if (roleBtn) {
         const userId = roleBtn.getAttribute('data-userid');
         const roleAction = roleBtn.getAttribute('data-action'); 
-        
-        const confirmMsg = roleAction === 'promote' 
-            ? 'Are you sure you want to PROMOTE this player?' 
-            : 'Are you sure you want to DEMOTE this player?';
-
-        if (confirm(confirmMsg)) {
-            fetch('http://localhost/troxan/app/api.php?path=admin', {
-                method: 'POST', credentials: 'include', 
-                headers: { 'Content-Type': 'application/json' },
+        const msg = roleAction === 'promote' ? 'Are you sure you want to PROMOTE this player?' : 'Are you sure you want to DEMOTE this player?';
+        showCustomConfirm("Rang módosítása", msg, "danger", function() {
+            fetch(adminUrl, {
+                method: 'POST', credentials: 'include', headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ action: 'change_role', role_action: roleAction, target_user_id: userId })
             }).then(res => res.json()).then(data => {
-                if (data.status === 'success') { alert(data.message); location.reload(); } 
-                else { alert('Error: ' + data.message); }
-            }).catch(err => { console.error(err); alert('Network error occurred.'); });
-        }
+                if (data.status === 'success') { showCustomAlert("Siker", data.message, "success", () => location.reload()); } 
+                else { showCustomAlert("Hiba", data.message, "error"); }
+            });
+        });
         return;
     }
 
-    // ==========================================
-    // 4. VIEW LOGS LOGIKA (ÚJ!)
-    // ==========================================
+    // --- HAMBURGER MENÜ ÉS MODÁLOK BEZÁRÁSA ---
+    const hamburgerBtn = event.target.closest('.admin-hamburger-btn');
+    if (hamburgerBtn) {
+        document.querySelectorAll('.admin-card-actions.menu-open').forEach(menu => {
+            menu.classList.remove('menu-open'); menu.closest('.admin-user-card').style.zIndex = '1';
+        });
+        const userCard = hamburgerBtn.closest('.admin-user-card');
+        const actionsMenu = userCard.querySelector('.admin-card-actions');
+        if (actionsMenu) {
+            const isOpen = actionsMenu.classList.toggle('menu-open');
+            userCard.style.zIndex = isOpen ? '50' : '1';
+        }
+        return;
+    }
+    
+    if (event.target.closest('.admin-close-menu-btn')) {
+        const actionsMenu = event.target.closest('.admin-card-actions');
+        if (actionsMenu) { actionsMenu.classList.remove('menu-open'); actionsMenu.closest('.admin-user-card').style.zIndex = '1'; }
+        return;
+    }
+    
+    if (!event.target.closest('.admin-card-actions') && !event.target.closest('.admin-action-btn') && !event.target.closest('.admin-details-modal')) {
+        document.querySelectorAll('.admin-card-actions.menu-open').forEach(menu => {
+            menu.classList.remove('menu-open'); menu.closest('.admin-user-card').style.zIndex = '1';
+        });
+    }
+
+    const usernameBtn = event.target.closest('.admin-username-btn');
+    if (usernameBtn) {
+        const userId = usernameBtn.getAttribute('data-userid');
+        const modal = document.getElementById(`details-modal-${userId}`);
+        if (modal) modal.classList.remove('hidden');
+        return;
+    }
+    
+    const closeDetailsBtn = event.target.closest('.admin-close-details-btn');
+    if (closeDetailsBtn && closeDetailsBtn.id !== 'basesite-alert-close-btn' && closeDetailsBtn.id !== 'basesite-confirm-close-btn') {
+        const modal = closeDetailsBtn.closest('.admin-details-modal');
+        if (modal) modal.classList.add('hidden');
+        return;
+    }
+
+    if (event.target.classList.contains('admin-details-modal') && event.target.id !== 'basesite-alert-modal' && event.target.id !== 'basesite-confirm-modal') {
+        event.target.classList.add('hidden');
+    }
+
+    // --- VIEW LOGS ---
     const viewLogsBtn = event.target.closest('.admin-view-logs-btn');
     if (viewLogsBtn) {
         const userId = viewLogsBtn.getAttribute('data-userid');
         const username = viewLogsBtn.getAttribute('data-username');
-        
-        // Bezárjuk a személyes Részletek modált
         const detailsModal = viewLogsBtn.closest('.admin-details-modal');
         if (detailsModal) detailsModal.classList.add('hidden');
         
-        // Megnyitjuk a globális Logs modált egy betöltő szöveggel
         const logsModal = document.getElementById('global-logs-modal');
         const logsContainer = document.getElementById('logs-container');
         document.getElementById('logs-modal-title').innerText = username + " - Logs";
         logsContainer.innerHTML = '<p class="text-center font-bold animate-pulse text-orange-900">Fetching logs from server...</p>';
         logsModal.classList.remove('hidden');
 
-        // Lekérjük az adatokat a szervertől
-        fetch('http://localhost/troxan/app/api.php?path=admin', {
-            method: 'POST',
-            credentials: 'include',
-            headers: { 'Content-Type': 'application/json' },
+        fetch(adminUrl, {
+            method: 'POST', credentials: 'include', headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ action: 'get_logs', target_user_id: userId })
-        })
-        .then(res => res.json())
-        .then(data => {
+        }).then(res => res.json()).then(data => {
             if (data.status === 'success') {
-                if (data.logs.length === 0) {
-                    logsContainer.innerHTML = '<p class="text-center font-bold text-orange-900">No logs found for this player.</p>';
-                    return;
-                }
-
-                // Generáljuk a listát
+                if (data.logs.length === 0) { logsContainer.innerHTML = '<p class="text-center font-bold text-orange-900">No logs found for this player.</p>'; return; }
                 let html = '';
                 data.logs.forEach(log => {
                     html += `
@@ -160,34 +321,90 @@ document.addEventListener('click', (event) => {
                                 <p>📖 Story finishes: <span class="font-normal">${log.details['Story finished']}</span></p>
                                 <p>⏱️ Time played: <span class="font-normal">${log.details['Time played']}</span></p>
                             </div>
-                        </div>
-                    `;
+                        </div>`;
                 });
                 logsContainer.innerHTML = html;
-            } else {
-                logsContainer.innerHTML = `<p class="text-center font-bold text-red-600">Error: ${data.message}</p>`;
-            }
-        })
-        .catch(err => {
-            logsContainer.innerHTML = '<p class="text-center font-bold text-red-600">Network error occurred.</p>';
+            } else logsContainer.innerHTML = `<p class="text-center font-bold text-red-600">Error: ${data.message}</p>`;
         });
         return;
     }
 
-    // Globális Logs modál bezárása
-    const closeLogsBtn = event.target.closest('.admin-close-logs-btn');
-    if (closeLogsBtn) {
-        document.getElementById('global-logs-modal').classList.add('hidden');
-        return;
-    }
-
-    // Egyedi log kinyitása / becsukása
+    if (event.target.closest('.admin-close-logs-btn')) { document.getElementById('global-logs-modal').classList.add('hidden'); return; }
     const logHeader = event.target.closest('.admin-log-header');
     if (logHeader) {
         const logId = logHeader.getAttribute('data-logid');
         const detailsDiv = document.getElementById(`log-details-${logId}`);
-        if (detailsDiv) {
-            detailsDiv.classList.toggle('hidden');
+        if (detailsDiv) detailsDiv.classList.toggle('hidden');
+        return;
+    }
+
+    // ==========================================
+    // 4. ÚJ: ADMIN MAPS GOMBOK (NYITÁS, TÖRLÉS, EDIT)
+    // ==========================================
+    
+    // MAPS GOMB MEGNYOMÁSA (Megnyitja a modalt)
+    const openMapsBtn = event.target.closest('.admin-maps-open-btn');
+    if (openMapsBtn) {
+        const userId = openMapsBtn.getAttribute('data-userid');
+        const username = openMapsBtn.getAttribute('data-username');
+        
+        currentAdminTargetUser.id = userId;
+        currentAdminTargetUser.username = username;
+
+        document.getElementById('admin-maps-title').innerText = `${username}'s Library`;
+        document.getElementById('admin-maps-own-filter').checked = false; // Reset szűrő
+        document.getElementById('admin-maps-modal').classList.remove('hidden');
+        
+        // Zárjuk be a hamburger menüt ha mobil nézet
+        const actionsMenu = openMapsBtn.closest('.admin-card-actions');
+        if (actionsMenu) { actionsMenu.classList.remove('menu-open'); actionsMenu.closest('.admin-user-card').style.zIndex = '1'; }
+
+        fetchAdminMaps(userId);
+        return;
+    }
+
+    // MAPS MODAL BEZÁRÁSA
+    if (event.target.closest('.admin-close-maps-btn')) {
+        document.getElementById('admin-maps-modal').classList.add('hidden');
+        return;
+    }
+
+    // PÁLYA TÖRLÉSE / BANNOLÁSA
+    const removeMapBtn = event.target.closest('.admin-remove-map-btn');
+    if (removeMapBtn) {
+        const mapId = removeMapBtn.getAttribute('data-mapid');
+        showCustomConfirm("Törlés", "Biztosan eltávolítod/kitiltod ezt a pályát a könyvtárból?", "danger", function() {
+            fetch(adminUrl, {
+                method: 'POST', credentials: 'include', headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ action: 'admin_remove_map', map_id: mapId, target_user_id: currentAdminTargetUser.id })
+            }).then(res => res.json()).then(data => {
+                if (data.status === 'success') {
+                    showCustomAlert("Siker", data.message, "success");
+                    fetchAdminMaps(currentAdminTargetUser.id); // Frissítjük a rácsot
+                } else showCustomAlert("Hiba", data.message, "error");
+            });
+        });
+        return;
+    }
+
+    // PÁLYA NEVÉNEK SZERKESZTÉSE
+    const editMapBtn = event.target.closest('.admin-edit-map-name-btn');
+    if (editMapBtn) {
+        const mapId = editMapBtn.getAttribute('data-mapid');
+        const card = editMapBtn.closest('.admin-map-card');
+        const oldName = card.querySelector('.admin-map-name-text').innerText;
+        
+        const newName = prompt("Írd be az új pályanevet:", oldName);
+        if (newName !== null && newName.trim() !== '' && newName !== oldName) {
+            fetch(adminUrl, {
+                method: 'POST', credentials: 'include', headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ action: 'admin_edit_map_name', map_id: mapId, new_name: newName.trim() })
+            }).then(res => res.json()).then(data => {
+                if (data.status === 'success') {
+                    card.querySelector('.admin-map-name-text').innerText = newName.trim();
+                    showCustomAlert("Siker", data.message, "success");
+                } else showCustomAlert("Hiba", data.message, "error");
+            });
         }
         return;
     }

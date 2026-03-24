@@ -1,0 +1,84 @@
+<?php
+function handleGameUpdateStats()
+{
+    global $pdo;
+
+    if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+        json_response(["status" => "error", "message" => "Method not allowed"], 405);
+        return;
+    }
+
+    // GOLYÓÁLLÓ TOKEN KIOLVASÁS
+    $authHeader = '';
+    if (isset($_SERVER['HTTP_AUTHORIZATION'])) {
+        $authHeader = trim($_SERVER['HTTP_AUTHORIZATION']);
+    } elseif (isset($_SERVER['REDIRECT_HTTP_AUTHORIZATION'])) {
+        $authHeader = trim($_SERVER['REDIRECT_HTTP_AUTHORIZATION']);
+    } elseif (function_exists('apache_request_headers')) {
+        $requestHeaders = apache_request_headers();
+        if (isset($requestHeaders['Authorization'])) {
+            $authHeader = trim($requestHeaders['Authorization']);
+        }
+    }
+
+    if (empty($authHeader) || !preg_match('/Bearer\s(\S+)/', $authHeader, $matches)) {
+        json_response(["status" => "error", "message" => "Hiányzó vagy érvénytelen token!"], 401);
+        return;
+    }
+
+    $token = $matches[1];
+    $input = json_decode(file_get_contents('php://input'), true);
+
+    if (!$input) {
+        json_response(["status" => "error", "message" => "Érvénytelen JSON formátum!"], 400);
+        return;
+    }
+
+    try {
+        // 1. Játékos lekérése TOKEN alapján
+        $stmt = $pdo->prepare("SELECT user_id, username, is_banned FROM `User` WHERE user_token = ?");
+        $stmt->execute([$token]);
+        $user = $stmt->fetch(PDO::FETCH_ASSOC);
+
+        if (!$user) {
+            json_response(["status" => "error", "message" => "Érvénytelen vagy lejárt token!"], 401);
+            return;
+        }
+
+        if ($user['is_banned'] == 1) {
+            json_response(["status" => "error", "message" => "A fiókod ki van tiltva!"], 403);
+            return;
+        }
+
+        if (isset($input['username']) && $input['username'] !== $user['username']) {
+            json_response(["status" => "error", "message" => "Cheat detektálva: Nem módosíthatod más játékos statisztikáit!"], 403);
+            return;
+        }
+
+        // 2. USER TÁBLA FRISSÍTÉSE (coins, level)
+        $coins = isset($input['coins']) ? (int)$input['coins'] : 0;
+        $level = isset($input['level']) ? (int)$input['level'] : 1;
+        
+        $updateUser = $pdo->prepare("UPDATE `User` SET coins = ?, level = ? WHERE user_id = ?");
+        $updateUser->execute([$coins, $level, $user['user_id']]);
+
+// 3. STATISTICS TÁBLA FRISSÍTÉSE (Minden mentés egy ÚJ SOR lesz!)
+        if (isset($input['statistics'])) {
+            $statsJson = json_encode($input['statistics']);
+            
+            // NINCS TÖBBÉ FELÜLÍRÁS! Mindig új sort szúrunk be!
+            $insertStat = $pdo->prepare("INSERT INTO `Statistics` (user_id, statistics_file, last_updated) VALUES (?, ?, NOW())");
+            $insertStat->execute([$user['user_id'], $statsJson]);
+        }
+
+        // Siker válasz a játéknak!
+        json_response([
+            "status" => "success",
+            "message" => "Stats updated successfully!"
+        ], 200);
+
+    } catch (Exception $e) {
+        json_response(["status" => "error", "message" => "Adatbázis hiba: " . $e->getMessage()], 500);
+    }
+}
+?>

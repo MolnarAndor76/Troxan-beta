@@ -11,12 +11,19 @@ function getContent()
         $search = trim($_GET['search'] ?? '');
         $sort = $_GET['sort'] ?? 'Downloads';
 
-        $roleName = strtolower($_SESSION['role_name'] ?? 'player');
+        $roleName = $_SESSION['role_name'] ?? 'Player';
         $roleId = $_SESSION['role_id'] ?? 0;
-        $isStaff = (in_array($roleName, ['admin', 'moderator', 'owner']) || in_array($roleId, [1, 2]));
+        
+        // Define staff and engineer roles
+        $isStaff = in_array($roleName, ['Admin', 'Moderator', 'Engineer']);
+        $isEngineer = ($roleName === 'Engineer');
 
-        // --- 1. AKTÍV PÁLYÁK LEKÉRÉSE ---
-        $query = "SELECT m.*, u.username as creator_name FROM `Maps` m JOIN `User` u ON m.creator_user_id = u.user_id WHERE m.status = 1";
+        // --- 1. FETCH ACTIVE MAPS ---
+        $query = "SELECT m.*, u.username as creator_name, r.role_name as creator_role 
+                  FROM `Maps` m 
+                  JOIN `User` u ON m.creator_user_id = u.user_id 
+                  JOIN Roles r ON u.role_id = r.id
+                  WHERE m.status = 1";
         $params = [];
 
         if (!empty($search)) {
@@ -35,7 +42,7 @@ function getContent()
             case 'Oldest':
                 $query .= " ORDER BY m.created_at ASC";
                 break;
-            default:
+            default: // Downloads
                 $query .= " ORDER BY m.downloads DESC";
                 break;
         }
@@ -44,10 +51,15 @@ function getContent()
         $stmt->execute($params);
         $active_maps = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
-        // --- 2. KUKA TARTALMÁNYAK LEKÉRÉSE (Csak Staffnak!) ---
+        // --- 2. FETCH TRASH MAPS (Staff Only) ---
         $trash_maps = [];
         if ($isStaff) {
-            $trashQuery = "SELECT m.*, u.username as creator_name FROM `Maps` m JOIN `User` u ON m.creator_user_id = u.user_id WHERE m.status IN (3, 4, 5) ORDER BY m.id DESC";
+            $trashQuery = "SELECT m.*, u.username as creator_name, r.role_name as creator_role 
+                           FROM `Maps` m 
+                           JOIN `User` u ON m.creator_user_id = u.user_id 
+                           JOIN Roles r ON u.role_id = r.id
+                           WHERE m.status IN (3, 4, 5) 
+                           ORDER BY m.id DESC";
             $stmtTrash = $pdo->prepare($trashQuery);
             $stmtTrash->execute();
             $trash_maps = $stmtTrash->fetchAll(PDO::FETCH_ASSOC);
@@ -69,28 +81,79 @@ function handlePost()
     $action = $input['action'] ?? '';
     $mapId = (int)($input['map_id'] ?? 0);
 
-    $roleName = strtolower($_SESSION['role_name'] ?? 'player');
-    $roleId = $_SESSION['role_id'] ?? 0;
-    $isStaff = (in_array($roleName, ['admin', 'moderator', 'owner']) || in_array($roleId, [1, 2]));
+    $roleName = $_SESSION['role_name'] ?? 'Player';
+    $isStaff = in_array($roleName, ['Admin', 'Moderator', 'Engineer']);
+    $isEngineer = ($roleName === 'Engineer');
+    $currentUserId = $_SESSION['user_id'] ?? null;
+
+    if (!$currentUserId) {
+        json_response(["status" => "error", "message" => "Nincs bejelentkezve!"], 401);
+        return;
+    }
 
     try {
         if ($action === 'delete_map') {
+            $checkStmt = $pdo->prepare("SELECT m.creator_user_id, r.role_name 
+                                        FROM `Maps` m 
+                                        JOIN `User` u ON m.creator_user_id = u.user_id 
+                                        JOIN Roles r ON u.role_id = r.id 
+                                        WHERE m.id = ?");
+            $checkStmt->execute([$mapId]);
+            $mapData = $checkStmt->fetch(PDO::FETCH_ASSOC);
+
+            if (!$mapData) {
+                json_response(["status" => "error", "message" => "Map not found."], 404);
+            }
+
+            if ($mapData['role_name'] === 'Engineer' && !$isEngineer && $mapData['creator_user_id'] != $currentUserId) {
+                json_response(["status" => "error", "message" => "Only the Creator can delete this map!"], 403);
+            }
+
             $stmt = $pdo->prepare("SELECT status FROM `Maps` WHERE id = ?");
             $stmt->execute([$mapId]);
             $currentStatus = $stmt->fetchColumn();
 
-            $newStatus = $isStaff ? 4 : (($currentStatus == 0) ? 5 : 3);
+            $newStatus = ($isStaff && $mapData['creator_user_id'] != $currentUserId) ? 4 : (($currentStatus == 0) ? 5 : 3);
+            
             $pdo->prepare("UPDATE `Maps` SET status = ? WHERE id = ?")->execute([$newStatus, $mapId]);
-            json_response(["status" => "success"], 200);
+            json_response(["status" => "success", "message" => "Map moved to trash!"], 200);
+            
         } elseif ($action === 'restore_map' && $isStaff) {
+            $checkStmt = $pdo->prepare("SELECT m.creator_user_id, r.role_name 
+                                        FROM `Maps` m 
+                                        JOIN `User` u ON m.creator_user_id = u.user_id 
+                                        JOIN Roles r ON u.role_id = r.id 
+                                        WHERE m.id = ?");
+            $checkStmt->execute([$mapId]);
+            $mapData = $checkStmt->fetch(PDO::FETCH_ASSOC);
+
+            if ($mapData['role_name'] === 'Engineer' && !$isEngineer && $mapData['creator_user_id'] != $currentUserId) {
+                json_response(["status" => "error", "message" => "Only the Creator can restore this map!"], 403);
+            }
+
             $pdo->prepare("UPDATE `Maps` SET status = 1 WHERE id = ?")->execute([$mapId]);
-            json_response(["status" => "success"], 200);
-        } elseif ($action === 'increment_download') {
+            json_response(["status" => "success", "message" => "Map restored successfully!"], 200);
+            
+        } elseif ($action === 'add_to_library') {
+            // 1. Ellenőrizzük, hogy benne van-e már a könyvtárában
+            $checkStmt = $pdo->prepare("SELECT 1 FROM `User_Map_Library` WHERE user_id = ? AND map_id = ?");
+            $checkStmt->execute([$currentUserId, $mapId]);
+            if ($checkStmt->fetchColumn()) {
+                json_response(["status" => "info", "message" => "Ez a pálya már a My Maps könyvtáradban van!"], 200);
+                return;
+            }
+
+            // 2. Növeljük a letöltések/hozzáadások számát a Maps táblában
             $pdo->prepare("UPDATE `Maps` SET downloads = downloads + 1 WHERE id = ?")->execute([$mapId]);
-            json_response(["status" => "success"], 200);
+            
+            // 3. Hozzáadjuk a játékos könyvtárához
+            $libStmt = $pdo->prepare("INSERT INTO `User_Map_Library` (user_id, map_id) VALUES (?, ?)");
+            $libStmt->execute([$currentUserId, $mapId]);
+
+            json_response(["status" => "success", "message" => "Pálya sikeresen hozzáadva a My Maps-hez!"], 200);
         }
     } catch (Exception $e) {
-        json_response(["status" => "error"], 500);
+        json_response(["status" => "error", "message" => "Database error: " . $e->getMessage()], 500);
     }
 }
 
@@ -101,4 +164,8 @@ switch ($data["method"]) {
     case 'POST':
         handlePost();
         break;
+    default:
+        json_response(["status" => "error", "message" => "Method not allowed"], 405); 
+        break;
 }
+?>

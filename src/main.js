@@ -65,13 +65,15 @@ async function fetchData(url, options = {}) {
 
 // --- ÚTVONAL-SPECIFIKUS TARTALOM LEKÉRŐK ---
 const appDiv = document.querySelector("#main-content");
+// 1. Dinamikusan összerakjuk a szerver URL-jét (IP/Domain + mappa)
 
 async function loadContent(path) {
   try {
-    const result = await fetchData(`http://localhost/troxan/app/${path}`);
+    // ITT A JAVÍTÁS: Beletettem az api.php?path= részt!
+    const result = await fetchData(`${window.location.protocol}//${window.location.hostname}/troxan/app/api.php?path=${path}`);
+    
     if (result.status === "success") {
       appDiv.innerHTML = result.html;
-      // Ha a válaszban jött új avatar infó (pl. profil frissítés után), mentsük el
       if (result.user && result.user.avatar_picture) {
         localStorage.setItem('userAvatar', result.user.avatar_picture);
         updateHeader();
@@ -85,6 +87,7 @@ async function loadContent(path) {
 // Segédfüggvények a régi hívásokhoz (hogy ne kelljen mindent átírni)
 async function getMainPageContent() { await loadContent('main'); }
 async function getMapsContent() { await loadContent('maps'); }
+async function getMyMapsContent() { await loadContent('my_maps'); }
 async function getLoginContent() { await loadContent('login'); }
 async function getRegistrationContent() { await loadContent('registration'); }
 async function getProfileContent() { await loadContent('profile'); }
@@ -121,7 +124,10 @@ switch (route) {
       if (isLoggedIn) getMapsContent(); 
       else getGuestContent(); // Ha ide akarnak jönni belépés nélkül, akkor jön a vár!
       break;
-
+        case "my_maps": 
+      if (isLoggedIn) getMyMapsContent(); 
+      else getGuestContent(); // Ha ide akarnak jönni belépés nélkül, akkor jön a vár!
+      break;
     case "editor": 
       if (isLoggedIn) getEditorContent(); 
       else getGuestContent();

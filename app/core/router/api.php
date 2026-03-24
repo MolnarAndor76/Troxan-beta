@@ -44,6 +44,9 @@ switch ($route['segment1']) {
     case "maps":
         load_controller($data, API_CONTROLLERS . 'mapsController.php');
         break;
+    case "my_maps":
+        load_controller($data, API_CONTROLLERS . 'myMapsController.php');
+        break;
     case "statistics":
         load_controller($data, API_CONTROLLERS . 'statisticsController.php');
         break;
@@ -67,6 +70,19 @@ switch ($route['segment1']) {
         break;
     case "guest":
         load_controller($data, API_CONTROLLERS . 'guestController.php');
+        break;
+    case 'game_login':
+        require API_CONTROLLERS . 'gameLoginController.php';
+        handleGameLogin();
+        break;
+    case 'game_stats':
+        require API_CONTROLLERS . 'gameStatsController.php';
+        handleGameStats();
+        break;
+    // Ez menti el a statokat (ÚJ!)
+    case 'game_update_stats':
+        require API_CONTROLLERS . 'gameUpdateStatsController.php';
+        handleGameUpdateStats();
         break;
         
     // ÚJ ISBANNED VÉGPONT
