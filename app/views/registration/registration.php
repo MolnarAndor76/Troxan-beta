@@ -67,4 +67,16 @@
       </div>
     </div>
   </div>
+
+  <!-- Notification Modal -->
+  <div id="notification-modal" class="hidden fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm">
+    <div class="bg-orange-50 border-4 border-orange-950 rounded-xl shadow-[8px_8px_0px_rgba(0,0,0,1)] w-[90%] max-w-md flex flex-col relative p-8">
+      <button type="button" id="close-notification-btn" class="absolute top-4 right-5 text-4xl font-bold text-red-600 hover:text-red-800 transition-colors leading-none cursor-pointer">&times;</button>
+
+      <h2 id="notification-title" class="text-2xl font-extrabold text-orange-950 uppercase tracking-widest mb-4">Message</h2>
+      <p id="notification-message" class="text-orange-950 font-medium text-lg mb-6"></p>
+
+      <button type="button" id="notification-btn" class="bg-yellow-500 hover:bg-yellow-400 text-orange-950 font-extrabold text-2xl py-3 px-6 rounded-md border-4 border-orange-950 shadow-[4px_4px_0px_rgba(0,0,0,1)] transition-transform hover:translate-y-1 hover:shadow-[2px_2px_0px_rgba(0,0,0,1)] tracking-widest cursor-pointer">OK</button>
+    </div>
+  </div>
 </div>

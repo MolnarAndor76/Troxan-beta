@@ -18,6 +18,13 @@
               <li><button class="mymaps-dropdown-item w-full text-left px-4 py-2 hover:bg-orange-200" type="button">Alphabetical</button></li>
             </ul>
           </div>
+
+          <div class="mymaps-nav-buttons flex items-center gap-2">
+            <button id="mymaps-nav-maps" class="mymaps-nav-btn" type="button">Maps</button>
+            <button id="mymaps-nav-profile" class="mymaps-nav-btn p-0" type="button" aria-label="Profile">
+              <img id="mymaps-nav-profile-avatar" class="mymaps-profile-avatar" src="https://picsum.photos/id/1025/200/200" alt="Profile">
+            </button>
+          </div>
         </div>
       </header>
 

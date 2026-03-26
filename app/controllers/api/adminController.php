@@ -20,10 +20,16 @@ function getContent() {
         }
 
         $searchTerm = isset($_GET['search']) ? trim($_GET['search']) : '';
-        
+
+        $hasLastUsername = $pdo->query("SHOW COLUMNS FROM `User` LIKE 'last_username_change'")->rowCount() > 0;
+        $hasLastPassword = $pdo->query("SHOW COLUMNS FROM `User` LIKE 'last_password_change'")->rowCount() > 0;
+
+        $lastUsernameSelect = $hasLastUsername ? 'u.last_username_change' : 'NULL';
+        $lastPasswordSelect = $hasLastPassword ? 'u.last_password_change' : 'NULL';
+
         $query = "
             SELECT u.user_id, u.username, u.email, u.created_at, u.last_time_online, u.is_banned,
-                   u.role_id, r.role_name, a.avatar_picture, s.statistics_file
+                   u.role_id, r.role_name, a.avatar_picture, s.statistics_file, {$lastUsernameSelect} as last_username_change, {$lastPasswordSelect} as last_password_change
             FROM `User` u
             JOIN Roles r ON u.role_id = r.id
             LEFT JOIN Avatars a ON u.avatar_id = a.id
@@ -67,6 +73,7 @@ function toggleBan() {
     $input = json_decode(file_get_contents('php://input'), true);
     
     $targetUserId = (int)$input['target_user_id'];
+    $reason = trim($input['reason'] ?? '');
     $myUserId = $_SESSION['user_id'];
 
     try {
@@ -86,7 +93,32 @@ function toggleBan() {
         if ($targetData['role_name'] === 'Admin' && $myRole !== 'Engineer') { json_response(["status" => "error", "message" => "Adminokat csak egy Engineer tilthat ki!"], 403); return; }
 
         $newStatus = ($targetData['is_banned'] == 1) ? 0 : 1;
+        if ($newStatus === 1 && empty($reason)) {
+            json_response(["status" => "error", "message" => "Ban reason kötelező."], 400);
+            return;
+        }
+
         $pdo->prepare("UPDATE `User` SET is_banned = ? WHERE user_id = ?")->execute([$newStatus, $targetUserId]);
+
+        // Email értesítés a cél felhasználónak, ha van email cím
+        $targetEmailStmt = $pdo->prepare("SELECT email, username FROM `User` WHERE user_id = ?");
+        $targetEmailStmt->execute([$targetUserId]);
+        $targetInfo = $targetEmailStmt->fetch(PDO::FETCH_ASSOC);
+
+        if (!empty($targetInfo['email'])) {
+            $mailerPath = __DIR__ . '/../../mailer.php';
+            if (file_exists($mailerPath)) {
+                require_once $mailerPath;
+                $subject = $newStatus == 1 ? "Troxan - You were banned" : "Troxan - You were unbanned";
+                $body = "<h2>Account status changed</h2>";
+                $body .= "<p>Your account (<strong>".htmlspecialchars($targetInfo['username'])."</strong>) has been " . ($newStatus == 1 ? 'banned' : 'unbanned') . " by an administrator.</p>";
+                if (!empty($reason)) {
+                    $body .= "<p>Reason: " . htmlspecialchars($reason) . "</p>";
+                }
+                $body .= "<p>If this was not expected, contact support immediately.</p>";
+                @sendTroxanMail($targetInfo['email'], $subject, $body);
+            }
+        }
 
         json_response(["status" => "success", "message" => ($newStatus == 1) ? "Játékos sikeresen kitiltva!" : "A kitiltás sikeresen feloldva!"], 200);
     } catch (Exception $e) { json_response(["status" => "error", "message" => "Adatbázis hiba: " . $e->getMessage()], 500); }
@@ -139,6 +171,65 @@ function changeRole() {
         $pdo->prepare("UPDATE `User` SET role_id = ? WHERE user_id = ?")->execute([$newRoleId, $targetUserId]);
         json_response(["status" => "success", "message" => "Sikeres művelet! Új rang: " . $newRoleName], 200);
     } catch (Exception $e) { json_response(["status" => "error", "message" => "Adatbázis hiba: " . $e->getMessage()], 500); }
+}
+
+function changeUserName() {
+    global $pdo;
+    if (!isset($_SESSION['user_id'])) { json_response(["status" => "error", "message" => "Nincs jogosultságod!"], 401); return; }
+    $input = json_decode(file_get_contents('php://input'), true);
+
+    $targetUserId = (int)$input['target_user_id'];
+    $newUsername = trim($input['new_username'] ?? '');
+    $reason = trim($input['reason'] ?? '');
+    $adminUserId = $_SESSION['user_id'];
+
+    if (empty($newUsername)) { json_response(["status" => "error", "message" => "Az új név nem lehet üres!"], 400); return; }
+
+    $myRoleStmt = $pdo->prepare("SELECT r.role_name FROM `User` u JOIN Roles r ON u.role_id = r.id WHERE u.user_id = ?");
+    $myRoleStmt->execute([$adminUserId]);
+    $myRole = $myRoleStmt->fetchColumn();
+    if ($myRole !== 'Engineer') { json_response(["status" => "error", "message" => "Csak Engineer végezhet névváltást másokon!"], 403); return; }
+
+    $targetStmt = $pdo->prepare("SELECT u.username, u.email, r.role_name FROM `User` u JOIN Roles r ON u.role_id = r.id WHERE u.user_id = ?");
+    $targetStmt->execute([$targetUserId]);
+    $targetData = $targetStmt->fetch(PDO::FETCH_ASSOC);
+
+    if (!$targetData) { json_response(["status" => "error", "message" => "Célfelhasználó nem található!"], 404); return; }
+    if ($targetData['role_name'] === 'Engineer') { json_response(["status" => "error", "message" => "Engineerek neveit nem módosíthatod!"], 403); return; }
+
+    $checkName = $pdo->prepare("SELECT 1 FROM `User` WHERE username = ? AND user_id != ?");
+    $checkName->execute([$newUsername, $targetUserId]);
+    if ($checkName->fetchColumn()) { json_response(["status" => "error", "message" => "Ez a név már foglalt!"], 400); return; }
+
+    $updateSql = "UPDATE `User` SET username = ?, last_username_change = NOW() WHERE user_id = ?";
+    if (!$pdo->query("SHOW COLUMNS FROM `User` LIKE 'last_username_change'")->rowCount()) {
+        $updateSql = "UPDATE `User` SET username = ? WHERE user_id = ?";
+    }
+
+    try {
+        $pdo->prepare($updateSql)->execute([$newUsername, $targetUserId]);
+
+        // Email értesítés a cél felhasználónak
+        $targetEmail = $targetData['email'] ?? '';
+        if (!empty($targetEmail)) {
+            $mailerPath = __DIR__ . '/../../mailer.php';
+            if (file_exists($mailerPath)) {
+                require_once $mailerPath;
+                $subject = "Troxan - Username Changed by Engineer";
+                $body = "<h2>Username change</h2>";
+                $body .= "<p>Your username has been changed from <strong>". htmlspecialchars($targetData['username']) ."</strong> to <strong>". htmlspecialchars($newUsername) ."</strong> by an Engineer.</p>";
+                if (!empty($reason)) {
+                    $body .= "<p>Reason: " . htmlspecialchars($reason) . "</p>";
+                }
+                $body .= "<p>If you did not request this change, contact support immediately.</p>";
+                @sendTroxanMail($targetEmail, $subject, $body);
+            }
+        }
+
+        json_response(["status" => "success", "message" => "Sikeres névváltás, a felhasználó új neve: {$newUsername}"], 200);
+    } catch (Exception $e) {
+        json_response(["status" => "error", "message" => "Adatbázis hiba: " . $e->getMessage()], 500);
+    }
 }
 
 // ==========================================
@@ -210,6 +301,7 @@ function adminRemoveMap() {
     
     $targetUserId = (int)$input['target_user_id'];
     $mapId = (int)$input['map_id'];
+    $reason = trim($input['reason'] ?? '');
 
     try {
         // Pálya adatainak lekérése
@@ -229,7 +321,32 @@ function adminRemoveMap() {
 
         // 2. Ha ő csinálta, akkor Admin BANNED (4) státuszt kap!
         if ($mapData['creator_user_id'] == $targetUserId) {
+            if (empty($reason)) {
+                json_response(["status" => "error", "message" => "Map ban reason kötelező."], 400);
+                return;
+            }
             $pdo->prepare("UPDATE `Maps` SET status = 4 WHERE id = ?")->execute([$mapId]);
+
+            // Email értesítés a pálya készítőjének
+            $creatorStmt = $pdo->prepare("SELECT email, username FROM `User` WHERE user_id = ?");
+            $creatorStmt->execute([$targetUserId]);
+            $creatorInfo = $creatorStmt->fetch(PDO::FETCH_ASSOC);
+
+            if (!empty($creatorInfo['email'])) {
+                $mailerPath = __DIR__ . '/../../mailer.php';
+                if (file_exists($mailerPath)) {
+                    require_once $mailerPath;
+                    $subject = "Troxan - Your map was banned";
+                    $body = "<h2>Map removed from the library</h2>";
+                    $body .= "<p>Your map has been banned by an administrator.</p>";
+                    if (!empty($reason)) {
+                        $body .= "<p>Reason: " . htmlspecialchars($reason) . "</p>";
+                    }
+                    $body .= "<p>If you think this was a mistake, contact support.</p>";
+                    @sendTroxanMail($creatorInfo['email'], $subject, $body);
+                }
+            }
+
             json_response(["status" => "success", "message" => "Pálya sikeresen kitiltva (Banned)!"], 200);
         } else {
             json_response(["status" => "success", "message" => "Pálya eltávolítva a játékos könyvtárából!"], 200);
@@ -265,6 +382,7 @@ switch ($data["method"]) {
         if (isset($input['action'])) {
             if ($input['action'] === 'toggle_ban') toggleBan();
             elseif ($input['action'] === 'change_role') changeRole();
+            elseif ($input['action'] === 'change_username') changeUserName();
             elseif ($input['action'] === 'get_logs') getLogs();
             elseif ($input['action'] === 'get_user_maps') getUserMaps();
             elseif ($input['action'] === 'admin_remove_map') adminRemoveMap();

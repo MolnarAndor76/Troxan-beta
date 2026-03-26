@@ -2,6 +2,7 @@
     <div class="admin-site-wrapper">
 
         <div class="admin-header">
+            <button id="admin-back-btn" class="admin-action-btn admin-btn-gray text-sm px-3 py-2 mr-3">⬅️ Back</button>
             <h1 class="admin-title">🛡️ ADMIN AREA</h1>
 
             <div class="admin-search-wrapper">
@@ -105,9 +106,9 @@
                                 <?php endif; ?>
 
                                 <?php if ($isBanned): ?>
-                                    <button class="admin-action-btn bg-green-500 text-white admin-ban-toggle-btn" data-userid="<?= $player['user_id'] ?>" data-action="unban" title="Unban Player">🕊️ Unban</button>
+                                    <button class="admin-action-btn bg-green-500 text-white admin-ban-toggle-btn" data-userid="<?= $player['user_id'] ?>" data-username="<?= htmlspecialchars($player['username']) ?>" data-action="unban" title="Unban Player">🕊️ Unban</button>
                                 <?php else: ?>
-                                    <button class="admin-action-btn admin-btn-red admin-ban-toggle-btn" data-userid="<?= $player['user_id'] ?>" data-action="ban" title="Ban Player">🔨 Ban</button>
+                                    <button class="admin-action-btn admin-btn-red admin-ban-toggle-btn" data-userid="<?= $player['user_id'] ?>" data-username="<?= htmlspecialchars($player['username']) ?>" data-action="ban" title="Ban Player">🔨 Ban</button>
                                 <?php endif; ?>
                             <?php endif; ?>
                         </div>
@@ -125,7 +126,14 @@
                                 <p>🗓️ Reg: <span class="font-normal"><?= date('Y-m-d', strtotime($player['created_at'])) ?></span></p>
                                 <p>🟢 Last: <span class="font-normal"><?= $player['last_time_online'] ? date('Y-m-d H:i', strtotime($player['last_time_online'])) : 'Never' ?></span></p>
                                 <p>⏱️ Play: <span class="font-normal"><?= $playtime ?></span></p>
+                                <p>🔁 Last username change: <span class="font-normal"><?= $player['last_username_change'] ? date('Y-m-d H:i', strtotime($player['last_username_change'])) : 'N/A' ?></span></p>
+                                <p>🔐 Last password change: <span class="font-normal"><?= $player['last_password_change'] ? date('Y-m-d H:i', strtotime($player['last_password_change'])) : 'N/A' ?></span></p>
                             </div>
+
+                            <div class="admin-change-name-section mt-4 border-t border-orange-950/50 pt-4">
+                                <button class="admin-action-btn admin-btn-blue w-full py-2 admin-change-name-open-btn" data-userid="<?= $player['user_id'] ?>" data-username="<?= htmlspecialchars($player['username']) ?>">📝 Change username</button>
+                            </div>
+
                             <button class="admin-action-btn admin-btn-gray mt-8 w-full py-3 admin-view-logs-btn" data-userid="<?= $player['user_id'] ?>" data-username="<?= htmlspecialchars($player['username']) ?>">📜 View Logs</button>
                         </div>
                     </div>
@@ -138,10 +146,39 @@
     </div>
 </div>
 
+<div id="admin-change-username-modal" class="admin-details-modal hidden">
+    <div class="admin-details-content !max-w-md">
+        <button class="admin-close-details-btn absolute top-3 right-4">✖</button>
+        <h2 class="text-lg font-bold text-orange-950 mb-3">Change Username</h2>
+        <p class="text-sm text-orange-900 mb-2">Target: <span id="change-username-target"></span></p>
+        <input id="change-username-input" type="text" class="w-full border border-orange-950 rounded p-2 mb-3" placeholder="New username">
+        <textarea id="change-username-reason-input" class="w-full border border-orange-950 rounded p-2 mb-3" placeholder="Reason (required)"></textarea>
+        <button id="change-username-confirm-btn" class="admin-action-btn admin-btn-blue w-full py-2">Change Name</button>
+    </div>
+</div>
+
+<div id="admin-ban-reason-modal" class="admin-details-modal hidden">
+    <div class="admin-details-content !max-w-md">
+        <button class="admin-close-details-btn absolute top-3 right-4">✖</button>
+        <h2 class="text-lg font-bold text-orange-950 mb-3" id="ban-reason-title">Ban Player</h2>
+        <p class="text-sm text-orange-900 mb-2">Target: <span id="ban-reason-target"></span></p>
+        <textarea id="ban-reason-input" class="w-full border border-orange-950 rounded p-2 mb-3" placeholder="Ban reason (required)"></textarea>
+        <button id="ban-reason-confirm-btn" class="admin-action-btn admin-btn-red w-full py-2">Confirm Ban</button>
+    </div>
+</div>
+
 <div id="global-logs-modal" class="admin-details-modal hidden">
     <div class="admin-details-content w-[95%] max-w-[600px] max-h-[90vh] flex flex-col">
         <button class="admin-close-logs-btn absolute top-3 right-4 text-3xl text-orange-950 font-black cursor-pointer hover:text-red-600 transition-colors z-20">✖</button>
         <h2 id="logs-modal-title" class="text-xl md:text-2xl font-['Press_Start_2P',_monospace] text-center border-b-4 border-orange-950 pb-4 mb-4 text-orange-950 shrink-0">Logs</h2>
+        <div class="mb-3 flex flex-wrap gap-2 items-end">
+            <label class="text-orange-950 font-bold text-sm">From:</label>
+            <input id="logs-date-from" type="date" class="border border-orange-950 rounded p-1">
+            <label class="text-orange-950 font-bold text-sm">To:</label>
+            <input id="logs-date-to" type="date" class="border border-orange-950 rounded p-1">
+            <button id="logs-date-filter-btn" class="admin-action-btn admin-btn-yellow py-1 px-3">Filter</button>
+            <button id="logs-date-clear-btn" class="admin-action-btn admin-btn-gray py-1 px-3">Clear</button>
+        </div>
         <div id="logs-container" class="flex flex-col gap-3 overflow-y-auto pr-2 pb-4"></div>
     </div>
 </div>

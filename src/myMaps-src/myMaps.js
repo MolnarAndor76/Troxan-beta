@@ -65,6 +65,39 @@ function filterAndSortMyMaps() {
     }
 }
 
+function setMyMapsProfileAvatar() {
+    const avatarEl = document.getElementById('mymaps-nav-profile-avatar');
+    if (!avatarEl) return;
+    const avatarUrl = localStorage.getItem('userAvatar') || 'https://picsum.photos/id/1025/200/200';
+    avatarEl.src = avatarUrl;
+}
+
+function initMyMapsNavButtons() {
+    const mapsBtn = document.getElementById('mymaps-nav-maps');
+    const profileBtn = document.getElementById('mymaps-nav-profile');
+
+    if (mapsBtn) {
+        mapsBtn.addEventListener('click', () => {
+            window.location.href = '/maps';
+        });
+    }
+
+    if (profileBtn) {
+        profileBtn.addEventListener('click', () => {
+            window.location.href = '/profile';
+        });
+    }
+
+    setMyMapsProfileAvatar();
+}
+
+// Whenever content updates dynamically (AJAX routing), call initCharacter.
+if (document.readyState === 'complete' || document.readyState === 'interactive') {
+    setTimeout(initMyMapsNavButtons, 0);
+} else {
+    document.addEventListener('DOMContentLoaded', initMyMapsNavButtons);
+}
+
 document.addEventListener('input', (event) => {
     if (event.target.id === 'mymaps-search') filterAndSortMyMaps();
 });
@@ -91,6 +124,19 @@ document.addEventListener('click', (event) => {
     }
     if (sortDropdown && !sortDropdown.classList.contains('hidden') && !event.target.closest('.mymaps-sort-box')) {
         sortDropdown.classList.add('hidden');
+    }
+
+    // --- NAV BUTTONS ---
+    const mapsNav = event.target.closest('#mymaps-nav-maps');
+    if (mapsNav) {
+        window.location.href = '/maps';
+        return;
+    }
+
+    const profileNav = event.target.closest('#mymaps-nav-profile');
+    if (profileNav) {
+        window.location.href = '/profile';
+        return;
     }
 
     // --- MAP ACTIONS ---

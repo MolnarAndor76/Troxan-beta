@@ -128,8 +128,17 @@
     </section>
 
     <section id="basesite-tab-lore" class="basesite-tab-content basesite-hidden">
-      <h2 class="basesite-title-sub">Troxan veszélyben van!</h2>
-      <p class="basesite-text">Lorem ipsum dolor sit amet consectetur adipisicing elit. Dolores numquam eaque at, obcaecati, veritatis inventore possimus voluptatibus officiis exercitationem laborum corporis voluptates itaque voluptas quia delectus libero quasi? Minus, vel.</p>
+      <h2 class="basesite-title-sub">The fate of troxan</h2>
+      <p class="basesite-text">For centuries, the majestic realm of Troxan was a beacon of absolute peace and prosperity. <br>
+       Joyous laughter echoed through its emerald valleys, and citizens lived in perfect harmony under the wise and benevolent guidance of the High Sovereign. The skies were forever bright, the rivers flowed with crystal-clear waters, and a golden age of tranquility blessed every corner of the kingdom. It was a true paradise, untouched by darkness. <br>
+
+<br> But then, everything changed. <br>
+
+<br> Without warning, a mysterious and devastating plague—a rapidly mutating, corrupted virus—swept across the land like a silent storm. It withered the once-vibrant forests, silenced the joyful streets, and began twisting the realm's peaceful inhabitants into hollow, aggressive husks. No ancient magic could cure it, and no fortress walls could keep the infection at bay. The virus is spreading at an unstoppable rate, consuming the very life force of Troxan. <br>
+
+<br> Now, as the kingdom teeters on the brink of total annihilation, the desperate Sovereign has summoned you. Out of all the warriors and scholars, you are the only one who possesses the resilience to withstand the infection. You have been tasked with the ultimate, perilous mission: venture deep into the heart of the corrupted zones, eradicate the source of the virus, and cleanse the land. <br>
+
+<br> The time for fear is over. You are Troxan's last, shining hope. Will you answer the call and save the realm, or will the darkness consume us all?</p>
     </section>
 
     <section id="basesite-tab-about" class="basesite-tab-content basesite-hidden">

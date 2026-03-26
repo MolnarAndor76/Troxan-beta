@@ -74,9 +74,18 @@ async function loadContent(path) {
     
     if (result.status === "success") {
       appDiv.innerHTML = result.html;
+
+      // Update avatar in myMaps navbar if loaded
+      if (typeof setMyMapsProfileAvatar === 'function') {
+        setMyMapsProfileAvatar();
+      }
+
       if (result.user && result.user.avatar_picture) {
         localStorage.setItem('userAvatar', result.user.avatar_picture);
         updateHeader();
+        if (typeof setMyMapsProfileAvatar === 'function') {
+          setMyMapsProfileAvatar();
+        }
       }
     }
   } catch (error) {
@@ -96,6 +105,23 @@ async function getLeaderboardContent() { await loadContent('leaderboard'); }
 async function getStatisticsContent() { await loadContent('statistics'); }
 async function getEditorContent() { await loadContent('editor'); }
 async function getGuestContent() { await loadContent('guest'); }
+
+// --- DOWNLOAD GOMB KEZELÉS ---
+document.addEventListener('click', function(event) {
+    if (event.target.closest('#basesite-download-game-btn')) {
+        const btn = event.target.closest('#basesite-download-game-btn');
+        const isLoggedIn = btn.getAttribute('data-loggedin') === 'true';
+        
+        if (isLoggedIn) {
+            window.location.href = 'https://github.com/Jogasz/Troxan/releases/download/v0.5.0-alpha/Troxan.rar';
+        } else {
+            getLoginContent();
+        }
+        
+        event.preventDefault();
+        return;
+    }
+});
 
 // --- ROUTER LOGIKA ---
 function getRoute() {

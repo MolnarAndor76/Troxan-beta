@@ -22,6 +22,9 @@
     }
 
     .mymaps-sort-box { @apply relative w-full sm:w-auto; }
+    .mymaps-nav-buttons { @apply flex items-center gap-2; }
+    .mymaps-nav-btn { @apply bg-blue-600 hover:bg-blue-500 text-white font-bold py-2 px-4 rounded-sm border-2 border-blue-950 shadow-[2px_2px_0px_rgba(0,0,0,1)] transition-all hover:translate-y-[1px] hover:shadow-[1px_1px_0px_rgba(0,0,0,1)]; }
+    .mymaps-profile-avatar { @apply w-9 h-9 rounded-full object-cover border-2 border-white; }
     .mymaps-sort-btn {
         @apply sm:w-48 bg-yellow-500 hover:bg-yellow-400 text-orange-950 font-bold py-2.5 px-4 rounded-sm transition-all flex items-center justify-between border-2 border-orange-950 shadow-[3px_3px_0px_rgba(0,0,0,1)] hover:translate-y-[1px] hover:shadow-[1px_1px_0px_rgba(0,0,0,1)] cursor-pointer uppercase tracking-wide;
     }
