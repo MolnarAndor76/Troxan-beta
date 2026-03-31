@@ -4,7 +4,7 @@ console.log("🟢 Maps JS Loaded!");
 window.alertCallback = null;
 window.confirmCallback = null;
 
-const mapUrl = `${window.location.protocol}//${window.location.hostname}/troxan/app/api.php?path=maps`;
+const mapUrl = `/app/api.php?path=maps`;
 
 function showCustomAlert(title, message, type = 'info', callback = null) {
     const modal = document.getElementById('basesite-alert-modal');

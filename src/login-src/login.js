@@ -1,5 +1,5 @@
 //url
-const loginUrl = `${window.location.protocol}//${window.location.hostname}/troxan/app/api.php?path=login`;
+const loginUrl = `/app/api.php?path=login`;
 
 import { updateHeader } from '../main.js';
 
@@ -252,7 +252,7 @@ document.addEventListener('submit', async (event) => {
                 const verificationCode = await showCodeInputModal();
 
                 if (verificationCode) {
-                    const verifyResponse = await fetch(`${window.location.protocol}//${window.location.hostname}/troxan/app/api.php?path=registration`, {
+                    const verifyResponse = await fetch('/app/api.php?path=registration', {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify({

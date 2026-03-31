@@ -1,5 +1,5 @@
 //URL
-const registerUrl = `${window.location.protocol}//${window.location.hostname}/troxan/app/api.php?path=registration`;
+const registerUrl = `/app/api.php?path=registration`;
 
 // Show notification modal
 function showNotification(title, message, callback = null) {

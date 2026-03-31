@@ -1,6 +1,6 @@
 //URL
-const profileUrl = `${window.location.protocol}//${window.location.hostname}/troxan/app/api.php?path=profile`;
-const logoutUrl = `${window.location.protocol}//${window.location.hostname}/troxan/app/api.php?path=logout`;
+const profileUrl = `/app/api.php?path=profile`;
+const logoutUrl = `/app/api.php?path=logout`;
 
 // Globális változók a mi kulturált pop-upjainkhoz
 window.alertCallback = null;
@@ -308,11 +308,11 @@ document.addEventListener('click', async (event) => {
                             logoutMessageEl.innerHTML = `You have been logged out!<br>The site will refresh in <span class="text-red-600 font-black text-2xl">${timeLeft}</span>...`;
                         } else {
                             clearInterval(countdown);
-                            window.location.href = '/'; 
+                            window.location.href = '/login';
                         }
-                    }, 1000); 
+                    }, 1000);
                 } else {
-                    setTimeout(() => { window.location.href = '/'; }, 3000);
+                    setTimeout(() => { window.location.href = '/login'; }, 3000);
                 }
             }
         } catch (error) {

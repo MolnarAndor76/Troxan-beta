@@ -1,8 +1,20 @@
+// ========== VITE BUNDLER: IMPORT AZ ÖSSZES JS MODULNAK ==========
+// Ezek az importok biztosítják, hogy a Vite egyszerű egy nagy index.js fájlra csomagol össze
+import './admin-src/admin.js';
+import './basesite-src/basesite.js';
+import './leaderboard-src/leaderboard.js';
+import './maps-src/maps.js';
+import './myMaps-src/myMaps.js';
+import './login-src/login.js';
+import './register-src/register.js';
+import './profile-src/profile.js';
+import './isBanned-src/isBanned.js';
+
 // --- SESSION ÉS HEADER FRISSÍTÉS ---
 export function updateHeader() {
   const loginLink = document.querySelector('a[href="/login"]');
   const existingProfile = document.getElementById('go-to-profile');
-  
+
   const username = localStorage.getItem('username');
   const isLoggedIn = localStorage.getItem('isLoggedIn') === 'true';
   const userAvatar = localStorage.getItem('userAvatar') || 'https://picsum.photos/id/1025/200/200';
@@ -14,7 +26,7 @@ export function updateHeader() {
       profileNav.className = 'user-profile-nav troxan-nav-link';
       profileNav.style.cssText = 'cursor:pointer; display:flex; align-items:center;';
       profileNav.id = 'go-to-profile';
-      
+
       profileNav.innerHTML = `
               <img src="${userAvatar}" class="nav-avatar" style="width:35px; height:35px; border-radius:50%; border:2px solid white; transition: transform 0.2s;" onmouseover="this.style.transform='scale(1.1)'" onmouseout="this.style.transform='scale(1)'" title="${username} profilja">
           `;
@@ -26,7 +38,7 @@ export function updateHeader() {
         window.location.href = '/profile';
       });
     }
-  } 
+  }
   // 2. ÁG: NINCS BELÉPVE -> Visszaállítjuk a Login gombot (ha kint maradt volna a kép)
   else {
     if (existingProfile) {
@@ -46,7 +58,7 @@ async function fetchData(url, options = {}) {
   const fetchOptions = {
     ...options,
     // Ha be van lépve, küldjük a session sütit, ha nincs, nem zavarjuk a szervert vele
-    credentials: isLoggedIn ? 'include' : 'omit', 
+    credentials: isLoggedIn ? 'include' : 'omit',
     headers: {
       ...options.headers,
       "Content-Type": "application/json",
@@ -54,7 +66,7 @@ async function fetchData(url, options = {}) {
   };
 
   const response = await fetch(url, fetchOptions);
-  
+
   if (!response.ok) {
     const errorData = await response.json().catch(() => ({}));
     throw new Error(errorData.message || `HTTP error! Status: ${response.status}`);
@@ -70,8 +82,7 @@ const appDiv = document.querySelector("#main-content");
 async function loadContent(path) {
   try {
     // ITT A JAVÍTÁS: Beletettem az api.php?path= részt!
-    const result = await fetchData(`${window.location.protocol}//${window.location.hostname}/troxan/app/api.php?path=${path}`);
-    
+    const result = await fetchData(`/app/api.php?path=${path}`);
     if (result.status === "success") {
       appDiv.innerHTML = result.html;
 
@@ -106,21 +117,86 @@ async function getStatisticsContent() { await loadContent('statistics'); }
 async function getEditorContent() { await loadContent('editor'); }
 async function getGuestContent() { await loadContent('guest'); }
 
-// --- DOWNLOAD GOMB KEZELÉS ---
-document.addEventListener('click', function(event) {
-    if (event.target.closest('#basesite-download-game-btn')) {
-        const btn = event.target.closest('#basesite-download-game-btn');
-        const isLoggedIn = btn.getAttribute('data-loggedin') === 'true';
-        
-        if (isLoggedIn) {
-            window.location.href = 'https://github.com/Jogasz/Troxan/releases/download/v0.5.0-alpha/Troxan.rar';
-        } else {
-            getLoginContent();
-        }
-        
-        event.preventDefault();
-        return;
+// --- CENTRAL NAVIGÁCIÓ ÉS ACTION EVENT DELEGATION ---
+const logoutUrl = '/app/api.php?path=logout';
+
+async function performLogout() {
+  try {
+    await fetch(logoutUrl, { method: 'POST', credentials: 'include' });
+  } catch (err) {
+    console.warn('Logout API hívás sikertelen, továbblépünk így is.', err);
+  }
+  localStorage.clear();
+  window.location.href = '/login';
+}
+
+function routePathToRouteName(path) {
+  const clean = (path || '/').replace(/\/+/g, '/').replace(/^\//, '').replace(/\/$/, '');
+  return clean || 'main';
+}
+
+function loadRoute(routeName) {
+  const isLoggedIn = localStorage.getItem('isLoggedIn') === 'true';
+  switch (routeName) {
+    case 'main': getMainPageContent(); break;
+    case 'maps': isLoggedIn ? getMapsContent() : getGuestContent(); break;
+    case 'my_maps': isLoggedIn ? getMyMapsContent() : getGuestContent(); break;
+    case 'editor': isLoggedIn ? getEditorContent() : getGuestContent(); break;
+    case 'login': getLoginContent(); break;
+    case 'registration': getRegistrationContent(); break;
+    case 'admin': isLoggedIn ? getAdminContent() : getGuestContent(); break;
+    case 'profile': isLoggedIn ? getProfileContent() : getLoginContent(); break;
+    case 'leaderboard': getLeaderboardContent(); break;
+    case 'statistics': getStatisticsContent(); break;
+    case 'guest': getGuestContent(); break;
+    default: getMainPageContent(); break;
+  }
+}
+
+function navigateTo(routeName, pushState = true) {
+  if (pushState) {
+    const newPath = routeName === 'main' ? '/' : `/${routeName}`;
+    history.pushState({ route: routeName }, '', newPath);
+  }
+  loadRoute(routeName);
+}
+
+document.addEventListener('popstate', (event) => {
+  const routeName = (event.state && event.state.route) ? event.state.route : routePathToRouteName(window.location.pathname);
+  loadRoute(routeName);
+});
+
+document.addEventListener('click', function (event) {
+  const downloadBtn = event.target.closest('#basesite-download-game-btn');
+  const logoutBtn = event.target.closest('#profile-log-out') || event.target.closest('#isBanned-logout-btn') || event.target.closest('[data-action="logout"]');
+
+  if (downloadBtn) {
+    const isLoggedIn = downloadBtn.getAttribute('data-loggedin') === 'true';
+    event.preventDefault();
+    if (isLoggedIn) {
+      window.location.href = 'https://github.com/Jogasz/Troxan/releases/download/v0.5.0-alpha/Troxan.rar';
+    } else {
+      navigateTo('login');
     }
+    return;
+  }
+
+  if (logoutBtn) {
+    event.preventDefault();
+    performLogout();
+    return;
+  }
+
+  const link = event.target.closest('a[href^="/"]');
+  if (link && !link.hasAttribute('download') && link.target !== '_blank' && !link.closest('[data-no-spa]')) {
+    const href = link.getAttribute('href');
+    if (!href.startsWith('/app/') && !href.startsWith('/<?')) {
+      event.preventDefault();
+      const routeName = routePathToRouteName(href);
+      navigateTo(routeName);
+      return;
+    }
+  }
 });
 
 // --- ROUTER LOGIKA ---
@@ -136,62 +212,5 @@ document.addEventListener('DOMContentLoaded', () => {
   // 1. Frissítjük a fejlécet a mentett adatok alapján
   updateHeader();
 
-  const route = getRoute();
-  const isLoggedIn = localStorage.getItem('isLoggedIn') === 'true';
-
-  // 2. Útvonalválasztó védelemmel
-switch (route) {
-    case "main": 
-      // A főoldalt bárki láthatja, nem kell isLoggedIn csekk!
-      getMainPageContent(); 
-      break;
-    
-    case "maps": 
-      if (isLoggedIn) getMapsContent(); 
-      else getGuestContent(); // Ha ide akarnak jönni belépés nélkül, akkor jön a vár!
-      break;
-        case "my_maps": 
-      if (isLoggedIn) getMyMapsContent(); 
-      else getGuestContent(); // Ha ide akarnak jönni belépés nélkül, akkor jön a vár!
-      break;
-    case "editor": 
-      if (isLoggedIn) getEditorContent(); 
-      else getGuestContent();
-      break;
-
-    case "login": 
-      getLoginContent(); 
-      break;
-    
-    case "registration": 
-      getRegistrationContent(); 
-      break;
-
-    case "admin":
-      if (isLoggedIn) getAdminContent();
-      else getGuestContent();
-      break;
-    
-    case "profile": 
-      if (isLoggedIn) getProfileContent(); 
-      else getLoginContent();
-      break;
-
-    case "leaderboard": 
-      getLeaderboardContent(); 
-      break;
-    
-    case "statistics": 
-      getStatisticsContent(); 
-      break;
-
-    case "guest":
-      getGuestContent();
-      break;
-
-    default: 
-      // Ha eltévedt a júzer, alapból a főoldalt kapja
-      getMainPageContent(); 
-      break;
-  }
+  loadRoute(getRoute());
 });

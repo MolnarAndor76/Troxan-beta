@@ -1,6 +1,6 @@
 
 console.log("🟢 My Maps JS Loaded!");
-const myMapUrl = `${window.location.protocol}//${window.location.hostname}/troxan/app/api.php?path=my_maps`;
+const myMapUrl = `/app/api.php?path=my_maps`;
 
 // ==========================================
 // 1. LIVE SEARCH & SORT 

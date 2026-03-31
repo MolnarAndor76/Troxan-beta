@@ -1,5 +1,5 @@
 //url
-const logoutUrl = `${window.location.protocol}//${window.location.hostname}/troxan/app/api.php?path=logout`;
+const logoutUrl = `/app/api.php?path=logout`;
 
 document.addEventListener('click', (event) => {
 
@@ -14,8 +14,7 @@ document.addEventListener('click', (event) => {
             .then(data => {
                 if (data.status === 'success') {
                     localStorage.clear(); // Mindent takarítsunk ki!
-                    // FIX: Ne fix URL, csak a gyökérkönyvtár!
-                    window.location.href = '/';
+                    window.location.href = '/login';
                 } else {
                     alert("Hiba: " + data.message);
                 }
@@ -24,9 +23,7 @@ document.addEventListener('click', (event) => {
                 console.error('Logout error:', err);
                 // Hiba esetén is takarítsunk ki és dobjuk ki a júzert
                 localStorage.clear();
-                
-                // ITT A CSERE: A localhost helyett dinamikusan a gyökérre dobjuk!
-                window.location.href = '/'; 
+                window.location.href = '/login'; 
             });
 
         return;

@@ -110,7 +110,7 @@ document.addEventListener('click', async (event) => {
     const fetchConfig = (bodyData) => ({
         method: 'POST', credentials: 'include', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(bodyData)
     });
-    const apiUrl = `${window.location.protocol}//${window.location.hostname}/troxan/app/api.php?path=main`; 
+    const apiUrl = '/app/api.php?path=main';
 
     // --- 0. LAKAT (Toggle Lock - Csak Engineer) ---
     const lockBtn = event.target.closest('.patch-lock-btn');

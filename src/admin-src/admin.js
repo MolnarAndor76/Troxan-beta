@@ -3,7 +3,7 @@ console.log("🟢 Admin JS Betöltve és harcra kész!");
 // ==========================================
 // 0. GLOBÁLIS VÁLTOZÓK ÉS UTILITIES
 // ==========================================
-const adminUrl = `${window.location.protocol}//${window.location.hostname}/troxan/app/api.php?path=admin`;
+const adminUrl = `/app/api.php?path=admin`;
 
 window.alertCallback = null;
 window.confirmCallback = null;
@@ -245,7 +245,7 @@ document.addEventListener('click', function(event) {
         if (typeof window.loadContent === 'function') {
             window.loadContent('profile');
         } else {
-            window.location.href = '/troxan/index.html#profile';
+            window.location.href = '/profile';
         }
         return;
     }
