@@ -86,7 +86,7 @@ function getContent()
     }
 }
 
-function handlePostActions()
+function handlePostActionsLegacy()
 {
     global $pdo;
 
@@ -296,6 +296,141 @@ function handlePostActions()
     }
 }
 
+function updateProfile()
+{
+    global $pdo;
+
+    if (!isset($_SESSION['user_id'])) {
+        json_response(["status" => "error", "message" => "Nincs jogosultságod!"], 401);
+        return;
+    }
+
+    $input = json_decode(file_get_contents("php://input"), true) ?: $_POST;
+    $userId = $_SESSION['user_id'];
+    $updates = [];
+    $params = [];
+
+    try {
+        // Avatar change
+        if (isset($input['avatar_id'])) {
+            $avatar_id = (int)$input['avatar_id'];
+            if ($avatar_id <= 0) {
+                json_response(["status" => "error", "message" => "Érvénytelen avatar azonosító!"], 400);
+            }
+            $updates[] = "avatar_id = ?";
+            $params[] = $avatar_id;
+        }
+
+        // Username change
+        if (isset($input['username'])) {
+            $newUsername = trim($input['username']);
+            if (empty($newUsername)) {
+                json_response(["status" => "error", "message" => "A név nem lehet üres!"], 400);
+            }
+
+            if (strtolower($newUsername) === strtolower($_SESSION['username'])) {
+                json_response(["status" => "error", "message" => "Same username!"], 400);
+            }
+
+            if (strlen($newUsername) < 7 || strlen($newUsername) > 16) {
+                json_response(["status" => "error", "message" => "A névnek 7 és 16 karakter között kell lennie!"], 400);
+            }
+
+            $checkName = $pdo->prepare("SELECT 1 FROM `User` WHERE username = ? AND user_id != ?");
+            $checkName->execute([$newUsername, $userId]);
+            if ($checkName->fetchColumn()) {
+                json_response(["status" => "error", "message" => "Ez a név már foglalt!"], 409);
+            }
+
+            $updates[] = "username = ?";
+            $params[] = $newUsername;
+            $_SESSION['username'] = $newUsername;
+        }
+
+        // Password change
+        if (isset($input['old_password']) || isset($input['new_password']) || isset($input['confirm_password'])) {
+            $oldPass = $input['old_password'] ?? '';
+            $newPass = $input['new_password'] ?? '';
+            $confirmPass = $input['confirm_password'] ?? '';
+
+            if (empty($oldPass) || empty($newPass) || empty($confirmPass)) {
+                json_response(["status" => "error", "message" => "Please fill in all fields!"], 400);
+            }
+
+            if ($newPass !== $confirmPass) {
+                json_response(["status" => "error", "message" => "New passwords do not match!"], 400);
+            }
+
+            if (strlen($newPass) < 8) {
+                json_response(["status" => "error", "message" => "New password must be at least 8 characters long!"], 400);
+            }
+
+            $stmt = $pdo->prepare("SELECT password FROM `User` WHERE user_id = ?");
+            $stmt->execute([$userId]);
+            $userData = $stmt->fetch(PDO::FETCH_ASSOC);
+
+            if (!$userData || !password_verify($oldPass, $userData['password'])) {
+                json_response(["status" => "error", "message" => "Incorrect current password!"], 400);
+            }
+
+            $newHashedPass = password_hash($newPass, PASSWORD_DEFAULT);
+            $updates[] = "password = ?";
+            $params[] = $newHashedPass;
+        }
+
+        if (empty($updates)) {
+            json_response(["status" => "error", "message" => "Nothing to update."], 400);
+        }
+
+        $params[] = $userId;
+        $sql = "UPDATE `User` SET " . implode(', ', $updates) . " WHERE user_id = ?";
+        $stmt = $pdo->prepare($sql);
+        $stmt->execute($params);
+
+        json_response(["status" => "success", "message" => "Profile updated successfully."], 200);
+    } catch (Exception $e) {
+        json_response(["status" => "error", "message" => "SQL hiba: " . $e->getMessage()], 500);
+    }
+}
+
+function deleteProfile()
+{
+    global $pdo;
+
+    if (!isset($_SESSION['user_id'])) {
+        json_response(["status" => "error", "message" => "Nincs jogosultságod!"], 401);
+        return;
+    }
+
+    $userId = $_SESSION['user_id'];
+
+    try {
+        $stmt = $pdo->prepare("DELETE FROM `User` WHERE user_id = ?");
+        $stmt->execute([$userId]);
+
+        session_unset();
+        session_destroy();
+
+        json_response(["status" => "success", "message" => "Felhasználói fiók törölve."], 200);
+    } catch (Exception $e) {
+        json_response(["status" => "error", "message" => "SQL hiba: " . $e->getMessage()], 500);
+    }
+}
+
+function handlePostActions()
+{
+    $input = json_decode(file_get_contents("php://input"), true) ?: $_POST;
+
+    if (isset($input['action']) && !empty($input['action'])) {
+        // legacy action-based POST
+        handlePostActionsLegacy();
+        return;
+    }
+
+    // RESTful fallback: treat POST as update for compatibility
+    updateProfile();
+}
+
 // ==========================================
 // ROUTING
 // ==========================================
@@ -305,6 +440,15 @@ switch ($data["method"]) {
         break;
     case 'POST':
         handlePostActions();
+        break;
+    case 'PUT':
+        updateProfile();
+        break;
+    case 'PATCH':
+        handlePostActionsLegacy();
+        break;
+    case 'DELETE':
+        deleteProfile();
         break;
     default:
         json_response(["status" => "error", "message" => "Method not allowed"], 405);

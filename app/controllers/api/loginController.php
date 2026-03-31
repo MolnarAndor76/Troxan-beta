@@ -250,22 +250,41 @@ function forgotPassword($input) {
     }
 }
 
-// Router logic
+// Router logic (RESTful endpoint behavior)
 $input = json_decode(file_get_contents("php://input"), true) ?: $_POST;
 
 switch ($data["method"]) {
-    case 'GET': 
-        getContent(); 
+    case 'GET':
+        getContent();
         break;
-    case 'POST': 
-        // Check for 'action' flag. If 'forgot_password', route to that function
+
+    case 'POST':
+        // POST /api/login = authenticate
         if (isset($input['action']) && $input['action'] === 'forgot_password') {
             forgotPassword($input);
         } elseif (isset($input['action']) && $input['action'] === 'force_password_change') {
             forcePasswordChange($input);
         } else {
-            loginUser($input); 
+            loginUser($input);
         }
+        break;
+
+    case 'PUT':
+        // PUT /api/login = password update action (restful form)
+        if (isset($input['action']) && $input['action'] === 'force_password_change') {
+            forcePasswordChange($input);
+        } else {
+            method_not_allowed();
+        }
+        break;
+
+    case 'DELETE':
+        // DELETE /api/login is not used; use /api/logout
+        json_response(["status" => "error", "message" => "Use /api/logout to end session."], 405);
+        break;
+
+    default:
+        method_not_allowed();
         break;
 }
 ?>

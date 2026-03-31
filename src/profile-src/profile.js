@@ -221,7 +221,7 @@ document.addEventListener('click', async (event) => {
         showCustomPrompt("Change Username", "7-16 characters", (newName) => {
             if (newName && newName.trim() !== '') {
                 fetch(profileUrl, {
-                    method: 'POST', credentials: 'include', headers: { 'Content-Type': 'application/json' },
+                    method: 'PATCH', credentials: 'include', headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ action: 'change_username', new_username: newName.trim() })
                 })
                 .then(res => res.text())

@@ -174,12 +174,14 @@ function registerUser()
     }
 }
 
-// Router logic based on HTTP method
+// Router logic based on HTTP method (RESTful)
 switch ($data["method"]) {
     case 'GET':
         getContent();
         break;
+
     case 'POST':
+        // POST /api/registration = new account
         $input = json_decode(file_get_contents("php://input"), true) ?: $_POST;
         if (isset($input['action']) && $input['action'] === 'verify_code') {
             verifyRegistrationCode();
@@ -187,6 +189,17 @@ switch ($data["method"]) {
             registerUser();
         }
         break;
+
+    case 'PUT':
+        // PUT /api/registration = verify code (RESTful update)
+        verifyRegistrationCode();
+        break;
+
+    case 'DELETE':
+        // Not supported here, operate on profile API
+        json_response(["status" => "error", "message" => "Method not allowed"], 405);
+        break;
+
     default:
         json_response(["status" => "error", "message" => "Method not allowed"], 405);
         break;

@@ -1,0 +1,18 @@
+<IfModule mod_rewrite.c>
+    RewriteEngine On
+    RewriteBase /
+
+    # API kérések a backend felé továbbítva
+    RewriteCond %{REQUEST_URI} ^/api(/.*)?$ [OR]
+    RewriteCond %{REQUEST_URI} ^/app/api.php
+    RewriteRule ^app/api.php$ /app/api.php [L,QSA]
+    RewriteRule ^api/(.*)$ /app/api.php?path=$1 [L,QSA]
+
+    # Létező fájl vagy könyvtár esetén nincs átirányítás
+    RewriteCond %{REQUEST_FILENAME} -f [OR]
+    RewriteCond %{REQUEST_FILENAME} -d
+    RewriteRule ^ - [L]
+
+    # SPA útvonalok: minden más kérést index.html-re irányítunk
+    RewriteRule ^ /index.html [L]
+</IfModule>
