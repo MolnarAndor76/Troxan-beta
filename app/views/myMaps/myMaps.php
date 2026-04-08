@@ -37,6 +37,7 @@
               <?php 
                 $isCreatorEngineer = ($map['creator_role'] === 'Engineer');
                 $isMyMap = ($myUserId == $map['creator_user_id']);
+                $canRenameMap = $isMyMap || $isStaff;
                 $cardBorderClass = $isCreatorEngineer ? 'border-cyan-900 shadow-cyan-900/50' : 'border-orange-950 shadow-[2px_2px_0px_#000]';
                 $nameClass = $isCreatorEngineer ? 'text-cyan-950' : 'text-orange-950';
 
@@ -67,7 +68,11 @@
                   </p>
                   
                   <div class="mymaps-btns-stats mt-2 flex justify-between items-center w-full gap-2 p-2 bg-orange-950/30 rounded-sm border border-orange-950/50">
-                    <button class="mymaps-edit-btn bg-blue-600 hover:bg-blue-500 text-white font-extrabold py-1.5 px-3 border-2 border-blue-950 rounded-sm shadow-[2px_2px_0px_#000] text-xs uppercase" data-mapid="<?= $map['id'] ?>">Edit</button>
+                    <?php if ($canRenameMap): ?>
+                        <button class="mymaps-edit-btn bg-blue-600 hover:bg-blue-500 text-white font-extrabold py-1.5 px-3 border-2 border-blue-950 rounded-sm shadow-[2px_2px_0px_#000] text-xs uppercase" data-mapid="<?= $map['id'] ?>">Edit</button>
+                    <?php else: ?>
+                        <button class="mymaps-edit-locked-btn bg-gray-500 text-white font-extrabold py-1.5 px-3 border-2 border-gray-900 rounded-sm shadow-[2px_2px_0px_#000] text-xs uppercase cursor-not-allowed" data-mapid="<?= $map['id'] ?>" title="Only the creator or staff can rename this map">🔒</button>
+                    <?php endif; ?>
                     
                     <?php if ($isMyMap): ?>
                         <?php if ($map['status'] == 1): ?>
@@ -86,5 +91,46 @@
         </div>
       </div>
     </section>
+  </div>
+</div>
+
+<div id="mymaps-alert-modal" class="hidden fixed inset-0 z-[9998] items-center justify-center">
+  <div class="absolute inset-0 bg-black/80"></div>
+  <div class="relative z-10 w-[90%] max-w-[400px] bg-orange-50 border-4 border-orange-950 p-6 rounded-xl shadow-[8px_8px_0px_rgba(0,0,0,1)] flex flex-col">
+    <button id="mymaps-alert-close-btn" class="absolute top-3 right-4 text-3xl text-orange-950 font-black cursor-pointer hover:text-red-600 transition-colors z-20">✖</button>
+    <div id="mymaps-alert-header" class="border-b-4 border-orange-950 pb-2 mb-4">
+      <h2 id="mymaps-alert-title" class="text-xl font-bold text-orange-950">Notice</h2>
+    </div>
+    <p id="mymaps-alert-message" class="text-lg font-bold text-gray-800 my-4">Message</p>
+    <button id="mymaps-alert-ok-btn" class="bg-yellow-500 hover:bg-yellow-400 text-orange-950 font-extrabold py-2 px-8 rounded border-2 border-orange-950 shadow-[3px_3px_0px_rgba(0,0,0,1)] transition-transform hover:translate-y-1 cursor-pointer self-center mt-4">OK</button>
+  </div>
+</div>
+
+<div id="mymaps-confirm-modal" class="hidden fixed inset-0 z-[9999] items-center justify-center">
+  <div class="absolute inset-0 bg-black/80"></div>
+  <div class="relative z-10 w-[90%] max-w-[420px] bg-orange-50 border-4 border-orange-950 p-6 rounded-xl shadow-[8px_8px_0px_rgba(0,0,0,1)] flex flex-col">
+    <button id="mymaps-confirm-close-btn" class="absolute top-3 right-4 text-3xl text-orange-950 font-black cursor-pointer hover:text-red-600 transition-colors z-20">✖</button>
+    <div id="mymaps-confirm-header" class="border-b-4 border-red-950 pb-2 mb-4">
+      <h2 id="mymaps-confirm-title" class="text-xl font-bold text-red-600">Confirmation</h2>
+    </div>
+    <p id="mymaps-confirm-message" class="text-lg font-bold text-gray-800 my-4">Are you sure?</p>
+    <div class="flex justify-center gap-4 mt-6">
+      <button id="mymaps-confirm-cancel-btn" class="bg-gray-500 hover:bg-gray-400 text-white font-extrabold py-2 px-6 rounded border-2 border-gray-900 shadow-[3px_3px_0px_rgba(0,0,0,1)] transition-transform hover:translate-y-1 cursor-pointer">Cancel</button>
+      <button id="mymaps-confirm-ok-btn" class="bg-red-600 hover:bg-red-500 text-white font-extrabold py-2 px-6 rounded border-2 border-red-900 shadow-[3px_3px_0px_rgba(0,0,0,1)] transition-transform hover:translate-y-1 cursor-pointer">Confirm</button>
+    </div>
+  </div>
+</div>
+
+<div id="mymaps-rename-modal" class="hidden fixed inset-0 z-[10000] items-center justify-center">
+  <div class="absolute inset-0 bg-black/80"></div>
+  <div class="relative z-10 w-[90%] max-w-[460px] bg-orange-50 border-4 border-orange-950 p-6 rounded-xl shadow-[8px_8px_0px_rgba(0,0,0,1)] flex flex-col">
+    <button id="mymaps-rename-close-btn" class="absolute top-3 right-4 text-3xl text-orange-950 font-black cursor-pointer hover:text-red-600 transition-colors z-20">✖</button>
+    <h2 class="text-lg font-bold text-orange-950 mb-3">Rename Map</h2>
+    <p class="text-sm text-orange-900 mb-2">Current name: <span id="mymaps-rename-old-name" class="font-bold"></span></p>
+    <input id="mymaps-rename-input" type="text" class="w-full border border-orange-950 rounded p-2 mb-3" placeholder="New map name">
+    <div class="flex justify-end gap-3 mt-1">
+      <button id="mymaps-rename-cancel-btn" class="bg-gray-500 hover:bg-gray-400 text-white font-extrabold py-2 px-6 rounded border-2 border-gray-900 shadow-[3px_3px_0px_rgba(0,0,0,1)] transition-transform hover:translate-y-1 cursor-pointer">Cancel</button>
+      <button id="mymaps-rename-save-btn" class="bg-blue-600 hover:bg-blue-500 text-white font-extrabold py-2 px-6 rounded border-2 border-blue-950 shadow-[3px_3px_0px_rgba(0,0,0,1)] transition-transform hover:translate-y-1 cursor-pointer">Save</button>
+    </div>
   </div>
 </div>

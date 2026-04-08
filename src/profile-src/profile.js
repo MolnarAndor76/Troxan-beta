@@ -218,7 +218,7 @@ document.addEventListener('click', async (event) => {
         const currentSettingsModal = event.target.closest('.fixed.inset-0');
         profileCloseModal(currentSettingsModal);
         
-        showCustomPrompt("Change Username", "7-16 characters", (newName) => {
+        showCustomPrompt("Change Username", "4-12 characters", (newName) => {
             if (newName && newName.trim() !== '') {
                 fetch(profileUrl, {
                     method: 'PATCH', credentials: 'include', headers: { 'Content-Type': 'application/json' },
@@ -316,7 +316,7 @@ document.addEventListener('click', async (event) => {
                 }
             }
         } catch (error) {
-            console.error("Hiba a kijelentkezés során:", error);
+            console.error("Error during logout:", error);
         }
         return;
     }
@@ -348,7 +348,7 @@ document.addEventListener('click', async (event) => {
                     body: JSON.stringify({ action: 'change_avatar', avatar_id: selectedAvatarId })
                 });
             } catch (error) {
-                console.error("Hálózati hiba:", error);
+                console.error("Network error:", error);
             }
         }
         return;

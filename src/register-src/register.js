@@ -56,8 +56,8 @@ document.addEventListener('submit', async (event) => {
         const data = Object.fromEntries(formData.entries());
 
         // Front-end validation (to alert before sending)
-        if (data.username.length > 16 || !/^[a-zA-Z0-9]+$/.test(data.username)) {
-            showNotification("Error", "Username must be alphanumeric and max 16 characters!");
+        if (data.username.length < 4 || data.username.length > 12 || !/^[a-zA-Z0-9]+$/.test(data.username)) {
+            showNotification("Error", "Username must be alphanumeric and 4-12 characters long!");
             return;
         }
         if (data.password.length < 8) {

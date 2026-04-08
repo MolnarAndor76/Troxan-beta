@@ -13,14 +13,17 @@ import './isBanned-src/isBanned.js';
 // --- SESSION ÉS HEADER FRISSÍTÉS ---
 export function updateHeader() {
   const loginLink = document.querySelector('a[href="/login"]');
+  const mobileLoginLink = document.querySelector('#mobile-menu a[href="/login"]');
   const existingProfile = document.getElementById('go-to-profile');
+  const existingMobileProfile = document.getElementById('go-to-profile-mobile');
 
   const username = localStorage.getItem('username');
   const isLoggedIn = localStorage.getItem('isLoggedIn') === 'true';
   const userAvatar = localStorage.getItem('userAvatar') || 'https://picsum.photos/id/1025/200/200';
 
-  // 1. ÁG: BE VAN LÉPVE -> Profilkép megjelenítése
+  // 1. ÁG: BE VAN LÉPVE -> Desktop: Profilkép, Mobile: Profile gomb
   if (isLoggedIn && username) {
+    // DESKTOP MENÜ
     if (!existingProfile && loginLink) {
       const profileNav = document.createElement('div');
       profileNav.className = 'user-profile-nav troxan-nav-link';
@@ -34,12 +37,22 @@ export function updateHeader() {
       loginLink.replaceWith(profileNav);
 
       profileNav.addEventListener('click', () => {
-        // Mivel SPA, itt is használhatnád a routert, de a reload biztosabb
         window.location.href = '/profile';
       });
     }
+
+    // MOBILE MENÜ
+    if (!existingMobileProfile && mobileLoginLink) {
+      const mobileProfileBtn = document.createElement('a');
+      mobileProfileBtn.href = '/profile';
+      mobileProfileBtn.className = 'troxan-nav-link';
+      mobileProfileBtn.id = 'go-to-profile-mobile';
+      mobileProfileBtn.innerText = 'Profile';
+
+      mobileLoginLink.replaceWith(mobileProfileBtn);
+    }
   }
-  // 2. ÁG: NINCS BELÉPVE -> Visszaállítjuk a Login gombot (ha kint maradt volna a kép)
+  // 2. ÁG: NINCS BELÉPVE -> Visszaállítjuk a Login gombot
   else {
     if (existingProfile) {
       const originalLogin = document.createElement('a');
@@ -47,6 +60,14 @@ export function updateHeader() {
       originalLogin.className = 'troxan-nav-link';
       originalLogin.innerText = 'Login';
       existingProfile.replaceWith(originalLogin);
+    }
+
+    if (existingMobileProfile) {
+      const originalMobileLogin = document.createElement('a');
+      originalMobileLogin.href = '/login';
+      originalMobileLogin.className = 'troxan-nav-link';
+      originalMobileLogin.innerText = 'Login';
+      existingMobileProfile.replaceWith(originalMobileLogin);
     }
   }
 }
@@ -67,6 +88,12 @@ async function fetchData(url, options = {}) {
 
   const response = await fetch(url, fetchOptions);
 
+  if (response.status === 401) {
+    clearClientAuthState();
+    navigateTo('login');
+    throw new Error('Session expired. Please log in again.');
+  }
+
   if (!response.ok) {
     const errorData = await response.json().catch(() => ({}));
     throw new Error(errorData.message || `HTTP error! Status: ${response.status}`);
@@ -79,12 +106,58 @@ async function fetchData(url, options = {}) {
 const appDiv = document.querySelector("#main-content");
 // 1. Dinamikusan összerakjuk a szerver URL-jét (IP/Domain + mappa)
 
+function clearClientAuthState() {
+  localStorage.removeItem('isLoggedIn');
+  localStorage.removeItem('username');
+  localStorage.removeItem('userAvatar');
+}
+
+async function syncAuthStateWithServer() {
+  try {
+    const response = await fetch('/app/api.php?path=profile', {
+      method: 'GET',
+      credentials: 'include',
+      headers: { 'Content-Type': 'application/json' }
+    });
+
+    const data = await response.json().catch(() => null);
+
+    if (!response.ok || !data) {
+      clearClientAuthState();
+      return;
+    }
+
+    if (data.status === 'success' && data.message === 'Redirected to guest') {
+      clearClientAuthState();
+    }
+  } catch (error) {
+    clearClientAuthState();
+  }
+}
+
+function fillClientLastUpdatedFields() {
+  const now = new Date();
+  const y = now.getFullYear();
+  const m = String(now.getMonth() + 1).padStart(2, '0');
+  const d = String(now.getDate()).padStart(2, '0');
+  const h = String(now.getHours()).padStart(2, '0');
+  const min = String(now.getMinutes()).padStart(2, '0');
+  const formatted = `${y}.${m}.${d} ${h}:${min}`;
+
+  const leaderboardEl = document.getElementById('leaderboard-last-updated-time');
+  if (leaderboardEl) leaderboardEl.textContent = formatted;
+
+  const profileEl = document.getElementById('profile-last-updated-time');
+  if (profileEl) profileEl.textContent = formatted;
+}
+
 async function loadContent(path) {
   try {
     // ITT A JAVÍTÁS: Beletettem az api.php?path= részt!
     const result = await fetchData(`/app/api.php?path=${path}`);
     if (result.status === "success") {
       appDiv.innerHTML = result.html;
+      fillClientLastUpdatedFields();
 
       // Update avatar in myMaps navbar if loaded
       if (typeof setMyMapsProfileAvatar === 'function') {
@@ -114,7 +187,6 @@ async function getProfileContent() { await loadContent('profile'); }
 async function getAdminContent() { await loadContent('admin'); }
 async function getLeaderboardContent() { await loadContent('leaderboard'); }
 async function getStatisticsContent() { await loadContent('statistics'); }
-async function getEditorContent() { await loadContent('editor'); }
 async function getGuestContent() { await loadContent('guest'); }
 
 // --- CENTRAL NAVIGÁCIÓ ÉS ACTION EVENT DELEGATION ---
@@ -124,7 +196,7 @@ async function performLogout() {
   try {
     await fetch(logoutUrl, { method: 'POST', credentials: 'include' });
   } catch (err) {
-    console.warn('Logout API hívás sikertelen, továbblépünk így is.', err);
+    console.warn('Logout API call failed, continuing anyway.', err);
   }
   localStorage.clear();
   window.location.href = '/login';
@@ -141,7 +213,6 @@ function loadRoute(routeName) {
     case 'main': getMainPageContent(); break;
     case 'maps': isLoggedIn ? getMapsContent() : getGuestContent(); break;
     case 'my_maps': isLoggedIn ? getMyMapsContent() : getGuestContent(); break;
-    case 'editor': isLoggedIn ? getEditorContent() : getGuestContent(); break;
     case 'login': getLoginContent(); break;
     case 'registration': getRegistrationContent(); break;
     case 'admin': isLoggedIn ? getAdminContent() : getGuestContent(); break;
@@ -167,19 +238,7 @@ document.addEventListener('popstate', (event) => {
 });
 
 document.addEventListener('click', function (event) {
-  const downloadBtn = event.target.closest('#basesite-download-game-btn');
-  const logoutBtn = event.target.closest('#profile-log-out') || event.target.closest('#isBanned-logout-btn') || event.target.closest('[data-action="logout"]');
-
-  if (downloadBtn) {
-    const isLoggedIn = downloadBtn.getAttribute('data-loggedin') === 'true';
-    event.preventDefault();
-    if (isLoggedIn) {
-      window.location.href = 'https://github.com/Jogasz/Troxan/releases/download/v0.5.0-alpha/Troxan.rar';
-    } else {
-      navigateTo('login');
-    }
-    return;
-  }
+  const logoutBtn = event.target.closest('[data-action="logout"]');
 
   if (logoutBtn) {
     event.preventDefault();
@@ -191,8 +250,13 @@ document.addEventListener('click', function (event) {
   if (link && !link.hasAttribute('download') && link.target !== '_blank' && !link.closest('[data-no-spa]')) {
     const href = link.getAttribute('href');
     if (!href.startsWith('/app/') && !href.startsWith('/<?')) {
-      event.preventDefault();
-      const routeName = routePathToRouteName(href);
+      event.preventDefault();      
+      // Close mobile menu if open
+      const mobileMenu = document.getElementById('mobile-menu');
+      if (mobileMenu && !mobileMenu.classList.contains('hidden')) {
+        mobileMenu.classList.add('hidden');
+      }
+            const routeName = routePathToRouteName(href);
       navigateTo(routeName);
       return;
     }
@@ -207,10 +271,35 @@ function getRoute() {
   return segments[0] || "main";
 }
 
-// --- INDÍTÁS ---
-document.addEventListener('DOMContentLoaded', () => {
-  // 1. Frissítjük a fejlécet a mentett adatok alapján
-  updateHeader();
+// --- PERIODIKUS SESSION ELLENŐRZÉS (5 percenként) ---
+async function periodicSessionCheck() {
+  const isLoggedIn = localStorage.getItem('isLoggedIn') === 'true';
+  if (!isLoggedIn) return;
 
+  try {
+    const response = await fetch('/app/api.php?path=profile', {
+      method: 'GET',
+      credentials: 'include',
+      headers: { 'Content-Type': 'application/json' }
+    });
+
+    const data = await response.json().catch(() => null);
+
+    if (response.status === 401 || !response.ok || !data || (data.status === 'success' && data.message === 'Redirected to guest')) {
+      clearClientAuthState();
+      navigateTo('login');
+    }
+  } catch (error) {
+    // Hálózati hiba – nem biztonságos kijelentkeztetni, várunk
+  }
+}
+
+// --- INDÍTÁS ---
+document.addEventListener('DOMContentLoaded', async () => {
+  await syncAuthStateWithServer();
+  updateHeader();
   loadRoute(getRoute());
+
+  // Indítjuk a periodikus session ellenőrzést (5 percenként)
+  setInterval(periodicSessionCheck, 5 * 60 * 1000);
 });

@@ -49,7 +49,7 @@
 
     .mymaps-card {
         @apply w-[260px] h-[360px] p-5 flex flex-col items-center justify-between transition-transform duration-300 hover:-translate-y-2;
-        background-image: url('./img/map2card-bg.png');
+        background-image: url('../maps-src/img/map2card-bg.png');
         background-size: 100% 100%;
         background-repeat: no-repeat;
         background-color: transparent;

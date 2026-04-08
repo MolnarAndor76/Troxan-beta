@@ -7,7 +7,7 @@
     </h1>
     
     <p style="font-size: 1.2rem; margin: 20px 0; max-width: 600px; background: rgba(0,0,0,0.5); padding: 20px; border-radius: 10px; border: 2px solid #555;">
-        Login or create an account to enjoy the full <span style="color: #ffcc00; font-weight: bold;">Troxan</span>-experience, including the Editor and Maps features!
+        Login or create an account to enjoy the full <span style="color: #ffcc00; font-weight: bold;">Troxan</span>-experience, including the Maps and other exclusive features!
     </p>
 
     <div style="display: flex; gap: 20px; margin-top: 20px;">

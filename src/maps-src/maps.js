@@ -22,7 +22,7 @@ function showCustomAlert(title, message, type = 'info', callback = null) {
     else titleEl.className = 'text-xl font-bold text-orange-950';
 
     window.alertCallback = callback;
-    modal.classList.remove('hidden');
+    modal.classList.remove('hidden', 'basesite-hidden');
 }
 
 function showCustomConfirm(title, message, type = 'danger', onConfirm = null) {
@@ -48,7 +48,7 @@ function showCustomConfirm(title, message, type = 'danger', onConfirm = null) {
     }
 
     window.confirmCallback = onConfirm;
-    modal.classList.remove('hidden');
+    modal.classList.remove('hidden', 'basesite-hidden');
 }
 
 function filterAndSortMaps() {
@@ -131,17 +131,17 @@ document.addEventListener('click', (event) => {
 
     if (event.target.closest('#basesite-alert-ok-btn') || (event.target.closest('.maps-close-modal') && event.target.closest('#basesite-alert-modal'))) {
         const modal = document.getElementById('basesite-alert-modal');
-        if (modal) { modal.classList.add('hidden'); if (window.alertCallback) { window.alertCallback(); window.alertCallback = null; } }
+        if (modal) { modal.classList.add('hidden', 'basesite-hidden'); if (window.alertCallback) { window.alertCallback(); window.alertCallback = null; } }
         return;
     }
     if (event.target.closest('#basesite-confirm-cancel-btn') || (event.target.closest('.maps-close-modal') && event.target.closest('#basesite-confirm-modal'))) {
         const modal = document.getElementById('basesite-confirm-modal');
-        if (modal) { modal.classList.add('hidden'); window.confirmCallback = null; }
+        if (modal) { modal.classList.add('hidden', 'basesite-hidden'); window.confirmCallback = null; }
         return;
     }
     if (event.target.closest('#basesite-confirm-ok-btn')) {
         const modal = document.getElementById('basesite-confirm-modal');
-        if (modal) { modal.classList.add('hidden'); if (window.confirmCallback) { window.confirmCallback(); window.confirmCallback = null; } }
+        if (modal) { modal.classList.add('hidden', 'basesite-hidden'); if (window.confirmCallback) { window.confirmCallback(); window.confirmCallback = null; } }
         return;
     }
 
@@ -181,14 +181,6 @@ document.addEventListener('click', (event) => {
         }
     }
 
-    const editBtn = event.target.closest('.maps-edit-btn');
-    if (editBtn) {
-        const mapId = editBtn.getAttribute('data-mapid');
-        showCustomAlert("Editor", `Irány az Editor! Pálya ID: ${mapId}`, "info");
-        return;
-    }
-
-    // --- AZ ADD TO LIBRARY GOMB LOGIKA ---
     const addBtn = event.target.closest('.maps-add-btn');
     if (addBtn) {
         event.preventDefault(); // Biztos ami tuti, ne ugorjon el az oldal
@@ -211,23 +203,21 @@ document.addEventListener('click', (event) => {
                         card.setAttribute('data-downloads', current + 1);
                     }
                     
-                    // Gomb "Added" állapotba rakása
+                    // Set button to "Added" state
                     addBtn.classList.replace('bg-green-600', 'bg-gray-500');
                     addBtn.classList.replace('hover:bg-green-500', 'hover:bg-gray-400');
                     addBtn.classList.replace('border-green-950', 'border-gray-950');
                     addBtn.textContent = 'Added ✔️';
-                    addBtn.style.pointerEvents = 'none';
 
-                    showCustomAlert("Siker", data.message, "success");
+                    showCustomAlert("Success", data.message, "success");
                 } else if (data.status === 'info') {
-                    showCustomAlert("Infó", data.message, "info");
+                    showCustomAlert("Info", data.message, "info");
                     addBtn.textContent = 'Added ✔️';
-                    addBtn.style.pointerEvents = 'none';
                 } else {
-                    showCustomAlert("Hiba", data.message, "error");
+                    showCustomAlert("Error", data.message, "error");
                 }
             }).catch(err => {
-                console.error("Fetch hiba történt:", err);
+                console.error("Fetch error occurred:", err);
             });
         }
         return;
@@ -239,7 +229,7 @@ document.addEventListener('click', (event) => {
         const card = deleteBtn.closest('.maps-card');
         const mapName = card.querySelector('.map-name').textContent.trim();
 
-        showCustomConfirm("Törlés megerősítése", `Biztosan törlöd a(z) "${mapName}" nevű pályát?`, "danger", function () {
+        showCustomConfirm("Confirm deletion", `Are you sure you want to delete the map "${mapName}"?`, "danger", function () {
             fetch(mapUrl, {
                 method: 'POST', credentials: 'include', headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ action: 'delete_map', map_id: mapId })
@@ -247,8 +237,8 @@ document.addEventListener('click', (event) => {
                 if (data.status === 'success') {
                     card.style.transition = 'all 0.4s ease'; card.style.opacity = '0'; card.style.transform = 'scale(0.5)';
                     setTimeout(() => card.remove(), 400);
-                    showCustomAlert("Siker", data.message || "Pálya törölve!", "success");
-                } else showCustomAlert("Hiba", data.message, "error");
+                    showCustomAlert("Success", data.message || "Map deleted!", "success");
+                } else showCustomAlert("Error", data.message, "error");
             });
         });
         return;
@@ -261,8 +251,8 @@ document.addEventListener('click', (event) => {
             method: 'POST', credentials: 'include', headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ action: 'restore_map', map_id: mapId })
         }).then(res => res.json()).then(data => {
-            if (data.status === 'success') showCustomAlert("Siker", data.message || "Pálya visszaállítva!", "success", () => window.location.reload());
-            else showCustomAlert("Hiba", data.message, "error");
+            if (data.status === 'success') showCustomAlert("Success", data.message || "Map restored!", "success", () => window.location.reload());
+            else showCustomAlert("Error", data.message, "error");
         });
         return;
     }

@@ -22,9 +22,9 @@ function handleGameStats()
         }
     }
 
-    // Ha még így sincs token:
+    // If no token is still provided:
     if (empty($authHeader) || !preg_match('/Bearer\s(\S+)/', $authHeader, $matches)) {
-        json_response(["status" => "error", "message" => "Hiányzó vagy érvénytelen token! Jelentkezz be újra!"], 401);
+        json_response(["status" => "error", "message" => "Missing or invalid token. Please log in again."], 401);
         return;
     }
 
@@ -37,12 +37,12 @@ function handleGameStats()
         $user = $stmt->fetch(PDO::FETCH_ASSOC);
 
         if (!$user) {
-            json_response(["status" => "error", "message" => "Érvénytelen vagy lejárt token!"], 401);
+            json_response(["status" => "error", "message" => "Invalid or expired token."], 401);
             return;
         }
 
         if ($user['is_banned'] == 1) {
-            json_response(["status" => "error", "message" => "A fiókod ki van tiltva!"], 403);
+            json_response(["status" => "error", "message" => "Your account is banned."], 403);
             return;
         }
 
@@ -57,7 +57,7 @@ function handleGameStats()
         exit();
 
     } catch (Exception $e) {
-        json_response(["status" => "error", "message" => "Adatbázis hiba: " . $e->getMessage()], 500);
+        json_response(["status" => "error", "message" => "Database error: " . $e->getMessage()], 500);
     }
 }
 ?>

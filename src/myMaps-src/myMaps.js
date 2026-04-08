@@ -2,6 +2,82 @@
 console.log("🟢 My Maps JS Loaded!");
 const myMapUrl = `/app/api.php?path=my_maps`;
 
+window.alertCallback = null;
+window.confirmCallback = null;
+let pendingRename = null;
+
+function openModalById(id) {
+    const modal = document.getElementById(id);
+    if (!modal) return;
+    modal.classList.remove('hidden');
+    modal.classList.add('flex');
+}
+
+function closeModalById(id) {
+    const modal = document.getElementById(id);
+    if (!modal) return;
+    modal.classList.add('hidden');
+    modal.classList.remove('flex');
+}
+
+function showCustomAlert(title, message, type = 'info', callback = null) {
+    const modal = document.getElementById('mymaps-alert-modal');
+    if (!modal) {
+        alert(title + ": " + message);
+        if (callback) callback();
+        return;
+    }
+
+    const titleEl = document.getElementById('mymaps-alert-title');
+    const msgEl = document.getElementById('mymaps-alert-message');
+    const headerEl = document.getElementById('mymaps-alert-header');
+    if (titleEl) titleEl.innerText = title;
+    if (msgEl) msgEl.innerHTML = message;
+
+    if (type === 'error') {
+        if (headerEl) headerEl.className = 'border-b-4 border-red-950 pb-2 mb-4';
+        if (titleEl) titleEl.className = 'text-xl font-bold text-red-600';
+    } else if (type === 'success') {
+        if (headerEl) headerEl.className = 'border-b-4 border-green-950 pb-2 mb-4';
+        if (titleEl) titleEl.className = 'text-xl font-bold text-green-700';
+    } else {
+        if (headerEl) headerEl.className = 'border-b-4 border-orange-950 pb-2 mb-4';
+        if (titleEl) titleEl.className = 'text-xl font-bold text-orange-950';
+    }
+
+    window.alertCallback = callback;
+    openModalById('mymaps-alert-modal');
+}
+
+function showCustomConfirm(title, message, type = 'danger', onConfirm = null) {
+    const modal = document.getElementById('mymaps-confirm-modal');
+    if (!modal) {
+        if (confirm(title + ' - ' + message) && onConfirm) onConfirm();
+        return;
+    }
+
+    const titleEl = document.getElementById('mymaps-confirm-title');
+    const msgEl = document.getElementById('mymaps-confirm-message');
+    const headerEl = document.getElementById('mymaps-confirm-header');
+    const okBtn = document.getElementById('mymaps-confirm-ok-btn');
+
+    if (titleEl) titleEl.innerText = title;
+    if (msgEl) msgEl.innerHTML = message;
+
+    if (type === 'danger') {
+        if (headerEl) headerEl.className = 'border-b-4 border-red-950 pb-2 mb-4';
+        if (titleEl) titleEl.className = 'text-xl font-bold text-red-600';
+        if (okBtn) okBtn.className = 'bg-red-600 hover:bg-red-500 text-white font-extrabold py-2 px-6 rounded border-2 border-red-900 shadow-[3px_3px_0px_rgba(0,0,0,1)] transition-transform hover:translate-y-1 cursor-pointer';
+    } else {
+        if (headerEl) headerEl.className = 'border-b-4 border-orange-950 pb-2 mb-4';
+        if (titleEl) titleEl.className = 'text-xl font-bold text-orange-950';
+        if (okBtn) okBtn.className = 'bg-yellow-500 hover:bg-yellow-400 text-orange-950 font-extrabold py-2 px-6 rounded border-2 border-orange-950 shadow-[3px_3px_0px_rgba(0,0,0,1)] transition-transform hover:translate-y-1 cursor-pointer';
+    }
+
+    window.confirmCallback = onConfirm;
+    openModalById('mymaps-confirm-modal');
+}
+
 // ==========================================
 // 1. LIVE SEARCH & SORT 
 // ==========================================
@@ -56,7 +132,7 @@ function filterAndSortMyMaps() {
             emptyMsg = document.createElement('p');
             emptyMsg.id = 'live-mymaps-empty-msg';
             emptyMsg.className = 'text-orange-900 font-bold text-xl col-span-full mt-10 text-center w-full';
-            emptyMsg.innerText = 'Nincs a keresésnek megfelelő pálya! 🏝️';
+            emptyMsg.innerText = 'No maps found for the current search! 🏝️';
             grid.appendChild(emptyMsg);
         }
         emptyMsg.style.display = 'block';
@@ -107,6 +183,86 @@ document.addEventListener('input', (event) => {
 // ==========================================
 document.addEventListener('click', (event) => {
 
+    if (event.target.closest('#mymaps-alert-close-btn') || event.target.closest('#mymaps-alert-ok-btn')) {
+        closeModalById('mymaps-alert-modal');
+        if (window.alertCallback) {
+            window.alertCallback();
+            window.alertCallback = null;
+        }
+        return;
+    }
+
+    if (event.target.closest('#mymaps-confirm-close-btn') || event.target.closest('#mymaps-confirm-cancel-btn')) {
+        closeModalById('mymaps-confirm-modal');
+        window.confirmCallback = null;
+        return;
+    }
+
+    if (event.target.closest('#mymaps-confirm-ok-btn')) {
+        closeModalById('mymaps-confirm-modal');
+        if (window.confirmCallback) {
+            window.confirmCallback();
+            window.confirmCallback = null;
+        }
+        return;
+    }
+
+    if (event.target.id === 'mymaps-alert-modal') {
+        closeModalById('mymaps-alert-modal');
+        window.alertCallback = null;
+        return;
+    }
+
+    if (event.target.id === 'mymaps-confirm-modal') {
+        closeModalById('mymaps-confirm-modal');
+        window.confirmCallback = null;
+        return;
+    }
+
+    if (event.target.closest('#mymaps-rename-close-btn') || event.target.closest('#mymaps-rename-cancel-btn') || event.target.id === 'mymaps-rename-modal') {
+        closeModalById('mymaps-rename-modal');
+        pendingRename = null;
+        return;
+    }
+
+    if (event.target.closest('#mymaps-rename-save-btn')) {
+        if (!pendingRename) {
+            closeModalById('mymaps-rename-modal');
+            return;
+        }
+
+        const inputEl = document.getElementById('mymaps-rename-input');
+        const newName = inputEl ? inputEl.value.trim() : '';
+
+        if (!newName) {
+            showCustomAlert('Error', 'Map name cannot be empty.', 'error');
+            if (inputEl) inputEl.focus();
+            return;
+        }
+        if (newName === pendingRename.oldName) {
+            showCustomAlert('Info', 'Map name is unchanged.', 'info');
+            return;
+        }
+
+        fetch(myMapUrl, {
+            method: 'POST', credentials: 'include', headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ action: 'edit_map_name', map_id: pendingRename.mapId, new_name: newName })
+        }).then(res => res.json()).then(data => {
+            if (data.status === 'success') {
+                if (pendingRename.mapNameEl) pendingRename.mapNameEl.textContent = newName;
+                if (pendingRename.card) pendingRename.card.setAttribute('data-name', newName.toLowerCase());
+                closeModalById('mymaps-rename-modal');
+                pendingRename = null;
+                showCustomAlert('Success', data.message, 'success');
+            } else {
+                showCustomAlert('Error', data.message, 'error');
+            }
+        }).catch(() => {
+            showCustomAlert('Error', 'Network error occurred.', 'error');
+        });
+        return;
+    }
+
     // --- SORTING GOMBOK ---
     const sortTrigger = event.target.closest('#mymaps-sort-trigger');
     const sortDropdown = document.getElementById('mymaps-sort-dropdown');
@@ -139,14 +295,6 @@ document.addEventListener('click', (event) => {
         return;
     }
 
-    // --- MAP ACTIONS ---
-    const editBtn = event.target.closest('.mymaps-edit-btn');
-    if (editBtn) {
-        const mapId = editBtn.getAttribute('data-mapid');
-        showCustomAlert("Editor", `Irány az Editor! Pálya ID: ${mapId}`, "info");
-        return;
-    }
-
     const publishBtn = event.target.closest('.mymaps-publish-btn');
     if (publishBtn) {
         const mapId = publishBtn.getAttribute('data-mapid');
@@ -155,11 +303,43 @@ document.addEventListener('click', (event) => {
             body: JSON.stringify({ action: 'toggle_publish', map_id: mapId })
         }).then(res => res.json()).then(data => {
             if (data.status === 'success') {
-                showCustomAlert("Siker", data.message, "success", () => window.location.reload());
+                showCustomAlert("Success", data.message, "success", () => window.location.reload());
             } else {
-                showCustomAlert("Hiba", data.message, "error");
+                showCustomAlert("Error", data.message, "error");
             }
         });
+        return;
+    }
+
+    const editBtn = event.target.closest('.mymaps-edit-btn');
+    if (editBtn) {
+        const mapId = editBtn.getAttribute('data-mapid');
+        const card = editBtn.closest('.mymaps-card');
+        const mapNameEl = card ? card.querySelector('.map-name') : null;
+        const oldName = mapNameEl ? mapNameEl.textContent.trim() : '';
+
+        if (!mapId || !oldName) {
+            showCustomAlert('Error', 'Invalid map data.', 'error');
+            return;
+        }
+
+        const oldNameEl = document.getElementById('mymaps-rename-old-name');
+        const inputEl = document.getElementById('mymaps-rename-input');
+        if (oldNameEl) oldNameEl.textContent = oldName;
+        if (inputEl) {
+            inputEl.value = oldName;
+            inputEl.focus();
+            inputEl.select();
+        }
+
+        pendingRename = { mapId, oldName, mapNameEl, card };
+        openModalById('mymaps-rename-modal');
+        return;
+    }
+
+    const lockedBtn = event.target.closest('.mymaps-edit-locked-btn');
+    if (lockedBtn) {
+        showCustomAlert('Locked', 'Only the original creator or staff (Admin / Moderator / Engineer) can rename this map.', 'info');
         return;
     }
 
@@ -169,7 +349,7 @@ document.addEventListener('click', (event) => {
         const card = removeBtn.closest('.mymaps-card');
         const mapName = card.querySelector('.map-name').textContent.trim();
 
-        showCustomConfirm("Eltávolítás", `Biztosan eltávolítod a(z) "${mapName}" pályát a könyvtáradból?`, "danger", function () {
+        showCustomConfirm("Remove", `Are you sure you want to remove the "${mapName}" map from your library?`, "danger", function () {
             fetch(myMapUrl, {
                 method: 'POST', credentials: 'include', headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ action: 'remove_map', map_id: mapId })
@@ -177,8 +357,8 @@ document.addEventListener('click', (event) => {
                 if (data.status === 'success') {
                     card.style.transition = 'all 0.4s ease'; card.style.opacity = '0'; card.style.transform = 'scale(0.5)';
                     setTimeout(() => card.remove(), 400);
-                    showCustomAlert("Siker", data.message, "success");
-                } else showCustomAlert("Hiba", data.message, "error");
+                    showCustomAlert("Success", data.message, "success");
+                } else showCustomAlert("Error", data.message, "error");
             });
         });
         return;

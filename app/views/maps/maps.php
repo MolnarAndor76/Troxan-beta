@@ -58,6 +58,7 @@
 
                 $cardBorderClass = $isCreatorEngineer ? 'border-cyan-900 shadow-cyan-900/50' : 'border-orange-950 shadow-[2px_2px_0px_#000]';
                 $nameClass = $isCreatorEngineer ? 'text-cyan-950' : 'text-orange-950';
+                $isInLibrary = !empty($map['is_in_library']);
               ?>
               
               <article class="maps-card" 
@@ -70,11 +71,7 @@
                 <div class="maps-image relative group overflow-hidden border-4 <?= $cardBorderClass ?> rounded-sm mb-2">
                   <img src="<?= htmlspecialchars($map['map_picture']) ?>" class="w-full h-full object-cover transition-transform duration-300 group-hover:scale-110">
                   
-                  <?php if ($canEditOrDelete): ?>
-                  <div class="absolute inset-0 bg-black/40 backdrop-blur-sm opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-center justify-center">
-                      <button class="maps-edit-btn bg-blue-600 hover:bg-blue-500 text-white font-extrabold py-2 px-6 border-2 border-orange-950 shadow-[2px_2px_0px_#000] hover:translate-y-[1px] hover:shadow-[1px_1px_0px_#000] transition-all uppercase tracking-wider" data-mapid="<?= $map['id'] ?>">Edit</button>
-                  </div>
-                  <?php endif; ?>
+
                 </div>
 
                 <div class="maps-info">
@@ -86,15 +83,15 @@
                   <div class="maps-btns-stats mt-2 flex justify-between items-center w-full">
                     
                     <?php if (!$isMyMap): ?>
-                        <button class="maps-add-btn bg-green-600 hover:bg-green-500 text-white px-3 py-1 font-extrabold text-xs border-2 border-green-950 rounded-sm shadow-[2px_2px_0px_#000] hover:translate-y-[1px] hover:shadow-[1px_1px_0px_#000] transition-all uppercase tracking-wider cursor-pointer z-10 relative" data-mapid="<?= $map['id'] ?>">+ Add</button>
+                      <button class="maps-add-btn <?= $isInLibrary ? 'bg-gray-500 hover:bg-gray-400 border-gray-950' : 'bg-green-600 hover:bg-green-500 border-green-950' ?> text-white px-3 py-1 font-extrabold text-xs border-2 rounded-sm shadow-[2px_2px_0px_#000] hover:translate-y-[1px] hover:shadow-[1px_1px_0px_#000] transition-all uppercase tracking-wider cursor-pointer z-10 relative" data-mapid="<?= $map['id'] ?>" data-added="<?= $isInLibrary ? 'true' : 'false' ?>"><?= $isInLibrary ? 'Added ✔️' : '+ Add' ?></button>
                     <?php else: ?>
-                        <span class="text-[10px] font-bold text-orange-900/50 uppercase border border-orange-900/30 px-2 py-1 rounded-sm bg-orange-900/10">Saját</span>
+                        <span class="text-[10px] font-bold text-orange-900/50 uppercase border border-orange-900/30 px-2 py-1 rounded-sm bg-orange-900/10">Own</span>
                     <?php endif; ?>
                     
                     <div class="flex gap-2 items-center ml-auto">
                         <?php if ($canEditOrDelete): ?>
-                          <button class="maps-delete text-xl hover:scale-110 transition-transform cursor-pointer" data-mapid="<?= $map['id'] ?>" title="Törlés">❌</button>
-                        <?php elseif ($isCreatorEngineer): ?>
+                          <button class="maps-delete text-xl hover:scale-110 transition-transform cursor-pointer" data-mapid="<?= $map['id'] ?>" title="Delete">❌</button>
+                        <?php elseif ($isCreatorEngineer && $isStaff): ?>
                           <span class="text-xl opacity-50 cursor-not-allowed" title="Engineer által védett!">🔒</span>
                         <?php endif; ?>
                         <span class="maps-download-count font-bold text-gray-700 ml-2">⬇ <span class="dl-number"><?= number_format($map['downloads']) ?></span></span>
@@ -114,11 +111,11 @@
   <div class="maps-modal-backdrop absolute inset-0 bg-black/80"></div>
   <div class="relative bg-orange-50 border-4 border-orange-950 p-6 rounded-xl shadow-2xl z-10 w-[90%] max-w-md">
     <button class="maps-close-modal absolute top-2 right-4 text-3xl font-bold text-orange-950 hover:text-red-500">×</button>
-    <h2 class="text-2xl font-bold mb-4 text-orange-950 border-b-2 border-orange-200 pb-2">Segítség</h2>
+    <h2 class="text-2xl font-bold mb-4 text-orange-950 border-b-2 border-orange-200 pb-2">Help</h2>
     <ul class="space-y-3 text-lg text-gray-800 font-medium">
-      <li>⚔️ WASD: Mozgás</li>
-      <li>🛡️ Q: Védekezés</li>
-      <li>📥 + Add: Pálya hozzáadása a könyvtáradhoz</li>
+      <li>⚔️ WASD: Move</li>
+      <li>🛡️ Q: Defend</li>
+      <li>📥 + Add: Add map to your library</li>
     </ul>
   </div>
 </div>
@@ -132,7 +129,7 @@
     <div class="flex flex-col mb-4 border-b-2 border-orange-200 pb-4 gap-4 mt-4 sm:mt-0">
         <div class="flex flex-col sm:flex-row justify-between items-center gap-4">
             <h2 class="text-3xl font-bold text-orange-950 flex items-center gap-2 m-0">🗑️ Admin Trash</h2>
-            <input type="text" id="trash-search-input" placeholder="Keresés készítőre..." class="w-full sm:w-64 p-2 border-4 border-orange-950 rounded-sm bg-white text-orange-950 font-bold focus:outline-none focus:border-yellow-500 shadow-[inset_0_4px_4px_rgba(0,0,0,0.05)]">
+            <input type="text" id="trash-search-input" placeholder="Search creator..." class="w-full sm:w-64 p-2 border-4 border-orange-950 rounded-sm bg-white text-orange-950 font-bold focus:outline-none focus:border-yellow-500 shadow-[inset_0_4px_4px_rgba(0,0,0,0.05)]">
         </div>
         
         <div class="flex flex-wrap gap-4 text-orange-950 font-bold bg-orange-200/50 p-2 rounded border-2 border-orange-950/20">
@@ -177,7 +174,6 @@
               <td class="p-3 flex gap-2">
                 <?php if ($canRestore): ?>
                   <button class="maps-restore-btn bg-green-700 hover:bg-green-600 text-white px-3 py-1 rounded-sm shadow-[2px_2px_0px_rgba(0,0,0,1)] hover:translate-y-[1px] hover:shadow-[1px_1px_0px_rgba(0,0,0,1)] transition-all uppercase text-xs tracking-wider" data-mapid="<?= $tmap['id'] ?>">Restore</button>
-                  <button class="maps-edit-btn bg-blue-600 hover:bg-blue-500 text-white px-3 py-1 rounded-sm shadow-[2px_2px_0px_rgba(0,0,0,1)] hover:translate-y-[1px] hover:shadow-[1px_1px_0px_rgba(0,0,0,1)] transition-all uppercase text-xs tracking-wider" data-mapid="<?= $tmap['id'] ?>">Edit</button>
                 <?php else: ?>
                   <span class="text-xs uppercase font-bold text-cyan-800 px-2 py-1 border border-cyan-800 rounded bg-cyan-100">🔒 Védett</span>
                 <?php endif; ?>

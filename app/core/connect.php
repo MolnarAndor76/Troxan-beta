@@ -21,6 +21,6 @@ try {
 
 } catch (PDOException $e) {
     // Ha valami gebasz van (nem fut a XAMPP, elírtad a nevet), itt megáll a kód és kiírja a hibát
-    die("Szerver hiba (Adatbázis kapcsolat sikertelen): " . $e->getMessage());
+    die("Server error (Database connection failed): " . $e->getMessage());
 }
 ?>

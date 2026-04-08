@@ -14,7 +14,7 @@ function showCustomAlert(title, message, type = 'info', callback = null) {
     else headerEl.className = 'basesite-modal-header bg-orange-900 border-b-4 border-orange-950';
 
     alertCallback = callback;
-    modal.classList.remove('basesite-hidden');
+    modal.classList.remove('basesite-hidden', 'hidden');
 }
 
 function showCustomConfirm(title, message, type = 'danger', onConfirm) {
@@ -34,28 +34,28 @@ function showCustomConfirm(title, message, type = 'danger', onConfirm) {
     }
 
     confirmCallback = onConfirm;
-    modal.classList.remove('basesite-hidden');
+    modal.classList.remove('basesite-hidden', 'hidden');
 }
 
 document.addEventListener('click', (event) => {
-    if (event.target.closest('#basesite-alert-close-btn') || event.target.closest('#basesite-alert-ok-btn')) {
+    if (event.target.closest('#basesite-alert-close-btn') || event.target.closest('#basesite-alert-ok-btn') || event.target.id === 'basesite-alert-modal') {
         const alertModal = document.getElementById('basesite-alert-modal');
         if (alertModal && !alertModal.classList.contains('basesite-hidden')) {
-            alertModal.classList.add('basesite-hidden');
+            alertModal.classList.add('basesite-hidden', 'hidden');
             if (alertCallback) { alertCallback(); alertCallback = null; }
         }
     }
-    if (event.target.closest('#basesite-confirm-close-btn') || event.target.closest('#basesite-confirm-cancel-btn')) {
+    if (event.target.closest('#basesite-confirm-close-btn') || event.target.closest('#basesite-confirm-cancel-btn') || event.target.id === 'basesite-confirm-modal') {
         const confirmModal = document.getElementById('basesite-confirm-modal');
         if (confirmModal && !confirmModal.classList.contains('basesite-hidden')) {
-            confirmModal.classList.add('basesite-hidden');
+            confirmModal.classList.add('basesite-hidden', 'hidden');
             confirmCallback = null;
         }
     }
     if (event.target.closest('#basesite-confirm-ok-btn')) {
         const confirmModal = document.getElementById('basesite-confirm-modal');
         if (confirmModal && !confirmModal.classList.contains('basesite-hidden')) {
-            confirmModal.classList.add('basesite-hidden');
+            confirmModal.classList.add('basesite-hidden', 'hidden');
             if (confirmCallback) { confirmCallback(); confirmCallback = null; }
         }
     }
@@ -102,7 +102,7 @@ document.addEventListener('click', (event) => {
   if (downloadBtn.getAttribute('data-loggedin') !== 'true') {
     event.preventDefault();
     showCustomAlert("Hold up, adventurer!", "You need to log in or create an account before downloading the game.", "error", () => { window.location.href = '/login'; });
-  } else showCustomAlert("Downloading", "Download is starting... (Placeholder)", "success");
+  } else showCustomAlert("Downloading", "Download is starting...", "success");
 });
 
 // ====== PATCH NOTES ADMIN LOGIKA ======
@@ -124,13 +124,13 @@ document.addEventListener('click', async (event) => {
             const result = await response.json();
             
             if (response.ok) {
-                showCustomAlert("Siker", result.message, "success", () => { window.location.reload(); });
+                showCustomAlert("Success", result.message, "success", () => { window.location.reload(); });
             } else { 
-                showCustomAlert("Hiba", result.message, "error"); 
+                showCustomAlert("Error", result.message, "error"); 
                 lockBtn.innerHTML = '🔒'; 
             }
         } catch (e) { 
-            showCustomAlert("Hiba", "Server error!", "error"); 
+            showCustomAlert("Error", "Server error!", "error"); 
             lockBtn.innerHTML = '🔒'; 
         }
         return;
@@ -141,15 +141,15 @@ document.addEventListener('click', async (event) => {
     if (deleteBtn) {
         const card = deleteBtn.closest('[data-id]');
         const patchId = card.getAttribute('data-id');
-        showCustomConfirm("Törlés megerősítése", "Biztosan a Lomtárba küldöd ezt a frissítést?", "danger", async () => {
+        showCustomConfirm("Confirm deletion", "Are you sure you want to move this patch to recycle bin?", "danger", async () => {
             try {
                 const response = await fetch(apiUrl, fetchConfig({ action: 'delete', id: patchId }));
                 const result = await response.json();
                 if (response.ok) {
                     card.style.transition = "opacity 0.3s, transform 0.3s"; card.style.opacity = "0"; card.style.transform = "scale(0.9)";
                     setTimeout(() => card.remove(), 300);
-                } else showCustomAlert("Hiba", result.message, "error");
-            } catch (e) { showCustomAlert("Hiba", "Server connection error!", "error"); }
+                } else showCustomAlert("Error", result.message, "error");
+            } catch (e) { showCustomAlert("Error", "Server connection error!", "error"); }
         });
         return; 
     }
@@ -184,8 +184,8 @@ document.addEventListener('click', async (event) => {
             const result = await response.json();
             
             if (response.ok) { window.location.reload(); } 
-            else { showCustomAlert("Hiba", result.message, "error"); saveBtn.innerHTML = '💾'; }
-        } catch (e) { showCustomAlert("Hiba", "Server error!", "error"); saveBtn.innerHTML = '💾'; }
+            else { showCustomAlert("Error", result.message, "error"); saveBtn.innerHTML = '💾'; }
+        } catch (e) { showCustomAlert("Error", "Server error!", "error"); saveBtn.innerHTML = '💾'; }
         return; 
     }
 
@@ -193,22 +193,22 @@ document.addEventListener('click', async (event) => {
     const newModal = document.getElementById('patch-new-modal');
     const recycleModal = document.getElementById('patch-recycle-modal');
     if (event.target.closest('.patch-close-btn') && !event.target.closest('#basesite-alert-close-btn') && !event.target.closest('#basesite-confirm-close-btn')) {
-        if(newModal) newModal.classList.add('basesite-hidden'); if(recycleModal) recycleModal.classList.add('basesite-hidden');
+        if(newModal) newModal.classList.add('basesite-hidden', 'hidden'); if(recycleModal) recycleModal.classList.add('basesite-hidden', 'hidden');
         document.body.style.overflow = 'auto';
     }
     if ((event.target === newModal || event.target === recycleModal) && !event.target.closest('#basesite-alert-modal') && !event.target.closest('#basesite-confirm-modal')) {
-        event.target.classList.add('basesite-hidden'); document.body.style.overflow = 'auto';
+        event.target.classList.add('basesite-hidden', 'hidden'); document.body.style.overflow = 'auto';
     }
 
     // ÚJ PATCH NYITÁS
     if (event.target.closest('#patch-new-btn')) {
-        newModal.classList.remove('basesite-hidden'); document.body.style.overflow = 'hidden';
+        newModal.classList.remove('basesite-hidden', 'hidden'); document.body.style.overflow = 'hidden';
         document.getElementById('new-patch-title').value = ''; document.getElementById('new-patch-desc').value = '';
     }
 
     // LOMTÁR NYITÁS
     if (event.target.closest('#patch-recycle-btn')) {
-        recycleModal.classList.remove('basesite-hidden'); document.body.style.overflow = 'hidden';
+        recycleModal.classList.remove('basesite-hidden', 'hidden'); document.body.style.overflow = 'hidden';
         const binContent = document.getElementById('recycle-bin-content');
         binContent.innerHTML = '<div class="text-center font-bold text-gray-500 py-10">⏳ Loading...</div>';
 
@@ -224,13 +224,13 @@ document.addEventListener('click', async (event) => {
                     </div>`;
                 });
                 binContent.innerHTML = html + '</div>';
-            } else binContent.innerHTML = '<div class="text-center font-bold text-gray-500 py-10">Lomtár üres! 🍃</div>';
-        } catch (e) { binContent.innerHTML = '<div class="text-center text-red-600 py-10">Hiba a betöltéskor!</div>'; }
+            } else binContent.innerHTML = '<div class="text-center font-bold text-gray-500 py-10">Recycle bin is empty! 🍃</div>';
+        } catch (e) { binContent.innerHTML = '<div class="text-center text-red-600 py-10">Error loading content!</div>'; }
     }
 
     // DISCARD
     if (event.target.closest('#patch-discard-btn')) {
-        showCustomConfirm("Figyelem", "Biztosan eldobod ezt a piszkozatot?", "danger", () => {
+        showCustomConfirm("Attention", "Are you sure you want to discard this draft?", "danger", () => {
             newModal.classList.add('basesite-hidden'); document.body.style.overflow = 'auto';
         }); return;
     }
@@ -238,13 +238,13 @@ document.addEventListener('click', async (event) => {
     // PUBLISH
     if (event.target.closest('#patch-publish-btn')) {
         const title = document.getElementById('new-patch-title').value; const desc = document.getElementById('new-patch-desc').value;
-        if (title.trim() === '' || desc.trim() === '') { showCustomAlert("Figyelem", "Minden mezőt ki kell tölteni!", "error"); return; }
+        if (title.trim() === '' || desc.trim() === '') { showCustomAlert("Attention", "All fields are required!", "error"); return; }
         try {
             const btn = event.target.closest('#patch-publish-btn'); btn.innerHTML = 'Publishing...';
             const response = await fetch(apiUrl, fetchConfig({ action: 'create', name: title, description: desc }));
-            if (response.ok) showCustomAlert("Siker", "Patch publikálva!", "success", () => window.location.reload());
-            else { showCustomAlert("Hiba", "Hiba publikáláskor!", "error"); btn.innerHTML = 'Publish'; }
-        } catch (e) { showCustomAlert("Hiba", "Server error!", "error"); }
+            if (response.ok) showCustomAlert("Success", "Patch published!", "success", () => window.location.reload());
+            else { showCustomAlert("Error", "Error publishing patch!", "error"); btn.innerHTML = 'Publish'; }
+        } catch (e) { showCustomAlert("Error", "Server error!", "error"); }
     }
 
     // RESTORE
@@ -255,8 +255,8 @@ document.addEventListener('click', async (event) => {
             btn.innerHTML = '⏳';
             const response = await fetch(apiUrl, fetchConfig({ action: 'restore', id: patchId }));
             const result = await response.json();
-            if (response.ok) showCustomAlert("Siker", "Patch visszaállítva!", "success", () => window.location.reload());
-            else { showCustomAlert("Hiba", result.message, "error"); btn.innerHTML = 'Restore'; }
-        } catch (e) { showCustomAlert("Hiba", "Server error!", "error"); }
+            if (response.ok) showCustomAlert("Success", "Patch restored!", "success", () => window.location.reload());
+            else { showCustomAlert("Error", result.message, "error"); btn.innerHTML = 'Restore'; }
+        } catch (e) { showCustomAlert("Error", "Server error!", "error"); }
     }
 });

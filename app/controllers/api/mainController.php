@@ -50,7 +50,7 @@ function handlePatchAction() {
     $input = json_decode(file_get_contents("php://input"), true) ?: $_POST;
 
     if (!isset($_SESSION['logged_in']) || $_SESSION['logged_in'] !== true || !isset($_SESSION['role_name']) || !in_array($_SESSION['role_name'], ['Admin', 'Engineer'])) {
-        json_response(["status" => "error", "message" => "Nincs jogosultságod ehhez a művelethez!"], 403);
+        json_response(["status" => "error", "message" => "You do not have permission for this action."], 403);
     }
 
     $action = $input['action'] ?? '';
@@ -78,7 +78,7 @@ function handlePatchAction() {
                 }
                 // Lakat védelem (Ha zárva van, Admin nem nyúlhat hozzá!)
                 if ($patchData['is_locked'] == 1 && $myRole !== 'Engineer') {
-                    json_response(["status" => "error", "message" => "Ez a bejegyzés le van lakatolva egy Engineer által!"], 403);
+                    json_response(["status" => "error", "message" => "This entry is locked by an Engineer!"], 403);
                 }
             }
         }
@@ -86,7 +86,7 @@ function handlePatchAction() {
         // === ÚJ: LAKAT ÁTKAPCSOLÁSA ===
         if ($action === 'toggle_lock' && $id) {
             if ($myRole !== 'Engineer') {
-                json_response(["status" => "error", "message" => "Csak egy Engineer használhatja a lakatot!"], 403);
+                json_response(["status" => "error", "message" => "Only an Engineer can use the lock!"], 403);
             }
             $stmt = $pdo->prepare("SELECT is_locked FROM PatchNotes WHERE id = ?");
             $stmt->execute([$id]);
@@ -96,7 +96,7 @@ function handlePatchAction() {
             $updateStmt = $pdo->prepare("UPDATE PatchNotes SET is_locked = ? WHERE id = ?");
             $updateStmt->execute([$newLock, $id]);
             
-            $msg = $newLock == 1 ? "Patch sikeresen lelakatolva! 🔒" : "Lakat feloldva! 🔓";
+            $msg = $newLock == 1 ? "Patch successfully locked! 🔒" : "Lock released! 🔓";
             json_response(["status" => "success", "message" => $msg], 200);
             
         } elseif ($action === 'delete' && $id) {
@@ -116,7 +116,7 @@ function handlePatchAction() {
             $desc = trim($input['description'] ?? '');
             $stmt = $pdo->prepare("INSERT INTO PatchNotes (name, description, created_by) VALUES (?, ?, ?)");
             $stmt->execute([$name, $desc, $currentUserId]);
-            json_response(["status" => "success", "message" => "Patch sikeresen publikálva!"], 200);
+            json_response(["status" => "success", "message" => "Patch published successfully!"], 200);
 
         } elseif ($action === 'restore' && $id) {
             $checkStmt = $pdo->prepare("
@@ -143,10 +143,10 @@ function handlePatchAction() {
             json_response(["status" => "success", "data" => $deleted], 200);
 
         } else {
-            json_response(["status" => "error", "message" => "Érvénytelen művelet!"], 400);
+            json_response(["status" => "error", "message" => "Invalid operation!"], 400);
         }
     } catch (Exception $e) {
-        json_response(["status" => "error", "message" => "Adatbázis hiba: " . $e->getMessage()], 500);
+        json_response(["status" => "error", "message" => "Database error: " . $e->getMessage()], 500);
     }
 }
 

@@ -16,12 +16,12 @@ document.addEventListener('click', (event) => {
                     localStorage.clear(); // Mindent takarítsunk ki!
                     window.location.href = '/login';
                 } else {
-                    alert("Hiba: " + data.message);
+                    alert("Error: " + data.message);
                 }
             })
             .catch(err => {
                 console.error('Logout error:', err);
-                // Hiba esetén is takarítsunk ki és dobjuk ki a júzert
+                // On error, still clear and redirect user
                 localStorage.clear();
                 window.location.href = '/login'; 
             });

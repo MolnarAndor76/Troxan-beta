@@ -49,7 +49,7 @@ function handleGameLogin()
         // 8. Visszaküldjük a C#-nak a sikeres válasz csomagot!
         json_response([
             "status" => "success",
-            "message" => "Sikeres bejelentkezés!",
+            "message" => "Login successful!",
             "data" => [
                 "user_id" => $user['user_id'],
                 "username" => $user['username'],
@@ -58,7 +58,7 @@ function handleGameLogin()
         ], 200);
 
     } catch (Exception $e) {
-        json_response(["status" => "error", "message" => "Adatbázis hiba."], 500);
+        json_response(["status" => "error", "message" => "Database error."], 500);
     }
 }
 ?>

@@ -38,9 +38,6 @@ switch ($route['segment1']) {
     case "main":
         load_controller($data, API_CONTROLLERS . 'mainController.php');
         break;
-    case "editor":
-        load_controller($data, API_CONTROLLERS . 'editorController.php');
-        break;
     case "maps":
         load_controller($data, API_CONTROLLERS . 'mapsController.php');
         break;

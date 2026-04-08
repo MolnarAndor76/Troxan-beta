@@ -22,7 +22,7 @@ function handleGameUpdateStats()
     }
 
     if (empty($authHeader) || !preg_match('/Bearer\s(\S+)/', $authHeader, $matches)) {
-        json_response(["status" => "error", "message" => "Hiányzó vagy érvénytelen token!"], 401);
+        json_response(["status" => "error", "message" => "Missing or invalid token."], 401);
         return;
     }
 
@@ -30,7 +30,7 @@ function handleGameUpdateStats()
     $input = json_decode(file_get_contents('php://input'), true);
 
     if (!$input) {
-        json_response(["status" => "error", "message" => "Érvénytelen JSON formátum!"], 400);
+        json_response(["status" => "error", "message" => "Invalid JSON format."], 400);
         return;
     }
 
@@ -41,17 +41,17 @@ function handleGameUpdateStats()
         $user = $stmt->fetch(PDO::FETCH_ASSOC);
 
         if (!$user) {
-            json_response(["status" => "error", "message" => "Érvénytelen vagy lejárt token!"], 401);
+            json_response(["status" => "error", "message" => "Invalid or expired token."], 401);
             return;
         }
 
         if ($user['is_banned'] == 1) {
-            json_response(["status" => "error", "message" => "A fiókod ki van tiltva!"], 403);
+            json_response(["status" => "error", "message" => "Your account is banned."], 403);
             return;
         }
 
         if (isset($input['username']) && $input['username'] !== $user['username']) {
-            json_response(["status" => "error", "message" => "Cheat detektálva: Nem módosíthatod más játékos statisztikáit!"], 403);
+            json_response(["status" => "error", "message" => "Cheat detected: You cannot modify another player's stats!"], 403);
             return;
         }
 
@@ -78,7 +78,7 @@ function handleGameUpdateStats()
         ], 200);
 
     } catch (Exception $e) {
-        json_response(["status" => "error", "message" => "Adatbázis hiba: " . $e->getMessage()], 500);
+        json_response(["status" => "error", "message" => "Database error: " . $e->getMessage()], 500);
     }
 }
 ?>

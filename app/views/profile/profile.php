@@ -61,9 +61,7 @@ $hasAdminAccess = in_array($user['role_name'], ['Admin', 'Engineer']);
 
 <p class="text-sm text-gray-600 font-bold mt-2 text-center">
     Last updated: 
-    <span class="text-orange-950">
-        <?php echo date('Y. m. d. - H:i:s'); ?>
-    </span>
+    <span class="text-orange-950" id="profile-last-updated-time"></span>
 </p>
 
             <div id="profile-settings-modal-id" class="hidden fixed inset-0 z-50 items-center justify-center">
@@ -122,7 +120,7 @@ $hasAdminAccess = in_array($user['role_name'], ['Admin', 'Engineer']);
                     <div id="basesite-prompt-header" class="border-b-4 border-orange-950 w-full pb-2 mb-4">
                         <h2 id="basesite-prompt-title" class="text-xl font-bold text-orange-950">Change Username</h2>
                     </div>
-                    <input type="text" id="basesite-prompt-input" class="w-full mt-4 p-3 border-4 border-orange-950 rounded bg-white text-gray-800 font-bold text-center focus:outline-none focus:border-yellow-500 focus:ring-4 focus:ring-yellow-500/30 transition-all shadow-inner" placeholder="7-16 characters">
+                    <input type="text" id="basesite-prompt-input" class="w-full mt-4 p-3 border-4 border-orange-950 rounded bg-white text-gray-800 font-bold text-center focus:outline-none focus:border-yellow-500 focus:ring-4 focus:ring-yellow-500/30 transition-all shadow-inner" placeholder="4-12 characters">
                     
                     <div class="flex justify-center gap-4 mt-6 w-full">
                         <button id="basesite-prompt-cancel-btn" class="flex-1 bg-gray-300 px-4 py-2 font-bold text-orange-950 border-2 border-orange-950 rounded shadow-[2px_2px_0px_#000] hover:translate-y-[1px] hover:shadow-[1px_1px_0px_#000] transition-all">Cancel</button>

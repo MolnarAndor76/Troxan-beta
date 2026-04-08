@@ -63,8 +63,8 @@ function getContent()
         // Levágjuk a top 10-et a fő táblázathoz
         $top_10 = array_slice($leaderboard_data, 0, 10);
 
-        // --- ÚJ: A legutolsó frissítés idejének lekérése az egész rendszerből ---
-        $stmtDate = $pdo->query("SELECT MAX(last_updated) FROM `Statistics`");
+        // --- System-wide latest stats update timestamp ---
+        $stmtDate = $pdo->query("SELECT last_updated FROM `Statistics` ORDER BY last_updated DESC, id DESC LIMIT 1");
         $latestUpdateRaw = $stmtDate->fetchColumn();
         $lastUpdatedText = $latestUpdateRaw ? date('Y.m.d H:i', strtotime($latestUpdateRaw)) : 'Never';
         // ------------------------------------------------------------------------

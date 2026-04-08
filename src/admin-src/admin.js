@@ -1,4 +1,4 @@
-console.log("🟢 Admin JS Betöltve és harcra kész!");
+console.log("🟢 Admin JS Loaded!");
 
 // ==========================================
 // 0. GLOBÁLIS VÁLTOZÓK ÉS UTILITIES
@@ -12,7 +12,20 @@ let currentAdminMaps = []; // Itt tároljuk a letöltött kártyákat a gyors sz
 let currentAdminTargetUser = { id: null, username: '' };
 let currentBanTarget = { id: null, username: '', action: 'ban', type: 'user', mapId: null, targetUserId: null };
 let currentNameTarget = { id: null, username: '' };
+let currentAdminRenameMap = { mapId: null, oldName: '' };
 let currentLogsData = [];
+
+function openModalById(id) {
+    const modal = document.getElementById(id);
+    if (!modal) return;
+    modal.classList.remove('hidden', 'basesite-hidden');
+}
+
+function closeModalById(id) {
+    const modal = document.getElementById(id);
+    if (!modal) return;
+    modal.classList.add('hidden', 'basesite-hidden');
+}
 
 function showCustomAlert(title, message, type = 'info', callback = null) {
     const modal = document.getElementById('basesite-alert-modal');
@@ -30,7 +43,7 @@ function showCustomAlert(title, message, type = 'info', callback = null) {
     else titleEl.className = 'text-xl font-bold text-orange-950';
 
     window.alertCallback = callback;
-    modal.classList.remove('hidden');
+    openModalById('basesite-alert-modal');
 }
 
 function showCustomConfirm(title, message, type = 'danger', onConfirm = null) {
@@ -56,7 +69,7 @@ function showCustomConfirm(title, message, type = 'danger', onConfirm = null) {
     }
 
     window.confirmCallback = onConfirm;
-    modal.classList.remove('hidden');
+    openModalById('basesite-confirm-modal');
 }
 
 // ==========================================
@@ -69,7 +82,7 @@ document.addEventListener('input', function(event) {
         let hasVisibleCard = false;
 
         cards.forEach(card => {
-            const nameEl = card.querySelector('.admin-username-btn') || card.querySelector('span[title="Védett profil!"]');
+            const nameEl = card.querySelector('.admin-username-btn') || card.querySelector('span[title="Protected profile!"]');
             if (nameEl) {
                 const username = nameEl.innerText.replace('🔒', '').toLowerCase().trim();
                 if (username.includes(filterText)) {
@@ -119,7 +132,7 @@ function renderAdminMaps() {
     }
 
     if (filteredMaps.length === 0) {
-        grid.innerHTML = '<p class="col-span-full text-center font-bold text-orange-900 text-xl mt-10">A könyvtár üres vagy nincs a szűrésnek megfelelő pálya. 🏝️</p>';
+        grid.innerHTML = '<p class="col-span-full text-center font-bold text-orange-900 text-xl mt-10">Library is empty or no maps match the filter. 🏝️</p>';
         return;
     }
 
@@ -217,7 +230,7 @@ document.addEventListener('change', (event) => {
 
 function fetchAdminMaps(userId) {
     const grid = document.getElementById('admin-maps-grid');
-    grid.innerHTML = '<p class="col-span-full text-center font-bold text-orange-900 text-xl animate-pulse mt-10">Pályák betöltése...</p>';
+grid.innerHTML = '<p class="col-span-full text-center font-bold text-orange-900 text-xl animate-pulse mt-10">Loading maps...</p>';
     
     fetch(adminUrl, {
         method: 'POST', credentials: 'include', headers: { 'Content-Type': 'application/json' },
@@ -227,10 +240,10 @@ function fetchAdminMaps(userId) {
             currentAdminMaps = data.maps;
             renderAdminMaps();
         } else {
-            grid.innerHTML = `<p class="col-span-full text-center font-bold text-red-600 text-xl mt-10">Hiba: ${data.message}</p>`;
+            grid.innerHTML = `<p class="col-span-full text-center font-bold text-red-600 text-xl mt-10">Error: ${data.message}</p>`;
         }
     }).catch(err => {
-        grid.innerHTML = '<p class="col-span-full text-center font-bold text-red-600 text-xl mt-10">Hálózati hiba történt.</p>';
+            grid.innerHTML = '<p class="col-span-full text-center font-bold text-red-600 text-xl mt-10">Network error occurred.</p>';
     });
 }
 
@@ -254,18 +267,18 @@ document.addEventListener('click', function(event) {
 
     // --- ALERT / CONFIRM BEZÁRÁSOK ---
     if (event.target.closest('#basesite-alert-close-btn') || event.target.closest('#basesite-alert-ok-btn')) {
-        const modal = document.getElementById('basesite-alert-modal');
-        if (modal) { modal.classList.add('hidden'); if (window.alertCallback) { window.alertCallback(); window.alertCallback = null; } }
+        closeModalById('basesite-alert-modal');
+        if (window.alertCallback) { window.alertCallback(); window.alertCallback = null; }
         return;
     }
     if (event.target.closest('#basesite-confirm-close-btn') || event.target.closest('#basesite-confirm-cancel-btn')) {
-        const modal = document.getElementById('basesite-confirm-modal');
-        if (modal) { modal.classList.add('hidden'); window.confirmCallback = null; }
+        closeModalById('basesite-confirm-modal');
+        window.confirmCallback = null;
         return;
     }
     if (event.target.closest('#basesite-confirm-ok-btn')) {
-        const modal = document.getElementById('basesite-confirm-modal');
-        if (modal) { modal.classList.add('hidden'); if (window.confirmCallback) { window.confirmCallback(); window.confirmCallback = null; } }
+        closeModalById('basesite-confirm-modal');
+        if (window.confirmCallback) { window.confirmCallback(); window.confirmCallback = null; }
         return;
     }
 
@@ -280,9 +293,11 @@ document.addEventListener('click', function(event) {
         document.getElementById('ban-reason-title').innerText = action === 'ban' ? 'Ban Player' : 'Unban Player';
         document.getElementById('ban-reason-target').innerText = username;
         document.getElementById('ban-reason-input').value = '';
+        document.getElementById('ban-reason-input').placeholder = action === 'ban' ? 'Ban reason (required)' : 'Unban reason (required)';
+        document.getElementById('ban-reason-confirm-btn').innerText = action === 'ban' ? 'Confirm Ban' : 'Confirm Unban';
 
         // show the reason modal
-        document.getElementById('admin-ban-reason-modal').classList.remove('hidden');
+        openModalById('admin-ban-reason-modal');
         return;
     }
 
@@ -291,13 +306,13 @@ document.addEventListener('click', function(event) {
         const userId = roleBtn.getAttribute('data-userid');
         const roleAction = roleBtn.getAttribute('data-action'); 
         const msg = roleAction === 'promote' ? 'Are you sure you want to PROMOTE this player?' : 'Are you sure you want to DEMOTE this player?';
-        showCustomConfirm("Rang módosítása", msg, "danger", function() {
+        showCustomConfirm("Role Change", msg, "danger", function() {
             fetch(adminUrl, {
                 method: 'POST', credentials: 'include', headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ action: 'change_role', role_action: roleAction, target_user_id: userId })
             }).then(res => res.json()).then(data => {
-                if (data.status === 'success') { showCustomAlert("Siker", data.message, "success", () => location.reload()); } 
-                else { showCustomAlert("Hiba", data.message, "error"); }
+                if (data.status === 'success') { showCustomAlert("Success", data.message, "success", () => location.reload()); } 
+                else { showCustomAlert("Error", data.message, "error"); }
             });
         });
         return;
@@ -347,7 +362,7 @@ document.addEventListener('click', function(event) {
         document.getElementById('change-username-target').innerText = username;
         document.getElementById('change-username-input').value = '';
         document.getElementById('change-username-reason-input').value = '';
-        document.getElementById('admin-change-username-modal').classList.remove('hidden');
+        openModalById('admin-change-username-modal');
         return;
     }
     
@@ -358,8 +373,19 @@ document.addEventListener('click', function(event) {
         return;
     }
 
-    if (event.target.classList.contains('admin-details-modal') && event.target.id !== 'basesite-alert-modal' && event.target.id !== 'basesite-confirm-modal') {
+    if (event.target.classList.contains('admin-details-modal')) {
+        if (event.target.id === 'basesite-alert-modal') {
+            event.target.classList.add('hidden');
+            window.alertCallback = null;
+            return;
+        }
+        if (event.target.id === 'basesite-confirm-modal') {
+            event.target.classList.add('hidden');
+            window.confirmCallback = null;
+            return;
+        }
         event.target.classList.add('hidden');
+        return;
     }
 
     // --- VIEW LOGS ---
@@ -374,7 +400,7 @@ document.addEventListener('click', function(event) {
         const logsContainer = document.getElementById('logs-container');
         document.getElementById('logs-modal-title').innerText = username + " - Logs";
         logsContainer.innerHTML = '<p class="text-center font-bold animate-pulse text-orange-900">Fetching logs from server...</p>';
-        logsModal.classList.remove('hidden');
+        openModalById('global-logs-modal');
 
         fetch(adminUrl, {
             method: 'POST', credentials: 'include', headers: { 'Content-Type': 'application/json' },
@@ -390,10 +416,15 @@ document.addEventListener('click', function(event) {
     }
 
     if (event.target.closest('#ban-reason-confirm-btn')) {
-        const reason = document.getElementById('ban-reason-input').value.trim();
+        const reasonInput = document.getElementById('ban-reason-input');
+        const reason = reasonInput ? reasonInput.value.trim() : '';
 
-        if (currentBanTarget.type === 'user' && currentBanTarget.action === 'ban' && !reason) { showCustomAlert('Hiba', 'A ban reason kötelező.', 'error'); return; }
-        if (currentBanTarget.type === 'map' && !reason) { showCustomAlert('Hiba', 'A map ban reason kötelező.', 'error'); return; }
+        if (!reason) {
+            showCustomAlert('Error', currentBanTarget.type === 'map' ? 'Map ban reason is required.' : 'Ban reason is required.', 'error');
+            if (reasonInput) reasonInput.focus();
+            openModalById('admin-ban-reason-modal');
+            return;
+        }
 
         let body = {};
         if (currentBanTarget.type === 'user') {
@@ -406,13 +437,19 @@ document.addEventListener('click', function(event) {
             method: 'POST', credentials: 'include', headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(body)
         }).then(res => res.json()).then(data => {
-            document.getElementById('admin-ban-reason-modal').classList.add('hidden');
             if (data.status === 'success') {
-                showCustomAlert('Siker', data.message, 'success', () => {
+                closeModalById('admin-ban-reason-modal');
+                showCustomAlert('Success', data.message, 'success', () => {
                     if (currentBanTarget.type === 'map') fetchAdminMaps(currentAdminTargetUser.id);
                     else location.reload();
                 });
-            } else { showCustomAlert('Hiba', data.message, 'error'); }
+            } else {
+                openModalById('admin-ban-reason-modal');
+                showCustomAlert('Error', data.message, 'error');
+            }
+        }).catch(() => {
+            openModalById('admin-ban-reason-modal');
+            showCustomAlert('Error', 'Network error occurred.', 'error');
         });
         return;
     }
@@ -420,14 +457,23 @@ document.addEventListener('click', function(event) {
     if (event.target.closest('#change-username-confirm-btn')) {
         const newName = document.getElementById('change-username-input').value.trim();
         const reason = document.getElementById('change-username-reason-input').value.trim();
-        if (!newName) { showCustomAlert('Hiba', 'Új név kötelező.', 'error'); return; }
+        if (!newName) { showCustomAlert('Error', 'New name is required.', 'error'); return; }
+        if (newName.length < 4 || newName.length > 12) { showCustomAlert('Error', 'Username must be between 4 and 12 characters.', 'error'); return; }
 
         fetch(adminUrl, {
             method: 'POST', credentials: 'include', headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ action: 'change_username', target_user_id: currentNameTarget.id, new_username: newName, reason: reason })
         }).then(res => res.json()).then(data => {
-            document.getElementById('admin-change-username-modal').classList.add('hidden');
-            if (data.status === 'success') { showCustomAlert('Siker', data.message, 'success', () => location.reload()); } else { showCustomAlert('Hiba', data.message, 'error'); }
+            if (data.status === 'success') {
+                closeModalById('admin-change-username-modal');
+                showCustomAlert('Success', data.message, 'success', () => location.reload());
+            } else {
+                openModalById('admin-change-username-modal');
+                showCustomAlert('Error', data.message, 'error');
+            }
+        }).catch(() => {
+            openModalById('admin-change-username-modal');
+            showCustomAlert('Error', 'Network error occurred.', 'error');
         });
         return;
     }
@@ -444,7 +490,7 @@ document.addEventListener('click', function(event) {
         return;
     }
 
-    if (event.target.closest('.admin-close-logs-btn')) { document.getElementById('global-logs-modal').classList.add('hidden'); return; }
+    if (event.target.closest('.admin-close-logs-btn')) { closeModalById('global-logs-modal'); return; }
     const logHeader = event.target.closest('.admin-log-header');
     if (logHeader) {
         const logId = logHeader.getAttribute('data-logid');
@@ -468,7 +514,7 @@ document.addEventListener('click', function(event) {
 
         document.getElementById('admin-maps-title').innerText = `${username}'s Library`;
         document.getElementById('admin-maps-own-filter').checked = false; // Reset szűrő
-        document.getElementById('admin-maps-modal').classList.remove('hidden');
+        openModalById('admin-maps-modal');
         
         // Zárjuk be a hamburger menüt ha mobil nézet
         const actionsMenu = openMapsBtn.closest('.admin-card-actions');
@@ -480,7 +526,7 @@ document.addEventListener('click', function(event) {
 
     // MAPS MODAL BEZÁRÁSA
     if (event.target.closest('.admin-close-maps-btn')) {
-        document.getElementById('admin-maps-modal').classList.add('hidden');
+        closeModalById('admin-maps-modal');
         return;
     }
 
@@ -493,7 +539,7 @@ document.addEventListener('click', function(event) {
         document.getElementById('ban-reason-title').innerText = 'Ban Map';
         document.getElementById('ban-reason-target').innerText = `Map ID: ${mapId}`;
         document.getElementById('ban-reason-input').value = '';
-        document.getElementById('admin-ban-reason-modal').classList.remove('hidden');
+        openModalById('admin-ban-reason-modal');
 
         return;
     }
@@ -505,18 +551,41 @@ document.addEventListener('click', function(event) {
         const card = editMapBtn.closest('.admin-map-card');
         const oldName = card.querySelector('.admin-map-name-text').innerText;
         
-        const newName = prompt("Írd be az új pályanevet:", oldName);
-        if (newName !== null && newName.trim() !== '' && newName !== oldName) {
-            fetch(adminUrl, {
-                method: 'POST', credentials: 'include', headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ action: 'admin_edit_map_name', map_id: mapId, new_name: newName.trim() })
-            }).then(res => res.json()).then(data => {
-                if (data.status === 'success') {
-                    card.querySelector('.admin-map-name-text').innerText = newName.trim();
-                    showCustomAlert("Siker", data.message, "success");
-                } else showCustomAlert("Hiba", data.message, "error");
-            });
+        currentAdminRenameMap = { mapId: mapId, oldName: oldName };
+        document.getElementById('admin-rename-map-old-name').innerText = oldName;
+        document.getElementById('admin-rename-map-input').value = oldName;
+        openModalById('admin-rename-map-modal');
+        
+        return;
+    }
+
+    // PÁLYA NEVÉNEK MEGERŐSÍTÉSE
+    if (event.target.closest('#admin-rename-map-confirm-btn')) {
+        if (!currentAdminRenameMap) return;
+        
+        const newName = document.getElementById('admin-rename-map-input').value.trim();
+        if (!newName || newName.length < 1 || newName.length > 64) {
+            showCustomAlert("Error", "Map name must be 1-64 characters.", "error");
+            return;
         }
+        
+        fetch(adminUrl, {
+            method: 'POST', credentials: 'include', headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ action: 'admin_edit_map_name', map_id: currentAdminRenameMap.mapId, new_name: newName })
+        }).then(res => res.json()).then(data => {
+            if (data.status === 'success') {
+                closeModalById('admin-rename-map-modal');
+                showCustomAlert("Success", "Map renamed successfully!", "success", () => {
+                    fetchAdminMaps(currentAdminTargetUser.id);
+                });
+            } else {
+                showCustomAlert("Error", data.message, "error");
+                openModalById('admin-rename-map-modal');
+            }
+        }).catch(() => {
+            showCustomAlert("Error", "Network error occurred.", "error");
+            openModalById('admin-rename-map-modal');
+        });
         return;
     }
 });

@@ -19,12 +19,16 @@ function getContent()
         $isEngineer = ($roleName === 'Engineer');
 
         // --- 1. FETCH ACTIVE MAPS ---
-        $query = "SELECT m.*, u.username as creator_name, r.role_name as creator_role 
-                  FROM `Maps` m 
+        $currentUserId = $_SESSION['user_id'] ?? 0;
+
+        $query = "SELECT m.*, u.username as creator_name, r.role_name as creator_role,
+                 CASE WHEN uml.map_id IS NOT NULL THEN 1 ELSE 0 END as is_in_library
+              FROM `Maps` m 
+              LEFT JOIN `User_Map_Library` uml ON m.id = uml.map_id AND uml.user_id = ?
                   JOIN `User` u ON m.creator_user_id = u.user_id 
                   JOIN Roles r ON u.role_id = r.id
                   WHERE m.status = 1";
-        $params = [];
+        $params = [$currentUserId];
 
         if (!empty($search)) {
             $query .= " AND (m.map_name LIKE ? OR u.username LIKE ?)";
@@ -135,11 +139,11 @@ function handlePost()
             json_response(["status" => "success", "message" => "Map restored successfully!"], 200);
             
         } elseif ($action === 'add_to_library') {
-            // 1. Ellenőrizzük, hogy benne van-e már a könyvtárában
+            // 1. Check if the map is already in their library
             $checkStmt = $pdo->prepare("SELECT 1 FROM `User_Map_Library` WHERE user_id = ? AND map_id = ?");
             $checkStmt->execute([$currentUserId, $mapId]);
             if ($checkStmt->fetchColumn()) {
-                json_response(["status" => "info", "message" => "Ez a pálya már a My Maps könyvtáradban van!"], 200);
+                json_response(["status" => "info", "message" => "This map is already in your My Maps library!"], 200);
                 return;
             }
 
@@ -150,7 +154,7 @@ function handlePost()
             $libStmt = $pdo->prepare("INSERT INTO `User_Map_Library` (user_id, map_id) VALUES (?, ?)");
             $libStmt->execute([$currentUserId, $mapId]);
 
-            json_response(["status" => "success", "message" => "Pálya sikeresen hozzáadva a My Maps-hez!"], 200);
+            json_response(["status" => "success", "message" => "Map successfully added to My Maps!"], 200);
         }
     } catch (Exception $e) {
         json_response(["status" => "error", "message" => "Database error: " . $e->getMessage()], 500);

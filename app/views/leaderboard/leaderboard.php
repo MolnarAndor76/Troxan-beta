@@ -50,7 +50,7 @@
     </div>
 
     <div class="leaderboard-last-updated">
-        Last time updated: <?= $lastUpdatedText ?>
+        Last time updated: <span id="leaderboard-last-updated-time"></span>
     </div>
 
   </div>

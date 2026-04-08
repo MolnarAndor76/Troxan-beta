@@ -11,6 +11,8 @@ function getContent()
         $search = trim($_GET['search'] ?? '');
         $sort = $_GET['sort'] ?? 'Newest Added';
         $myUserId = $_SESSION['user_id'];
+        $myRoleName = $_SESSION['role_name'] ?? 'Player';
+        $isStaff = in_array($myRoleName, ['Admin', 'Moderator', 'Engineer']);
 
         // --- A MÁGIKUS LEKÉRDEZÉS ---
         // 1. Hozza azokat, amiket TE csináltál (és a státusz 0=Draft, 1=Publikus, vagy 3=Unpublished)
@@ -69,7 +71,7 @@ function handlePost()
     $currentUserId = $_SESSION['user_id'] ?? null;
 
     if (!$currentUserId) {
-        json_response(["status" => "error", "message" => "Nincs bejelentkezve!"], 401);
+        json_response(["status" => "error", "message" => "Login required."], 401);
         return;
     }
 
@@ -81,7 +83,7 @@ function handlePost()
             $mapData = $stmt->fetch(PDO::FETCH_ASSOC);
 
             if (!$mapData) {
-                json_response(["status" => "error", "message" => "Pálya nem található."], 404);
+                json_response(["status" => "error", "message" => "Map not found."], 404);
             }
 
             // 1. Töröljük a kapcsolatot a saját könyvtárból
@@ -99,7 +101,7 @@ function handlePost()
                 $pdo->prepare("UPDATE `Maps` SET status = 5 WHERE id = ?")->execute([$mapId]);
             }
 
-            json_response(["status" => "success", "message" => "Pálya eltávolítva a könyvtáradból!"], 200);
+            json_response(["status" => "success", "message" => "Map removed from your library successfully!"], 200);
             
         } elseif ($action === 'toggle_publish') {
             // Publikálás vagy visszavonás
@@ -108,19 +110,62 @@ function handlePost()
             $mapData = $stmt->fetch(PDO::FETCH_ASSOC);
 
             if ($mapData['creator_user_id'] != $currentUserId) {
-                json_response(["status" => "error", "message" => "Csak a saját pályádat publikálhatod!"], 403);
+                json_response(["status" => "error", "message" => "You can only publish your own maps."], 403);
             }
 
             // Ha 1 (Publikus) -> Akkor Unpublish (3). Ha 0 vagy 3 -> Akkor Publish (1)
             $newStatus = ($mapData['status'] == 1) ? 3 : 1;
             
             $pdo->prepare("UPDATE `Maps` SET status = ? WHERE id = ?")->execute([$newStatus, $mapId]);
-            $msg = ($newStatus == 1) ? "Pálya sikeresen publikálva a közös listába!" : "Pálya visszavonva (Unpublished)!";
+            $msg = ($newStatus == 1) ? "Map successfully published to public list!" : "Map unpublished!";
             
             json_response(["status" => "success", "message" => $msg, "new_status" => $newStatus], 200);
+        } elseif ($action === 'edit_map_name') {
+            $newName = trim($input['new_name'] ?? '');
+            $myRoleName = $_SESSION['role_name'] ?? 'Player';
+            $isStaff = in_array($myRoleName, ['Admin', 'Moderator', 'Engineer']);
+
+            if ($mapId <= 0) {
+                json_response(["status" => "error", "message" => "Invalid map ID."], 400);
+                return;
+            }
+
+            if ($newName === '') {
+                json_response(["status" => "error", "message" => "Map name cannot be empty."], 400);
+                return;
+            }
+
+            if (mb_strlen($newName) > 64) {
+                json_response(["status" => "error", "message" => "Map name is too long (max 64 characters)."], 400);
+                return;
+            }
+
+            $stmt = $pdo->prepare("SELECT creator_user_id, status FROM `Maps` WHERE id = ?");
+            $stmt->execute([$mapId]);
+            $mapData = $stmt->fetch(PDO::FETCH_ASSOC);
+
+            if (!$mapData) {
+                json_response(["status" => "error", "message" => "Map not found."], 404);
+                return;
+            }
+
+            if ((int)$mapData['creator_user_id'] !== (int)$currentUserId && !$isStaff) {
+                json_response(["status" => "error", "message" => "Only the creator or staff can rename this map."], 403);
+                return;
+            }
+
+            if ((int)$mapData['status'] === 5) {
+                json_response(["status" => "error", "message" => "Scrapped maps cannot be edited."], 400);
+                return;
+            }
+
+            $upd = $pdo->prepare("UPDATE `Maps` SET map_name = ? WHERE id = ?");
+            $upd->execute([$newName, $mapId]);
+
+            json_response(["status" => "success", "message" => "Map name updated successfully!"], 200);
         }
     } catch (Exception $e) {
-        json_response(["status" => "error", "message" => "Adatbázis hiba: " . $e->getMessage()], 500);
+        json_response(["status" => "error", "message" => "Database error: " . $e->getMessage()], 500);
     }
 }
 

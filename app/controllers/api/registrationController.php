@@ -80,9 +80,9 @@ function registerUser()
         json_response(["status" => "error", "message" => "All fields are required!"], 400);
     }
 
-    // Username validation: 7-16 characters, letters and numbers only
-    if (strlen($username) > 16 || strlen($username) < 7 || !preg_match('/^[a-zA-Z0-9]+$/', $username)) {
-        json_response(["status" => "error", "message" => "Username must be 7-16 characters and contain only letters and numbers!"], 400);
+    // Username validation: 4-12 characters, letters and numbers only
+    if (strlen($username) > 12 || strlen($username) < 4 || !preg_match('/^[a-zA-Z0-9]+$/', $username)) {
+        json_response(["status" => "error", "message" => "Username must be 4-12 characters and contain only letters and numbers!"], 400);
     }
 
     if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {

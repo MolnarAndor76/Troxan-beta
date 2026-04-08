@@ -2,7 +2,7 @@
     <div class="admin-site-wrapper">
 
         <div class="admin-header">
-            <button id="admin-back-btn" class="admin-action-btn admin-btn-gray text-sm px-3 py-2 mr-3">⬅️ Back</button>
+            <button id="admin-back-btn" class="admin-action-btn admin-btn-gray text-sm px-3 py-2 mr-3">Back</button>
             <h1 class="admin-title">🛡️ ADMIN AREA</h1>
 
             <div class="admin-search-wrapper">
@@ -151,22 +151,30 @@
         <button class="admin-close-details-btn absolute top-3 right-4">✖</button>
         <h2 class="text-lg font-bold text-orange-950 mb-3">Change Username</h2>
         <p class="text-sm text-orange-900 mb-2">Target: <span id="change-username-target"></span></p>
-        <input id="change-username-input" type="text" class="w-full border border-orange-950 rounded p-2 mb-3" placeholder="New username">
+        <input id="change-username-input" type="text" class="w-full border border-orange-950 rounded p-2 mb-3" placeholder="New username (4-12 chars)">
         <textarea id="change-username-reason-input" class="w-full border border-orange-950 rounded p-2 mb-3" placeholder="Reason (required)"></textarea>
         <button id="change-username-confirm-btn" class="admin-action-btn admin-btn-blue w-full py-2">Change Name</button>
     </div>
 </div>
 
-<div id="admin-ban-reason-modal" class="admin-details-modal hidden">
+<div id="admin-ban-reason-modal" class="admin-details-modal hidden" style="z-index: 9996;">
     <div class="admin-details-content !max-w-md">
         <button class="admin-close-details-btn absolute top-3 right-4">✖</button>
         <h2 class="text-lg font-bold text-orange-950 mb-3" id="ban-reason-title">Ban Player</h2>
         <p class="text-sm text-orange-900 mb-2">Target: <span id="ban-reason-target"></span></p>
-        <textarea id="ban-reason-input" class="w-full border border-orange-950 rounded p-2 mb-3" placeholder="Ban reason (required)"></textarea>
+        <textarea id="ban-reason-input" class="w-full border border-orange-950 rounded p-2 mb-3" placeholder="Reason (required)"></textarea>
         <button id="ban-reason-confirm-btn" class="admin-action-btn admin-btn-red w-full py-2">Confirm Ban</button>
     </div>
 </div>
-
+<div id="admin-rename-map-modal" class="admin-details-modal hidden" style="z-index: 9997;">
+    <div class="admin-details-content !max-w-md">
+        <button class="admin-close-details-btn absolute top-3 right-4">✖</button>
+        <h2 class="text-lg font-bold text-orange-950 mb-3">Rename Map</h2>
+        <p class="text-sm text-orange-900 mb-2">Old name: <span id="admin-rename-map-old-name"></span></p>
+        <input id="admin-rename-map-input" type="text" class="w-full border border-orange-950 rounded p-2 mb-3" placeholder="New map name (1-64 chars)">
+        <button id="admin-rename-map-confirm-btn" class="admin-action-btn admin-btn-blue w-full py-2">Rename</button>
+    </div>
+</div>
 <div id="global-logs-modal" class="admin-details-modal hidden">
     <div class="admin-details-content w-[95%] max-w-[600px] max-h-[90vh] flex flex-col">
         <button class="admin-close-logs-btn absolute top-3 right-4 text-3xl text-orange-950 font-black cursor-pointer hover:text-red-600 transition-colors z-20">✖</button>
@@ -197,13 +205,13 @@
 <div id="basesite-confirm-modal" class="admin-details-modal hidden" style="z-index: 9999;">
   <div class="admin-details-content !max-w-sm text-center">
     <div id="basesite-confirm-header" class="border-b-4 border-red-950 pb-2 mb-4">
-      <h2 id="basesite-confirm-title" class="text-xl font-bold text-red-600">Megerősítés</h2>
+      <h2 id="basesite-confirm-title" class="text-xl font-bold text-red-600">Confirmation</h2>
     </div>
     <button id="basesite-confirm-close-btn" class="admin-close-details-btn">&times;</button>
-    <p id="basesite-confirm-message" class="text-lg font-bold text-gray-800 my-4">Biztos vagy benne?</p>
+    <p id="basesite-confirm-message" class="text-lg font-bold text-gray-800 my-4">Are you sure?</p>
     <div class="flex justify-center gap-4 mt-6">
-      <button id="basesite-confirm-cancel-btn" class="admin-action-btn admin-btn-gray py-2 px-6">Mégse</button>
-      <button id="basesite-confirm-ok-btn" class="admin-action-btn admin-btn-red py-2 px-6">Igen</button>
+      <button id="basesite-confirm-cancel-btn" class="admin-action-btn admin-btn-gray py-2 px-6">Cancel</button>
+      <button id="basesite-confirm-ok-btn" class="admin-action-btn admin-btn-red py-2 px-6">Confirm</button>
     </div>
   </div>
 </div>

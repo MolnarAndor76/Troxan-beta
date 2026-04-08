@@ -82,7 +82,7 @@ function getContent()
 
         json_response(["html" => $buffer, "status" => "success"], 200);
     } catch (Exception $e) {
-        json_response(["status" => "error", "message" => "SQL hiba: " . $e->getMessage()], 500);
+        json_response(["status" => "error", "message" => "SQL error: " . $e->getMessage()], 500);
     }
 }
 
@@ -91,7 +91,7 @@ function handlePostActionsLegacy()
     global $pdo;
 
     if (!isset($_SESSION['user_id'])) {
-        json_response(["status" => "error", "message" => "Nincs jogosultságod!"], 401);
+        json_response(["status" => "error", "message" => "Unauthorized access."], 401);
         return;
     }
 
@@ -106,12 +106,12 @@ function handlePostActionsLegacy()
         if ($action === 'change_avatar') {
             $avatar_id = isset($input['avatar_id']) ? (int)$input['avatar_id'] : 0;
             if ($avatar_id === 0) {
-                json_response(["status" => "error", "message" => "Érvénytelen avatar azonosító!"], 400);
+                json_response(["status" => "error", "message" => "Invalid avatar ID!"], 400);
                 return;
             }
             $stmt = $pdo->prepare("UPDATE `User` SET avatar_id = ? WHERE user_id = ?");
             $stmt->execute([$avatar_id, $userId]);
-            json_response(["status" => "success", "message" => "Avatar sikeresen frissítve!"], 200);
+            json_response(["status" => "success", "message" => "Avatar updated successfully!"], 200);
             
         } 
         // ==========================================
@@ -139,8 +139,8 @@ function handlePostActionsLegacy()
             $oldUsername = $_SESSION['username'];  
 
             if (!$isEngineer) {
-                if (strlen($newUsername) < 7 || strlen($newUsername) > 16) {
-                    json_response(["status" => "error", "message" => "A névnek 7 és 16 karakter között kell lennie!"], 400);
+                if (strlen($newUsername) < 4 || strlen($newUsername) > 12) {
+                    json_response(["status" => "error", "message" => "Username must be between 4 and 12 characters."], 400);
                     return;
                 }
             }
@@ -206,7 +206,7 @@ function handlePostActionsLegacy()
                 }
             }
 
-            json_response(["status" => "success", "message" => "Sikeres névváltás: {$newUsername}!"], 200);
+            json_response(["status" => "success", "message" => "Username changed successfully to: {$newUsername}!"], 200);
             
         } 
         // ==========================================
@@ -289,10 +289,10 @@ function handlePostActionsLegacy()
             
         } 
         else {
-            json_response(["status" => "error", "message" => "Ismeretlen akció!"], 400);
+            json_response(["status" => "error", "message" => "Unknown action!"], 400);
         }
     } catch (Exception $e) {
-        json_response(["status" => "error", "message" => "SQL hiba: " . $e->getMessage()], 500);
+        json_response(["status" => "error", "message" => "SQL error: " . $e->getMessage()], 500);
     }
 }
 
@@ -301,7 +301,7 @@ function updateProfile()
     global $pdo;
 
     if (!isset($_SESSION['user_id'])) {
-        json_response(["status" => "error", "message" => "Nincs jogosultságod!"], 401);
+        json_response(["status" => "error", "message" => "Unauthorized access."], 401);
         return;
     }
 
@@ -315,7 +315,7 @@ function updateProfile()
         if (isset($input['avatar_id'])) {
             $avatar_id = (int)$input['avatar_id'];
             if ($avatar_id <= 0) {
-                json_response(["status" => "error", "message" => "Érvénytelen avatar azonosító!"], 400);
+                json_response(["status" => "error", "message" => "Invalid avatar ID!"], 400);
             }
             $updates[] = "avatar_id = ?";
             $params[] = $avatar_id;
@@ -332,8 +332,8 @@ function updateProfile()
                 json_response(["status" => "error", "message" => "Same username!"], 400);
             }
 
-            if (strlen($newUsername) < 7 || strlen($newUsername) > 16) {
-                json_response(["status" => "error", "message" => "A névnek 7 és 16 karakter között kell lennie!"], 400);
+            if (strlen($newUsername) < 4 || strlen($newUsername) > 12) {
+                json_response(["status" => "error", "message" => "Username must be between 4 and 12 characters."], 400);
             }
 
             $checkName = $pdo->prepare("SELECT 1 FROM `User` WHERE username = ? AND user_id != ?");
@@ -389,7 +389,7 @@ function updateProfile()
 
         json_response(["status" => "success", "message" => "Profile updated successfully."], 200);
     } catch (Exception $e) {
-        json_response(["status" => "error", "message" => "SQL hiba: " . $e->getMessage()], 500);
+        json_response(["status" => "error", "message" => "SQL error: " . $e->getMessage()], 500);
     }
 }
 
@@ -398,7 +398,7 @@ function deleteProfile()
     global $pdo;
 
     if (!isset($_SESSION['user_id'])) {
-        json_response(["status" => "error", "message" => "Nincs jogosultságod!"], 401);
+        json_response(["status" => "error", "message" => "Unauthorized access."], 401);
         return;
     }
 
@@ -411,9 +411,9 @@ function deleteProfile()
         session_unset();
         session_destroy();
 
-        json_response(["status" => "success", "message" => "Felhasználói fiók törölve."], 200);
+        json_response(["status" => "success", "message" => "User account deleted."], 200);
     } catch (Exception $e) {
-        json_response(["status" => "error", "message" => "SQL hiba: " . $e->getMessage()], 500);
+        json_response(["status" => "error", "message" => "SQL error: " . $e->getMessage()], 500);
     }
 }
 
