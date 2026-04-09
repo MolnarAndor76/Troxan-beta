@@ -3,6 +3,66 @@ function handleGameUpdateStats()
 {
     global $pdo;
 
+    if (!function_exists('troxan_debug_game_stats')) {
+        function troxan_debug_game_stats($userId, $username, $incomingStats, $rawInput)
+        {
+            $debugEnabled = (defined('TROXAN_DEBUG_GAME_STATS') && TROXAN_DEBUG_GAME_STATS)
+                || (isset($_GET['debug_stats']) && $_GET['debug_stats'] === '1');
+
+            if (!$debugEnabled) {
+                return;
+            }
+
+            $logDir = dirname(__DIR__, 2) . '/logs';
+            if (!is_dir($logDir)) {
+                @mkdir($logDir, 0775, true);
+            }
+
+            $pick = function ($stats, array $keys, $default = null) {
+                if (!is_array($stats)) {
+                    return $default;
+                }
+                foreach ($keys as $key) {
+                    if (!array_key_exists($key, $stats)) {
+                        continue;
+                    }
+                    $value = $stats[$key];
+                    if ($value === null) {
+                        continue;
+                    }
+                    if (is_string($value) && trim($value) === '') {
+                        continue;
+                    }
+                    return $value;
+                }
+                return $default;
+            };
+
+            $normalized = [
+                'score' => (int)($pick($incomingStats, ['score', 'Experience points'], 0)),
+                'deaths' => (int)($pick($incomingStats, ['num_of_deaths', 'Deaths'], 0)),
+                'enemies_killed' => (int)($pick($incomingStats, ['num_of_enemies_killed', 'Mobs killed'], 0)),
+                'story_finished' => (int)($pick($incomingStats, ['num_of_story_finished', 'Story finished'], 0)),
+                'time_played' => (string)($pick($incomingStats, ['time_played', 'Total playtime', 'play_time', 'playtime'], '0h 0m')),
+            ];
+
+            $record = [
+                'time_utc' => gmdate('Y-m-d H:i:s'),
+                'user_id' => (int)$userId,
+                'username' => (string)$username,
+                'normalized' => $normalized,
+                'incoming_stats' => $incomingStats,
+                'raw_input_keys' => is_array($rawInput) ? array_keys($rawInput) : []
+            ];
+
+            @file_put_contents(
+                $logDir . '/game_stats_debug.log',
+                json_encode($record, JSON_UNESCAPED_UNICODE) . PHP_EOL,
+                FILE_APPEND | LOCK_EX
+            );
+        }
+    }
+
     if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
         json_response(["status" => "error", "message" => "Method not allowed"], 405);
         return;
@@ -65,6 +125,8 @@ function handleGameUpdateStats()
 // 3. STATISTICS TÁBLA FRISSÍTÉSE (ÖSSZEGZETT statokkal, minden mentés új sor)
         if (isset($input['statistics'])) {
             $incomingStats = is_array($input['statistics']) ? $input['statistics'] : [];
+
+            troxan_debug_game_stats($user['user_id'], $user['username'], $incomingStats, $input);
 
             $prevStmt = $pdo->prepare("SELECT statistics_file FROM `Statistics` WHERE user_id = ? ORDER BY id DESC LIMIT 1");
             $prevStmt->execute([$user['user_id']]);

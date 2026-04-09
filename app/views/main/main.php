@@ -24,10 +24,10 @@
     <section id="basesite-tab-download" class="basesite-tab-content basesite-block">
       <h1 class="basesite-title-main">Welcome to Troxan!</h1>
       <div class="basesite-video-container">
-        <iframe src="https://www.youtube-nocookie.com/embed/_pMgNJjNodo?autoplay=1&mute=1&loop=1&playlist=_pMgNJjNodo&controls=0&modestbranding=1&rel=0" class="basesite-video-iframe" title="YouTube video player" frameborder="0" allow="autoplay; encrypted-media" loading="lazy"></iframe>
+        <iframe id="basesite-trailer-iframe" src="<?= htmlspecialchars($siteSettings['trailer_url']) ?>" class="basesite-video-iframe" title="YouTube video player" frameborder="0" allow="autoplay; encrypted-media" loading="lazy"></iframe>
       </div>
       <div class="basesite-dl-layout">
-        <button class="basesite-dl-btn" id="basesite-download-game-btn" data-loggedin="<?= $isLoggedIn ?>">Download Game</button>
+        <button class="basesite-dl-btn" id="basesite-download-game-btn" data-loggedin="<?= $isLoggedIn ?>" data-download-url="<?= htmlspecialchars($siteSettings['download_url']) ?>">Download Game</button>
         <button id="basesite-open-req-btn" class="basesite-link">View System requirements</button>
       </div>
     </section>
@@ -129,29 +129,28 @@
 
     <section id="basesite-tab-lore" class="basesite-tab-content basesite-hidden">
       <h2 class="basesite-title-sub">The fate of troxan</h2>
-      <p class="basesite-text">For centuries, the majestic realm of Troxan was a beacon of absolute peace and prosperity. <br>
-       Joyous laughter echoed through its emerald valleys, and citizens lived in perfect harmony under the wise and benevolent guidance of the High Sovereign. The skies were forever bright, the rivers flowed with crystal-clear waters, and a golden age of tranquility blessed every corner of the kingdom. It was a true paradise, untouched by darkness. <br>
-
-<br> But then, everything changed. <br>
-
-<br> Without warning, a mysterious and devastating plague—a rapidly mutating, corrupted virus—swept across the land like a silent storm. It withered the once-vibrant forests, silenced the joyful streets, and began twisting the realm's peaceful inhabitants into hollow, aggressive husks. No ancient magic could cure it, and no fortress walls could keep the infection at bay. The virus is spreading at an unstoppable rate, consuming the very life force of Troxan. <br>
-
-<br> Now, as the kingdom teeters on the brink of total annihilation, the desperate Sovereign has summoned you. Out of all the warriors and scholars, you are the only one who possesses the resilience to withstand the infection. You have been tasked with the ultimate, perilous mission: venture deep into the heart of the corrupted zones, eradicate the source of the virus, and cleanse the land. <br>
-
-<br> The time for fear is over. You are Troxan's last, shining hope. Will you answer the call and save the realm, or will the darkness consume us all?</p>
+      <p class="basesite-text" id="basesite-lore-text"><?= nl2br(htmlspecialchars($siteSettings['lore_text'])) ?></p>
+      <textarea id="site-settings-lore-source" class="hidden"><?= htmlspecialchars($siteSettings['lore_text']) ?></textarea>
     </section>
 
     <section id="basesite-tab-about" class="basesite-tab-content basesite-hidden">
-      <h2 class="basesite-title-sub">About Troxan and us</h2>
-      <p class="basesite-text">Troxan started as a school project…</p>
+      <div class="flex items-center justify-between gap-3">
+        <h2 class="basesite-title-sub">About Troxan and us</h2>
+        <?php if ($canEditSiteSettings): ?>
+          <button id="site-settings-edit-btn" class="text-xl hover:scale-110 transition-transform cursor-pointer" title="Edit Main Page Settings">✏️</button>
+        <?php endif; ?>
+      </div>
+      <p class="basesite-text" id="basesite-about-us-text"><?= nl2br(htmlspecialchars($siteSettings['about_us_text'])) ?></p>
       <p class="basesite-text">Feel free to email us at <a href="mailto:troxangame@email.com" class="basesite-link">troxangame@email.com</a></p>
       <div class="basesite-about-box">
         <h3 class="basesite-about-title">Special thanks to our artists:</h3>
-        <ul class="basesite-about-list">
-          <li>Trailer made by: <a href="#" class="basesite-link">Név (kattintható link)</a></li>
-          <li>Artworks: <em>Hamarosan...</em></li>
+        <ul class="basesite-about-list" id="basesite-special-thanks-list">
+          <?php foreach (array_filter(array_map('trim', explode("\n", $siteSettings['special_thanks_text']))) as $line): ?>
+            <li><?= nl2br(htmlspecialchars($line)) ?></li>
+          <?php endforeach; ?>
         </ul>
       </div>
+      <textarea id="site-settings-system-req-source" class="hidden"><?= htmlspecialchars($siteSettings['system_requirements_text']) ?></textarea>
     </section>
 
     <div id="basesite-req-modal" class="basesite-modal-overlay basesite-hidden">
@@ -166,11 +165,21 @@
               <tr class="basesite-tr-head"><th class="basesite-th">Komponens</th><th class="basesite-th">Minimum</th><th class="basesite-th-yellow">Ajánlott</th></tr>
             </thead>
             <tbody class="basesite-tbody">
-              <tr class="basesite-tr-split"><td class="basesite-td-hide-mobile">CPU</td><td class="basesite-td-block-mobile"><span class="basesite-mobile-label-top">CPU</span><span class="basesite-mobile-label-inline">Min: </span>Nemtom p4</td><td class="basesite-td-block-mobile"><span class="basesite-mobile-label-yellow">Ajánlott: </span>Ryzen 9 5950X</td></tr>
-              <tr class="basesite-tr-split"><td class="basesite-td-hide-mobile">GPU</td><td class="basesite-td-block-mobile"><span class="basesite-mobile-label-top">GPU</span><span class="basesite-mobile-label-inline">Min: </span>Gt 1030</td><td class="basesite-td-block-mobile"><span class="basesite-mobile-label-yellow">Ajánlott: </span>RTX 3080TI</td></tr>
-              <tr class="basesite-tr-split"><td class="basesite-td-hide-mobile">RAM</td><td class="basesite-td-block-mobile"><span class="basesite-mobile-label-top">RAM</span><span class="basesite-mobile-label-inline">Min: </span>256mb</td><td class="basesite-td-block-mobile"><span class="basesite-mobile-label-yellow">Ajánlott: </span>64gb</td></tr>
-              <tr class="basesite-tr-hidden-mobile"><td class="basesite-td-label">OS</td><td class="basesite-td">&lt;WIN XP 64bit</td><td class="basesite-td-gray">-------------------</td></tr>
-              <tr class="basesite-tr-hidden-desktop"><td class="basesite-td-label">STORAGE</td><td class="basesite-td">300mb</td><td class="basesite-td-gray">-------------------</td></tr>
+              <?php if (!empty($systemRequirementsRows)): ?>
+                <?php foreach ($systemRequirementsRows as $row): ?>
+                  <tr class="basesite-tr-split">
+                    <td class="basesite-td-hide-mobile"><?= htmlspecialchars($row['component']) ?></td>
+                    <td class="basesite-td-block-mobile"><span class="basesite-mobile-label-top"><?= htmlspecialchars($row['component']) ?></span><span class="basesite-mobile-label-inline">Min: </span><?= htmlspecialchars($row['minimum']) ?></td>
+                    <td class="basesite-td-block-mobile"><span class="basesite-mobile-label-yellow">Ajánlott: </span><?= htmlspecialchars($row['recommended']) ?></td>
+                  </tr>
+                <?php endforeach; ?>
+              <?php else: ?>
+                <tr class="basesite-tr-split">
+                  <td class="basesite-td-hide-mobile">N/A</td>
+                  <td class="basesite-td-block-mobile"><span class="basesite-mobile-label-top">N/A</span><span class="basesite-mobile-label-inline">Min: </span>N/A</td>
+                  <td class="basesite-td-block-mobile"><span class="basesite-mobile-label-yellow">Ajánlott: </span>N/A</td>
+                </tr>
+              <?php endif; ?>
             </tbody>
           </table>
         </div>

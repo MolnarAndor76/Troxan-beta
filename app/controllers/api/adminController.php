@@ -252,13 +252,13 @@ function getLogs() {
             $stats = !empty($log['statistics_file']) ? json_decode($log['statistics_file'], true) : [];
             $parsedLogs[] = [
                 'id' => $log['id'],
-                'date' => $log['last_updated'] ? date('Y.m.d H:i', strtotime($log['last_updated'])) : 'Unknown',
-                'score' => $stats['score'] ?? ($stats['Experience points'] ?? 0),
+                'date' => troxan_format_db_datetime($log['last_updated'], 'Y.m.d H:i', 'Unknown'),
+                'score' => troxan_get_stat_score($stats),
                 'details' => [
-                    'Enemies killed' => $stats['num_of_enemies_killed'] ?? ($stats['Mobs killed'] ?? 0),
-                    'Deaths' => $stats['num_of_deaths'] ?? ($stats['Deaths'] ?? 0),
-                    'Story finished' => $stats['num_of_story_finished'] ?? 0,
-                    'Time played' => $stats['time_played'] ?? ($stats['Total playtime'] ?? '0h 0m')
+                    'Enemies killed' => troxan_get_stat_int($stats, ['num_of_enemies_killed', 'Mobs killed'], 0),
+                    'Deaths' => troxan_get_stat_int($stats, ['num_of_deaths', 'Deaths'], 0),
+                    'Story finished' => troxan_get_stat_int($stats, ['num_of_story_finished', 'Story finished'], 0),
+                    'Time played' => troxan_get_stat_playtime($stats)
                 ]
             ];
         }

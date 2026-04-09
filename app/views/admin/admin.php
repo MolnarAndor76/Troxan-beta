@@ -25,7 +25,7 @@
                 <?php foreach ($users as $player): ?>
                     <?php
                     $stats = !empty($player['statistics_file']) ? json_decode($player['statistics_file'], true) : [];
-                    $playtime = $stats['time_played'] ?? '0h 0m';
+                    $playtime = troxan_get_stat_playtime($stats);
 
                     $avatarSrc = 'https://picsum.photos/id/1025/100/100';
                     if (!empty($player['avatar_picture'])) {
@@ -123,11 +123,11 @@
                             </h2>
                             <div class="flex flex-col gap-3 text-orange-950 font-bold text-base md:text-lg">
                                 <p>📧 Email: <span class="font-normal"><?= htmlspecialchars($player['email']) ?></span></p>
-                                <p>🗓️ Reg: <span class="font-normal"><?= date('Y-m-d', strtotime($player['created_at'])) ?></span></p>
-                                <p>🟢 Last: <span class="font-normal"><?= $player['last_time_online'] ? date('Y-m-d H:i', strtotime($player['last_time_online'])) : 'Never' ?></span></p>
+                                <p>🗓️ Reg: <span class="font-normal"><?= troxan_format_db_datetime($player['created_at'], 'Y-m-d', '-') ?></span></p>
+                                <p>🟢 Last: <span class="font-normal"><?= troxan_format_db_datetime($player['last_time_online'], 'Y-m-d H:i', 'Never') ?></span></p>
                                 <p>⏱️ Play: <span class="font-normal"><?= $playtime ?></span></p>
-                                <p>🔁 Last username change: <span class="font-normal"><?= $player['last_username_change'] ? date('Y-m-d H:i', strtotime($player['last_username_change'])) : 'N/A' ?></span></p>
-                                <p>🔐 Last password change: <span class="font-normal"><?= $player['last_password_change'] ? date('Y-m-d H:i', strtotime($player['last_password_change'])) : 'N/A' ?></span></p>
+                                <p>🔁 Last username change: <span class="font-normal"><?= troxan_format_db_datetime($player['last_username_change'], 'Y-m-d H:i', 'N/A') ?></span></p>
+                                <p>🔐 Last password change: <span class="font-normal"><?= troxan_format_db_datetime($player['last_password_change'], 'Y-m-d H:i', 'N/A') ?></span></p>
                             </div>
 
                             <div class="admin-change-name-section mt-4 border-t border-orange-950/50 pt-4">

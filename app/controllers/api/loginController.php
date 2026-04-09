@@ -122,7 +122,11 @@ function forcePasswordChange($input) {
         $newHashedPassword = password_hash($new_password, PASSWORD_DEFAULT);
 
         // Update password and clear temporary password flags
-        $updateStmt = $pdo->prepare("UPDATE `User` SET password = ?, has_temp_password = 0, temp_password_expires = NULL WHERE user_id = ?");
+        $hasLastPasswordChange = $pdo->query("SHOW COLUMNS FROM `User` LIKE 'last_password_change'")->rowCount() > 0;
+        $updateSql = $hasLastPasswordChange
+            ? "UPDATE `User` SET password = ?, has_temp_password = 0, temp_password_expires = NULL, last_password_change = NOW() WHERE user_id = ?"
+            : "UPDATE `User` SET password = ?, has_temp_password = 0, temp_password_expires = NULL WHERE user_id = ?";
+        $updateStmt = $pdo->prepare($updateSql);
         $updateStmt->execute([$newHashedPassword, $user_id]);
 
         // Send confirmation email

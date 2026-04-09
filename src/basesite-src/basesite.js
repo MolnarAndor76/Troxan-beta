@@ -3,6 +3,8 @@ let alertCallback = null;
 let confirmCallback = null;
 let patchActionInProgress = false;
 let activeEditPatchId = null;
+let siteSettingsActionInProgress = false;
+let siteSettingsEditMode = false;
 
 function showCustomAlert(title, message, type = 'info', callback = null) {
     const modal = document.getElementById('basesite-alert-modal');
@@ -104,7 +106,191 @@ document.addEventListener('click', (event) => {
   if (downloadBtn.getAttribute('data-loggedin') !== 'true') {
     event.preventDefault();
     showCustomAlert("Hold up, adventurer!", "You need to log in or create an account before downloading the game.", "error", () => { window.location.href = '/login'; });
-  } else showCustomAlert("Downloading", "Download is starting...", "success");
+    return;
+  }
+
+  const downloadUrl = (downloadBtn.getAttribute('data-download-url') || '').trim();
+  if (!downloadUrl) {
+    showCustomAlert('Error', 'Download URL is missing. Ask an Engineer to update it.', 'error');
+    return;
+  }
+
+  window.location.href = downloadUrl;
+});
+
+function isLikelyValidSiteUrl(value) {
+    const url = (value || '').trim();
+    if (!url) return false;
+    if (url.startsWith('/') && !url.startsWith('//')) return true;
+
+    try {
+        const parsed = new URL(url);
+        return parsed.protocol === 'http:' || parsed.protocol === 'https:';
+    } catch (e) {
+        return false;
+    }
+}
+
+function toEditableAboutText(rawHtml) {
+    return rawHtml
+        .replace(/<br\s*[\/]?>/gi, '\n')
+        .replace(/&nbsp;/g, ' ')
+        .trim();
+}
+
+// ====== MAIN PAGE SETTINGS (ENGINEER) ======
+document.addEventListener('click', async (event) => {
+    const editBtn = event.target.closest('#site-settings-edit-btn');
+    const saveBtn = event.target.closest('#site-settings-save-btn');
+
+    if (!editBtn && !saveBtn) {
+        return;
+    }
+
+    if (siteSettingsActionInProgress) {
+        showCustomAlert('Please wait', 'Settings update is already in progress.', 'info');
+        return;
+    }
+
+    const aboutTextEl = document.getElementById('basesite-about-us-text');
+    const specialThanksList = document.getElementById('basesite-special-thanks-list');
+    const systemReqSource = document.getElementById('site-settings-system-req-source');
+    const loreSource = document.getElementById('site-settings-lore-source');
+    const downloadBtn = document.getElementById('basesite-download-game-btn');
+    const trailerIframe = document.getElementById('basesite-trailer-iframe');
+
+    if (!aboutTextEl || !downloadBtn || !trailerIframe) {
+        showCustomAlert('Error', 'Required elements are missing from page.', 'error');
+        return;
+    }
+
+    if (editBtn) {
+        if (siteSettingsEditMode) {
+            return;
+        }
+
+        const currentDownloadUrl = (downloadBtn.getAttribute('data-download-url') || '').trim();
+        const currentTrailerUrl = (trailerIframe.getAttribute('src') || '').trim();
+        const currentAboutText = toEditableAboutText(aboutTextEl.innerHTML);
+        const currentSpecialThanks = specialThanksList
+            ? Array.from(specialThanksList.querySelectorAll('li')).map(li => li.innerText.trim()).join('\n')
+            : '';
+        const currentSystemRequirements = systemReqSource ? systemReqSource.value : '';
+        const currentLoreText = loreSource ? loreSource.value : '';
+
+        const editorHtml = `
+            <div id="site-settings-editor" class="bg-orange-100 border-2 border-orange-900 rounded p-4 mb-4">
+                <label class="block text-sm font-bold text-orange-950 mb-1" for="site-settings-download-url">Download URL</label>
+                <input id="site-settings-download-url" type="text" class="w-full bg-white border-2 border-orange-950 p-2 rounded text-gray-900 mb-3" value="${currentDownloadUrl.replace(/"/g, '&quot;')}">
+
+                <label class="block text-sm font-bold text-orange-950 mb-1" for="site-settings-trailer-url">Trailer URL</label>
+                <input id="site-settings-trailer-url" type="text" class="w-full bg-white border-2 border-orange-950 p-2 rounded text-gray-900 mb-3" value="${currentTrailerUrl.replace(/"/g, '&quot;')}">
+
+                <label class="block text-sm font-bold text-orange-950 mb-1" for="site-settings-about-us">About us text</label>
+                <textarea id="site-settings-about-us" class="w-full h-24 bg-white border-2 border-orange-950 p-2 rounded text-gray-900 mb-3">${currentAboutText}</textarea>
+
+                <label class="block text-sm font-bold text-orange-950 mb-1" for="site-settings-special-thanks">Special thanks (one line = one entry)</label>
+                <textarea id="site-settings-special-thanks" class="w-full h-24 bg-white border-2 border-orange-950 p-2 rounded text-gray-900 mb-3">${currentSpecialThanks}</textarea>
+
+                <label class="block text-sm font-bold text-orange-950 mb-1" for="site-settings-system-req">System requirements (one line: Component|Minimum|Recommended)</label>
+                <textarea id="site-settings-system-req" class="w-full h-28 bg-white border-2 border-orange-950 p-2 rounded text-gray-900 mb-3">${currentSystemRequirements}</textarea>
+
+                <label class="block text-sm font-bold text-orange-950 mb-1" for="site-settings-lore">Lore text</label>
+                <textarea id="site-settings-lore" class="w-full h-40 bg-white border-2 border-orange-950 p-2 rounded text-gray-900">${currentLoreText}</textarea>
+            </div>
+        `;
+
+        aboutTextEl.insertAdjacentHTML('beforebegin', editorHtml);
+        aboutTextEl.classList.add('basesite-hidden');
+        if (specialThanksList) specialThanksList.closest('.basesite-about-box').classList.add('basesite-hidden');
+
+        editBtn.id = 'site-settings-save-btn';
+        editBtn.textContent = '💾';
+        editBtn.title = 'Save Main Page Settings';
+        siteSettingsEditMode = true;
+        return;
+    }
+
+    if (!siteSettingsEditMode || !saveBtn) {
+        return;
+    }
+
+    const downloadInput = document.getElementById('site-settings-download-url');
+    const trailerInput = document.getElementById('site-settings-trailer-url');
+    const aboutInput = document.getElementById('site-settings-about-us');
+    const specialThanksInput = document.getElementById('site-settings-special-thanks');
+    const systemReqInput = document.getElementById('site-settings-system-req');
+    const loreInput = document.getElementById('site-settings-lore');
+
+    if (!downloadInput || !trailerInput || !aboutInput) {
+        showCustomAlert('Error', 'Editor fields are missing.', 'error');
+        return;
+    }
+
+    const downloadUrl = downloadInput.value.trim();
+    const trailerUrl = trailerInput.value.trim();
+    const aboutUsText = aboutInput.value.trim();
+    const specialThanksText = specialThanksInput ? specialThanksInput.value : '';
+    const systemRequirementsText = systemReqInput ? systemReqInput.value.trim() : '';
+    const loreText = loreInput ? loreInput.value.trim() : '';
+
+    if (!isLikelyValidSiteUrl(downloadUrl)) {
+        showCustomAlert('Validation error', 'Download URL is invalid.', 'error');
+        return;
+    }
+
+    if (!isLikelyValidSiteUrl(trailerUrl)) {
+        showCustomAlert('Validation error', 'Trailer URL is invalid.', 'error');
+        return;
+    }
+
+    if (!aboutUsText) {
+        showCustomAlert('Validation error', 'About us text cannot be empty.', 'error');
+        return;
+    }
+
+    if (!systemRequirementsText) {
+        showCustomAlert('Validation error', 'System requirements cannot be empty.', 'error');
+        return;
+    }
+
+    if (!loreText) {
+        showCustomAlert('Validation error', 'Lore text cannot be empty.', 'error');
+        return;
+    }
+
+    try {
+        siteSettingsActionInProgress = true;
+        saveBtn.textContent = '⏳';
+
+        const response = await fetch('/app/api.php?path=main', {
+            method: 'POST',
+            credentials: 'include',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                action: 'update_site_settings',
+                download_url: downloadUrl,
+                trailer_url: trailerUrl,
+                about_us_text: aboutUsText,
+                special_thanks_text: specialThanksText,
+                system_requirements_text: systemRequirementsText,
+                lore_text: loreText
+            })
+        });
+
+        const result = await response.json();
+        if (response.ok) {
+            window.location.reload();
+        } else {
+            showCustomAlert('Error', result.message || 'Could not save main page settings.', 'error');
+            saveBtn.textContent = '💾';
+            siteSettingsActionInProgress = false;
+        }
+    } catch (e) {
+        showCustomAlert('Error', 'Server error while saving settings.', 'error');
+        saveBtn.textContent = '💾';
+        siteSettingsActionInProgress = false;
+    }
 });
 
 // ====== PATCH NOTES ADMIN LOGIKA ======

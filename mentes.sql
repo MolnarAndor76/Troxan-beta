@@ -165,6 +165,7 @@ CREATE TABLE `User` (
   `created_at` datetime DEFAULT current_timestamp(),
   `modified_at` datetime DEFAULT current_timestamp() ON UPDATE current_timestamp(),
   `last_time_online` datetime DEFAULT NULL,
+  `last_password_change` datetime DEFAULT NULL,
   `role_id` int(11) NOT NULL,
   `settings_id` int(11) DEFAULT NULL,
   `avatar_id` int(11) NOT NULL,

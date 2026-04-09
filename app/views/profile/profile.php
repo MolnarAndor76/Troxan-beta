@@ -1,11 +1,11 @@
 <?php
-$joinTime      = $playerStats['join_time'] ?? '-';
-$storyFinishes = $playerStats['num_of_story_finished'] ?? 0;
-$enemiesKilled = $playerStats['num_of_enemies_killed'] ?? 0;
-$deaths        = $playerStats['num_of_deaths'] ?? 0;
-$score         = $playerStats['score'] ?? 0;
-$accountCreated = !empty($user['created_at']) ? date('Y-m-d', strtotime($user['created_at'])) : '-';
-$lastUpdatedText = !empty($lastUpdated) ? date('Y.m.d H:i', strtotime($lastUpdated)) : 'Never';
+$lastSession   = troxan_format_db_datetime($user['last_time_online'] ?? null, 'Y-m-d H:i', 'Never');
+$storyFinishes = troxan_get_stat_int($playerStats, ['num_of_story_finished', 'Story finished'], 0);
+$enemiesKilled = troxan_get_stat_int($playerStats, ['num_of_enemies_killed', 'Mobs killed'], 0);
+$deaths        = troxan_get_stat_int($playerStats, ['num_of_deaths', 'Deaths'], 0);
+$score         = troxan_get_stat_score($playerStats);
+$accountCreated = troxan_format_db_datetime($user['created_at'] ?? null, 'Y-m-d', '-');
+$lastUpdatedText = troxan_format_db_datetime($lastUpdated, 'Y.m.d H:i', 'Never');
 $hasAdminAccess = in_array($user['role_name'], ['Admin', 'Engineer']);
 ?>
 
@@ -26,7 +26,7 @@ $hasAdminAccess = in_array($user['role_name'], ['Admin', 'Engineer']);
                     </thead>
                     <tbody>
                         <tr><td>Account created</td><td class="stat-value"><?= htmlspecialchars($accountCreated) ?></td></tr>
-                        <tr><td>Last session</td><td class="stat-value"><?= htmlspecialchars($joinTime) ?></td></tr>
+                        <tr><td>Last session</td><td class="stat-value"><?= htmlspecialchars($lastSession) ?></td></tr>
                         <tr><td>Story finishes</td><td class="stat-value"><?= $storyFinishes ?></td></tr>
                         <tr><td>Enemies killed</td><td class="stat-value"><?= $enemiesKilled ?></td></tr>
                         <tr><td>Deaths</td><td class="stat-value"><?= $deaths ?></td></tr>

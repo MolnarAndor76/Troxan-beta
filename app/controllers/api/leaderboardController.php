@@ -34,7 +34,7 @@ function getContent()
             }
 
             // Az új JSON formátum alapján a "score" kulcsot keressük!
-            $score = isset($stats['score']) ? (int)$stats['score'] : 0;
+            $score = troxan_get_stat_score($stats);
 
             $leaderboard_data[] = [
                 'user_id'  => $user['user_id'],
@@ -44,9 +44,7 @@ function getContent()
         }
 
         // Sorbarendezés csökkenő sorrendben a pontszám alapján
-        usort($leaderboard_data, function ($a, $b) {
-            return $b['score'] <=> $a['score'];
-        });
+        usort($leaderboard_data, 'troxan_compare_leaderboard_rows');
 
         $current_user_data = null;
 
@@ -66,7 +64,7 @@ function getContent()
         // --- System-wide latest stats update timestamp ---
         $stmtDate = $pdo->query("SELECT last_updated FROM `Statistics` ORDER BY last_updated DESC, id DESC LIMIT 1");
         $latestUpdateRaw = $stmtDate->fetchColumn();
-        $lastUpdatedText = $latestUpdateRaw ? date('Y.m.d H:i', strtotime($latestUpdateRaw)) : 'Never';
+        $lastUpdatedText = troxan_format_db_datetime($latestUpdateRaw, 'Y.m.d H:i', 'Never');
         // ------------------------------------------------------------------------
         ob_start();
 

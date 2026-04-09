@@ -17,7 +17,7 @@ function getContent()
 
         // 1. Lekérjük a JELENLEGI JÁTÉKOS adatait
         $stmt = $pdo->prepare("
-            SELECT u.username, u.email, u.created_at, u.last_username_change, r.role_name, a.avatar_picture 
+            SELECT u.username, u.email, u.created_at, u.last_time_online, u.last_username_change, r.role_name, a.avatar_picture 
             FROM `User` u 
             JOIN Roles r ON u.role_id = r.id 
             LEFT JOIN Avatars a ON u.avatar_id = a.id
@@ -52,14 +52,29 @@ function getContent()
 
         // 3. LEADERBOARD RANK KISZÁMÍTÁSA
         $stmtRank = $pdo->query("
-            SELECT s.user_id, MAX(CAST(JSON_UNQUOTE(JSON_EXTRACT(s.statistics_file, '$.score')) AS UNSIGNED)) as max_score
-            FROM `Statistics` s
-            JOIN `User` u ON s.user_id = u.user_id
+            SELECT u.user_id, u.username, s.statistics_file
+            FROM `User` u
+            LEFT JOIN `Statistics` s ON u.user_id = s.user_id
+                AND s.id = (
+                    SELECT MAX(id)
+                    FROM `Statistics` s2
+                    WHERE s2.user_id = u.user_id
+                )
             WHERE u.is_banned = 0
-            GROUP BY s.user_id
-            ORDER BY max_score DESC
         ");
-        $allScores = $stmtRank->fetchAll(PDO::FETCH_ASSOC);
+        $rankRows = $stmtRank->fetchAll(PDO::FETCH_ASSOC);
+
+        $allScores = [];
+        foreach ($rankRows as $row) {
+            $stats = !empty($row['statistics_file']) ? json_decode($row['statistics_file'], true) : [];
+            $allScores[] = [
+                'user_id' => $row['user_id'],
+                'username' => $row['username'],
+                'score' => troxan_get_stat_score($stats)
+            ];
+        }
+
+        usort($allScores, 'troxan_compare_leaderboard_rows');
 
         $leaderboardRank = '-';
         $currentRank = 1;
@@ -253,7 +268,11 @@ function handlePostActionsLegacy()
 
             // Ha ide eljutott, minden hibátlan! Titkosítjuk és mentjük!
             $newHashedPass = password_hash($newPass, PASSWORD_DEFAULT);
-            $update = $pdo->prepare("UPDATE `User` SET password = ? WHERE user_id = ?");
+            $hasLastPasswordChange = $pdo->query("SHOW COLUMNS FROM `User` LIKE 'last_password_change'")->rowCount() > 0;
+            $updateSql = $hasLastPasswordChange
+                ? "UPDATE `User` SET password = ?, last_password_change = NOW() WHERE user_id = ?"
+                : "UPDATE `User` SET password = ? WHERE user_id = ?";
+            $update = $pdo->prepare($updateSql);
             $update->execute([$newHashedPass, $userId]);
 
             // BIZTONSÁGI EMAIL KIKÜLDÉSE
@@ -376,6 +395,10 @@ function updateProfile()
             $newHashedPass = password_hash($newPass, PASSWORD_DEFAULT);
             $updates[] = "password = ?";
             $params[] = $newHashedPass;
+
+            if ($pdo->query("SHOW COLUMNS FROM `User` LIKE 'last_password_change'")->rowCount() > 0) {
+                $updates[] = "last_password_change = NOW()";
+            }
         }
 
         if (empty($updates)) {
