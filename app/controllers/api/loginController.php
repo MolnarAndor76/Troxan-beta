@@ -45,6 +45,19 @@ function loginUser($input) {
             $_SESSION['username']  = $user['username'];
             $_SESSION['role_name'] = $user['role_name'] ?? 'Player';
             $_SESSION['logged_in'] = true;
+            
+            $pdo->exec("CREATE TABLE IF NOT EXISTS `Active_Web_Sessions` (
+                `user_id` INT NOT NULL PRIMARY KEY,
+                `session_token` VARCHAR(128) NOT NULL,
+                `updated_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
+
+            $webSessionToken = bin2hex(random_bytes(32));
+            $_SESSION['web_session_token'] = $webSessionToken;
+
+            $sessionStmt = $pdo->prepare("INSERT INTO `Active_Web_Sessions` (user_id, session_token) VALUES (?, ?) ON DUPLICATE KEY UPDATE session_token = VALUES(session_token), updated_at = NOW()");
+            $sessionStmt->execute([$user['user_id'], $webSessionToken]);
+
             session_write_close();
 
             $avatar_base64 = 'https://picsum.photos/id/1025/200/200';

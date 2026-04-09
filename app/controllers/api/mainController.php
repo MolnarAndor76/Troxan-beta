@@ -116,7 +116,7 @@ function handlePatchAction() {
             $desc = trim($input['description'] ?? '');
             $stmt = $pdo->prepare("INSERT INTO PatchNotes (name, description, created_by) VALUES (?, ?, ?)");
             $stmt->execute([$name, $desc, $currentUserId]);
-            json_response(["status" => "success", "message" => "Patch published successfully!"], 200);
+            json_response(["status" => "success", "message" => "Patch published successfully!"], 201);
 
         } elseif ($action === 'restore' && $id) {
             $checkStmt = $pdo->prepare("

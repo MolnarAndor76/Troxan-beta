@@ -302,56 +302,20 @@ function adminRemoveMap() {
     
     $targetUserId = (int)$input['target_user_id'];
     $mapId = (int)$input['map_id'];
-    $reason = trim($input['reason'] ?? '');
 
     try {
-        // Fetch map details
-        $stmt = $pdo->prepare("SELECT creator_user_id FROM `Maps` WHERE id = ?");
-        $stmt->execute([$mapId]);
-        $mapData = $stmt->fetch(PDO::FETCH_ASSOC);
-
-        if (!$mapData) { json_response(["status" => "error", "message" => "Map not found."], 404); return; }
-
-        // 1. Remove the link from the library
+        // Remove ONLY from player's library (no map ban from this action)
         $delStmt = $pdo->prepare("DELETE FROM `User_Map_Library` WHERE user_id = ? AND map_id = ?");
         $delStmt->execute([$targetUserId, $mapId]);
 
-        if ($delStmt->rowCount() > 0) {
-            $pdo->prepare("UPDATE `Maps` SET downloads = GREATEST(downloads - 1, 0) WHERE id = ?")->execute([$mapId]);
+        if ($delStmt->rowCount() <= 0) {
+            json_response(["status" => "error", "message" => "This map is not in the player's library."], 404);
+            return;
         }
 
-        // 2. If they created the map, set status to Admin BANNED (4)
-        if ($mapData['creator_user_id'] == $targetUserId) {
-            if (empty($reason)) {
-                json_response(["status" => "error", "message" => "Map ban reason is required."], 400);
-                return;
-            }
-            $pdo->prepare("UPDATE `Maps` SET status = 4 WHERE id = ?")->execute([$mapId]);
+        $pdo->prepare("UPDATE `Maps` SET downloads = GREATEST(downloads - 1, 0) WHERE id = ?")->execute([$mapId]);
 
-            // Email notification to the map creator
-            $creatorStmt = $pdo->prepare("SELECT email, username FROM `User` WHERE user_id = ?");
-            $creatorStmt->execute([$targetUserId]);
-            $creatorInfo = $creatorStmt->fetch(PDO::FETCH_ASSOC);
-
-            if (!empty($creatorInfo['email'])) {
-                $mailerPath = __DIR__ . '/../../mailer.php';
-                if (file_exists($mailerPath)) {
-                    require_once $mailerPath;
-                    $subject = "Troxan - Your map was banned";
-                    $body = "<h2>Map removed from the library</h2>";
-                    $body .= "<p>Your map has been banned by an administrator.</p>";
-                    if (!empty($reason)) {
-                        $body .= "<p>Reason: " . htmlspecialchars($reason) . "</p>";
-                    }
-                    $body .= "<p>If you think this was a mistake, contact support.</p>";
-                    @sendTroxanMail($creatorInfo['email'], $subject, $body);
-                }
-            }
-
-            json_response(["status" => "success", "message" => "Map successfully banned!"], 200);
-        } else {
-            json_response(["status" => "success", "message" => "Map removed from player's library successfully!"], 200);
-        }
+        json_response(["status" => "success", "message" => "Map removed from player's library successfully!"], 200);
 
     } catch (Exception $e) { json_response(["status" => "error", "message" => $e->getMessage()], 500); }
 }
@@ -372,6 +336,100 @@ function adminEditMapName() {
     } catch (Exception $e) { json_response(["status" => "error", "message" => $e->getMessage()], 500); }
 }
 
+function hardDeleteUser() {
+    global $pdo;
+
+    if (!isset($_SESSION['user_id'])) {
+        json_response(["status" => "error", "message" => "Unauthorized access."], 401);
+        return;
+    }
+
+    $input = json_decode(file_get_contents('php://input'), true) ?: [];
+    $targetUserId = (int)($input['target_user_id'] ?? 0);
+    $confirmText = strtoupper(trim($input['confirm_text'] ?? ''));
+    $myUserId = (int)$_SESSION['user_id'];
+
+    if ($targetUserId <= 0) {
+        json_response(["status" => "error", "message" => "Invalid target user."], 400);
+        return;
+    }
+
+    if ($confirmText !== 'CONFIRM') {
+        json_response(["status" => "error", "message" => "Type CONFIRM to permanently delete this account."], 400);
+        return;
+    }
+
+    if ($targetUserId === $myUserId) {
+        json_response(["status" => "error", "message" => "You cannot delete your own account from here."], 400);
+        return;
+    }
+
+    $transactionStarted = false;
+
+    try {
+        $myRoleStmt = $pdo->prepare("SELECT r.role_name FROM `User` u JOIN Roles r ON u.role_id = r.id WHERE u.user_id = ?");
+        $myRoleStmt->execute([$myUserId]);
+        $myRole = $myRoleStmt->fetchColumn();
+
+        if (!in_array($myRole, ['Admin', 'Engineer'])) {
+            json_response(["status" => "error", "message" => "Only Admins and Engineers can use this feature."], 403);
+            return;
+        }
+
+        $targetRoleStmt = $pdo->prepare("SELECT u.user_id, r.role_name FROM `User` u JOIN Roles r ON u.role_id = r.id WHERE u.user_id = ?");
+        $targetRoleStmt->execute([$targetUserId]);
+        $targetData = $targetRoleStmt->fetch(PDO::FETCH_ASSOC);
+
+        if (!$targetData) {
+            json_response(["status" => "error", "message" => "Target user not found."], 404);
+            return;
+        }
+
+        if ($targetData['role_name'] === 'Engineer') {
+            json_response(["status" => "error", "message" => "Engineers cannot be deleted."], 403);
+            return;
+        }
+
+        if ($targetData['role_name'] === 'Admin' && $myRole !== 'Engineer') {
+            json_response(["status" => "error", "message" => "Only an Engineer can delete an Admin."], 403);
+            return;
+        }
+
+        if (!$pdo->inTransaction()) {
+            $transactionStarted = $pdo->beginTransaction();
+        }
+
+        $mapIdsStmt = $pdo->prepare("SELECT id FROM `Maps` WHERE creator_user_id = ?");
+        $mapIdsStmt->execute([$targetUserId]);
+        $createdMapIds = $mapIdsStmt->fetchAll(PDO::FETCH_COLUMN);
+
+        if (!empty($createdMapIds)) {
+            $placeholders = implode(',', array_fill(0, count($createdMapIds), '?'));
+            $pdo->prepare("DELETE FROM `User_Map_Library` WHERE map_id IN ($placeholders)")->execute($createdMapIds);
+            $pdo->prepare("DELETE FROM `Maps` WHERE id IN ($placeholders)")->execute($createdMapIds);
+        }
+
+        $pdo->prepare("DELETE FROM `User_Map_Library` WHERE user_id = ?")->execute([$targetUserId]);
+        $pdo->prepare("DELETE FROM `Statistics` WHERE user_id = ?")->execute([$targetUserId]);
+
+        try {
+            $pdo->prepare("DELETE FROM `Active_Web_Sessions` WHERE user_id = ?")->execute([$targetUserId]);
+        } catch (Exception $e) {
+            // Optional cleanup table may not exist in all environments.
+        }
+
+        $pdo->prepare("DELETE FROM `User` WHERE user_id = ?")->execute([$targetUserId]);
+
+        if ($transactionStarted && $pdo->inTransaction()) {
+            $pdo->commit();
+        }
+        json_response(["status" => "success", "message" => "User account permanently deleted."], 200);
+    } catch (Exception $e) {
+        if ($transactionStarted && $pdo->inTransaction()) $pdo->rollBack();
+        json_response(["status" => "error", "message" => $e->getMessage()], 500);
+    }
+}
+
 
 // ==========================================
 // 6. ROUTER
@@ -388,6 +446,7 @@ switch ($data["method"]) {
             elseif ($input['action'] === 'get_user_maps') getUserMaps();
             elseif ($input['action'] === 'admin_remove_map') adminRemoveMap();
             elseif ($input['action'] === 'admin_edit_map_name') adminEditMapName();
+            elseif ($input['action'] === 'hard_delete_user') hardDeleteUser();
             else json_response(["status" => "error", "message" => "Ismeretlen POST akció"], 400);
         } else json_response(["status" => "error", "message" => "Hiányzó action paraméter"], 400);
         break;

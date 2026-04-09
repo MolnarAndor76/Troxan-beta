@@ -403,16 +403,67 @@ function deleteProfile()
     }
 
     $userId = $_SESSION['user_id'];
+    $input = json_decode(file_get_contents('php://input'), true) ?: [];
+    $confirmText = strtoupper(trim($input['confirm_text'] ?? ''));
+
+    if ($confirmText !== 'CONFIRM') {
+        json_response(["status" => "error", "message" => "Type CONFIRM to delete your profile."], 400);
+        return;
+    }
+
+    $transactionStarted = false;
 
     try {
+        if (!$pdo->inTransaction()) {
+            try {
+                $transactionStarted = $pdo->beginTransaction();
+            } catch (Exception $txe) {
+                $transactionStarted = false;
+            }
+        }
+
+        $userStmt = $pdo->prepare("SELECT user_id FROM `User` WHERE user_id = ? LIMIT 1");
+        $userStmt->execute([$userId]);
+        $userRow = $userStmt->fetch(PDO::FETCH_ASSOC);
+
+        if (!$userRow) {
+            if ($pdo->inTransaction()) $pdo->rollBack();
+            json_response(["status" => "error", "message" => "User not found."], 404);
+            return;
+        }
+
+        $mapIdsStmt = $pdo->prepare("SELECT id FROM `Maps` WHERE creator_user_id = ?");
+        $mapIdsStmt->execute([$userId]);
+        $createdMapIds = $mapIdsStmt->fetchAll(PDO::FETCH_COLUMN);
+
+        if (!empty($createdMapIds)) {
+            $placeholders = implode(',', array_fill(0, count($createdMapIds), '?'));
+            $pdo->prepare("DELETE FROM `User_Map_Library` WHERE map_id IN ($placeholders)")->execute($createdMapIds);
+            $pdo->prepare("DELETE FROM `Maps` WHERE id IN ($placeholders)")->execute($createdMapIds);
+        }
+
+        $pdo->prepare("DELETE FROM `User_Map_Library` WHERE user_id = ?")->execute([$userId]);
+        $pdo->prepare("DELETE FROM `Statistics` WHERE user_id = ?")->execute([$userId]);
+
+        try {
+            $pdo->prepare("DELETE FROM `Active_Web_Sessions` WHERE user_id = ?")->execute([$userId]);
+        } catch (Exception $e) {
+            // Optional cleanup table may not exist in some environments.
+        }
+
         $stmt = $pdo->prepare("DELETE FROM `User` WHERE user_id = ?");
         $stmt->execute([$userId]);
+
+        if ($transactionStarted && $pdo->inTransaction()) {
+            $pdo->commit();
+        }
 
         session_unset();
         session_destroy();
 
         json_response(["status" => "success", "message" => "User account deleted."], 200);
     } catch (Exception $e) {
+        if ($transactionStarted && $pdo->inTransaction()) $pdo->rollBack();
         json_response(["status" => "error", "message" => "SQL error: " . $e->getMessage()], 500);
     }
 }

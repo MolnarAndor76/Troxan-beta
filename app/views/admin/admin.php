@@ -1,4 +1,4 @@
-<div class="p-2 md:p-6">
+<div class="p-2 md:p-6 overflow-x-hidden">
     <div class="admin-site-wrapper">
 
         <div class="admin-header">
@@ -73,7 +73,7 @@
                                         <?= htmlspecialchars($player['username']) ?>
                                     </button>
                                 <?php else: ?>
-                                    <span class="text-lg font-extrabold tracking-wide text-left px-3 py-1 rounded-md border-2 opacity-80 cursor-not-allowed <?= $nameClass ?>" title="Védett profil!">
+                                    <span class="text-lg font-extrabold tracking-wide text-left px-3 py-1 rounded-md border-2 opacity-80 cursor-not-allowed <?= $nameClass ?>" title="Protected profile!">
                                         <?= htmlspecialchars($player['username']) ?> 🔒
                                     </span>
                                 <?php endif; ?>
@@ -135,6 +135,10 @@
                             </div>
 
                             <button class="admin-action-btn admin-btn-gray mt-8 w-full py-3 admin-view-logs-btn" data-userid="<?= $player['user_id'] ?>" data-username="<?= htmlspecialchars($player['username']) ?>">📜 View Logs</button>
+
+                            <?php if ($canModify): ?>
+                                <button class="admin-action-btn admin-btn-red mt-3 w-full py-3 admin-hard-delete-open-btn" data-userid="<?= $player['user_id'] ?>" data-username="<?= htmlspecialchars($player['username']) ?>">🗑️ DELETE PROFILE</button>
+                            <?php endif; ?>
                         </div>
                     </div>
                     <?php endif; ?>
@@ -175,6 +179,17 @@
         <button id="admin-rename-map-confirm-btn" class="admin-action-btn admin-btn-blue w-full py-2">Rename</button>
     </div>
 </div>
+
+<div id="admin-hard-delete-modal" class="admin-details-modal hidden" style="z-index: 9998;">
+    <div class="admin-details-content !max-w-md">
+        <button class="admin-close-details-btn absolute top-3 right-4">✖</button>
+        <h2 class="text-lg font-bold text-red-700 mb-3">Hard Delete Profile</h2>
+        <p class="text-sm text-orange-900 mb-2">Target: <span id="admin-hard-delete-target"></span></p>
+        <p class="text-sm font-bold text-red-700 mb-2">Type CONFIRM to permanently delete this account.</p>
+        <input id="admin-hard-delete-input" type="text" class="w-full border border-red-900 rounded p-2 mb-3" placeholder="CONFIRM">
+        <button id="admin-hard-delete-confirm-btn" class="admin-action-btn admin-btn-red w-full py-2">Permanently Delete</button>
+    </div>
+</div>
 <div id="global-logs-modal" class="admin-details-modal hidden">
     <div class="admin-details-content w-[95%] max-w-[600px] max-h-[90vh] flex flex-col">
         <button class="admin-close-logs-btn absolute top-3 right-4 text-3xl text-orange-950 font-black cursor-pointer hover:text-red-600 transition-colors z-20">✖</button>
@@ -197,7 +212,7 @@
       <h2 id="basesite-alert-title" class="text-xl font-bold text-orange-950">Notice</h2>
     </div>
     <button id="basesite-alert-close-btn" class="admin-close-details-btn">&times;</button>
-    <p id="basesite-alert-message" class="text-lg font-bold text-gray-800 my-4">Üzenet helye</p>
+    <p id="basesite-alert-message" class="text-lg font-bold text-gray-800 my-4">Message goes here</p>
     <button id="basesite-alert-ok-btn" class="admin-action-btn admin-btn-yellow mt-4 py-2 px-8">OK</button>
   </div>
 </div>

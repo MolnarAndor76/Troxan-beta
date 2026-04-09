@@ -183,6 +183,23 @@ document.addEventListener('input', (event) => {
 // ==========================================
 document.addEventListener('click', (event) => {
 
+    const mobileMenuBtn = event.target.closest('#mymaps-mobile-menu-btn');
+    const controlsRow = document.getElementById('mymaps-controls-row');
+    if (mobileMenuBtn && controlsRow) {
+        controlsRow.classList.toggle('hidden');
+        controlsRow.classList.toggle('mymaps-mobile-open');
+        return;
+    }
+
+    if (controlsRow && controlsRow.classList.contains('mymaps-mobile-open')) {
+        const clickedInsideMenu = !!event.target.closest('#mymaps-controls-row');
+        const clickedMenuBtn = !!event.target.closest('#mymaps-mobile-menu-btn');
+        if (!clickedInsideMenu && !clickedMenuBtn) {
+            controlsRow.classList.add('hidden');
+            controlsRow.classList.remove('mymaps-mobile-open');
+        }
+    }
+
     if (event.target.closest('#mymaps-alert-close-btn') || event.target.closest('#mymaps-alert-ok-btn')) {
         closeModalById('mymaps-alert-modal');
         if (window.alertCallback) {
@@ -285,12 +302,20 @@ document.addEventListener('click', (event) => {
     // --- NAV BUTTONS ---
     const mapsNav = event.target.closest('#mymaps-nav-maps');
     if (mapsNav) {
+        if (controlsRow && controlsRow.classList.contains('mymaps-mobile-open')) {
+            controlsRow.classList.add('hidden');
+            controlsRow.classList.remove('mymaps-mobile-open');
+        }
         window.location.href = '/maps';
         return;
     }
 
     const profileNav = event.target.closest('#mymaps-nav-profile');
     if (profileNav) {
+        if (controlsRow && controlsRow.classList.contains('mymaps-mobile-open')) {
+            controlsRow.classList.add('hidden');
+            controlsRow.classList.remove('mymaps-mobile-open');
+        }
         window.location.href = '/profile';
         return;
     }

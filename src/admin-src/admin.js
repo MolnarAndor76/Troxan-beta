@@ -13,6 +13,7 @@ let currentAdminTargetUser = { id: null, username: '' };
 let currentBanTarget = { id: null, username: '', action: 'ban', type: 'user', mapId: null, targetUserId: null };
 let currentNameTarget = { id: null, username: '' };
 let currentAdminRenameMap = { mapId: null, oldName: '' };
+let currentHardDeleteTarget = { id: null, username: '' };
 let currentLogsData = [];
 
 function openModalById(id) {
@@ -82,7 +83,7 @@ document.addEventListener('input', function(event) {
         let hasVisibleCard = false;
 
         cards.forEach(card => {
-            const nameEl = card.querySelector('.admin-username-btn') || card.querySelector('span[title="Protected profile!"]');
+            const nameEl = card.querySelector('.admin-username-btn') || card.querySelector('span[title]');
             if (nameEl) {
                 const username = nameEl.innerText.replace('🔒', '').toLowerCase().trim();
                 if (username.includes(filterText)) {
@@ -147,6 +148,11 @@ function renderAdminMaps() {
         const isCreatorEngineer = (map.creator_role === 'Engineer');
         const cardBorder = isCreatorEngineer ? 'border-cyan-900 shadow-cyan-900/50' : 'border-orange-950 shadow-[2px_2px_0px_#000]';
 
+        const isCreatedByTargetPlayer = Number(map.creator_user_id) === Number(currentAdminTargetUser.id);
+        const removeBtnHtml = isCreatedByTargetPlayer
+            ? ''
+            : `<button class="admin-remove-map-btn text-xl hover:scale-110 transition-transform cursor-pointer drop-shadow-md ml-auto" data-mapid="${map.id}" title="Remove from player's library">🗑️</button>`;
+
         const cardHtml = `
             <article class="admin-map-card relative w-[240px] h-[340px] p-4 flex flex-col items-center justify-between transition-transform duration-300 hover:-translate-y-1" data-mapid="${map.id}">
                 <div class="w-full h-28 border-4 ${cardBorder} rounded-sm overflow-hidden mb-2 relative shadow-[2px_2px_0px_#000]">
@@ -158,7 +164,7 @@ function renderAdminMaps() {
                     <p class="text-xs font-bold text-white drop-shadow-[1px_1px_0px_#000] text-center w-full mb-auto truncate">${isCreatorEngineer ? '🛠️ ' : ''}By: ${map.creator_name}</p>
                     <div class="mt-2 flex justify-between items-center w-full gap-2 p-2 bg-orange-950/30 rounded-sm border border-orange-950/50">
                         <button class="admin-edit-map-name-btn bg-blue-600 hover:bg-blue-500 text-white font-extrabold py-1.5 px-3 border-2 border-blue-950 rounded-sm shadow-[2px_2px_0px_#000] text-[10px] uppercase" data-mapid="${map.id}">✏️ Edit</button>
-                        <button class="admin-remove-map-btn text-xl hover:scale-110 transition-transform cursor-pointer drop-shadow-md ml-auto" data-mapid="${map.id}" title="Remove / Ban">🗑️</button>
+                        ${removeBtnHtml}
                     </div>
                 </div>
             </article>
@@ -415,6 +421,47 @@ document.addEventListener('click', function(event) {
         return;
     }
 
+    const hardDeleteOpenBtn = event.target.closest('.admin-hard-delete-open-btn');
+    if (hardDeleteOpenBtn) {
+        const userId = hardDeleteOpenBtn.getAttribute('data-userid');
+        const username = hardDeleteOpenBtn.getAttribute('data-username') || '';
+        currentHardDeleteTarget = { id: userId, username: username };
+
+        document.getElementById('admin-hard-delete-target').innerText = username;
+        document.getElementById('admin-hard-delete-input').value = '';
+        openModalById('admin-hard-delete-modal');
+        return;
+    }
+
+    if (event.target.closest('#admin-hard-delete-confirm-btn')) {
+        const confirmInput = document.getElementById('admin-hard-delete-input');
+        const confirmText = (confirmInput ? confirmInput.value : '').trim();
+
+        if (confirmText !== 'CONFIRM') {
+            showCustomAlert('Error', 'Type CONFIRM in uppercase to permanently delete this account.', 'error');
+            if (confirmInput) confirmInput.focus();
+            openModalById('admin-hard-delete-modal');
+            return;
+        }
+
+        fetch(adminUrl, {
+            method: 'POST', credentials: 'include', headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ action: 'hard_delete_user', target_user_id: currentHardDeleteTarget.id, confirm_text: confirmText })
+        }).then(res => res.json()).then(data => {
+            if (data.status === 'success') {
+                closeModalById('admin-hard-delete-modal');
+                showCustomAlert('Success', data.message, 'success', () => location.reload());
+            } else {
+                openModalById('admin-hard-delete-modal');
+                showCustomAlert('Error', data.message, 'error');
+            }
+        }).catch(() => {
+            openModalById('admin-hard-delete-modal');
+            showCustomAlert('Error', 'Network error occurred.', 'error');
+        });
+        return;
+    }
+
     if (event.target.closest('#ban-reason-confirm-btn')) {
         const reasonInput = document.getElementById('ban-reason-input');
         const reason = reasonInput ? reasonInput.value.trim() : '';
@@ -530,16 +577,25 @@ document.addEventListener('click', function(event) {
         return;
     }
 
-    // PÁLYA TÖRLÉSE / BANNOLÁSA
+    // PÁLYA ELTÁVOLÍTÁSA A JÁTÉKOS KÖNYVTÁRÁBÓL
     const removeMapBtn = event.target.closest('.admin-remove-map-btn');
     if (removeMapBtn) {
         const mapId = removeMapBtn.getAttribute('data-mapid');
 
-        currentBanTarget = { id: null, username: '', action: 'map_ban', type: 'map', mapId: mapId, targetUserId: currentAdminTargetUser.id };
-        document.getElementById('ban-reason-title').innerText = 'Ban Map';
-        document.getElementById('ban-reason-target').innerText = `Map ID: ${mapId}`;
-        document.getElementById('ban-reason-input').value = '';
-        openModalById('admin-ban-reason-modal');
+        showCustomConfirm('Remove map', 'Are you sure you want to remove this map from the player\'s library?', 'danger', () => {
+            fetch(adminUrl, {
+                method: 'POST', credentials: 'include', headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ action: 'admin_remove_map', map_id: mapId, target_user_id: currentAdminTargetUser.id })
+            }).then(res => res.json()).then(data => {
+                if (data.status === 'success') {
+                    showCustomAlert('Success', data.message, 'success', () => fetchAdminMaps(currentAdminTargetUser.id));
+                } else {
+                    showCustomAlert('Error', data.message, 'error');
+                }
+            }).catch(() => {
+                showCustomAlert('Error', 'Network error occurred.', 'error');
+            });
+        });
 
         return;
     }

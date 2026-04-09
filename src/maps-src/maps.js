@@ -122,9 +122,30 @@ document.addEventListener('keypress', (e) => {
 
 document.addEventListener('click', (event) => {
 
+    const mobileMenuBtn = event.target.closest('#maps-mobile-menu-btn');
+    const controlsRow = document.getElementById('maps-controls-row');
+    if (mobileMenuBtn && controlsRow) {
+        controlsRow.classList.toggle('hidden');
+        controlsRow.classList.toggle('maps-mobile-open');
+        return;
+    }
+
+    if (controlsRow && controlsRow.classList.contains('maps-mobile-open')) {
+        const clickedInsideMenu = !!event.target.closest('#maps-controls-row');
+        const clickedMenuBtn = !!event.target.closest('#maps-mobile-menu-btn');
+        if (!clickedInsideMenu && !clickedMenuBtn) {
+            controlsRow.classList.add('hidden');
+            controlsRow.classList.remove('maps-mobile-open');
+        }
+    }
+
     // --- ÚJ GOMB: Irány a My Maps! ---
     const goMyMapsBtn = event.target.closest('#maps-go-mymaps-btn');
     if (goMyMapsBtn) {
+        if (controlsRow && controlsRow.classList.contains('maps-mobile-open')) {
+            controlsRow.classList.add('hidden');
+            controlsRow.classList.remove('maps-mobile-open');
+        }
         window.location.href = '/my_maps';
         return;
     }

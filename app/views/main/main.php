@@ -99,10 +99,10 @@
                   </div>
               <?php endif; ?>
 
-              <div class="absolute bottom-2 right-2 flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+              <div class="absolute bottom-2 right-2 flex gap-2 opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity">
                 
                 <?php if ($iAmEngineer): ?>
-                    <button class="patch-lock-btn text-xl hover:scale-110 transition-transform cursor-pointer" title="<?= $isLocked ? 'Lakat feloldása' : 'Lelakatolás' ?>">
+                    <button class="patch-lock-btn text-xl hover:scale-110 transition-transform cursor-pointer" title="<?= $isLocked ? 'Unlock patch' : 'Lock patch' ?>">
                         <?= $isLocked ? '🔒' : '🔓' ?>
                     </button>
                 <?php elseif ($isLocked && $canEditPatchNotes): ?>
@@ -213,7 +213,7 @@
           <button id="basesite-alert-close-btn" class="basesite-modal-close">&times;</button>
         </div>
         <div class="basesite-modal-body bg-orange-50 text-center p-6">
-          <p id="basesite-alert-message" class="text-xl font-bold text-orange-950 my-4 leading-relaxed">Üzenet helye</p>
+          <p id="basesite-alert-message" class="text-xl font-bold text-orange-950 my-4 leading-relaxed">Message goes here</p>
           <button id="basesite-alert-ok-btn" class="bg-yellow-500 hover:bg-yellow-400 text-orange-950 font-extrabold py-2 px-8 rounded border-2 border-orange-950 shadow-[3px_3px_0px_rgba(0,0,0,1)] transition-transform hover:translate-y-1 cursor-pointer mt-4">OK</button>
         </div>
       </div>

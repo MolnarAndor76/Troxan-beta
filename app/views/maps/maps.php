@@ -1,10 +1,13 @@
 <div class="maps-site">
-  <div id="maps-main">
-    <section id="maps-wrapper" class="content-box">
+  <div id="maps-main" class="flex-1 min-h-0 flex flex-col">
+    <section id="maps-wrapper" class="content-box flex-1 min-h-0 flex flex-col">
       <header class="maps-header">
-        <h2 id="maps-title">MAPS</h2>
+        <div class="maps-header-top">
+          <h2 id="maps-title">MAPS</h2>
+          <button id="maps-mobile-menu-btn" class="maps-ham-btn md:hidden" type="button" aria-label="Open maps menu">☰</button>
+        </div>
 
-        <div class="maps-controls-row">
+        <div id="maps-controls-row" class="maps-controls-row hidden md:flex">
           <input type="text" id="maps-search" placeholder="Search...">
           
           <div class="maps-sort-box relative">
@@ -29,13 +32,13 @@
             <button id="maps-trash-open-btn" class="maps-help-btn" title="Admin Trash">🗑️</button>
           <?php endif; ?>
           
-          <button id="maps-go-mymaps-btn" class="maps-help-btn" title="Irány a könyvtáram!">🗺️ My Maps</button>
+          <button id="maps-go-mymaps-btn" class="maps-help-btn" title="Go to my library!">🗺️ My Maps</button>
           
           <button id="maps-help-btn" class="maps-help-btn">?</button>
         </div>
       </header>
 
-      <div class="maps-scroll-area max-h-[600px] overflow-y-auto pr-2">
+      <div class="maps-scroll-area">
         <div class="maps-grid">
          <?php if (empty($active_maps)): ?>
              <p id="live-maps-empty-msg" class="text-orange-900 font-bold text-xl col-span-full mt-10 text-center w-full">No maps found. 🏝️</p>
@@ -196,7 +199,7 @@
     <div id="basesite-alert-header" class="border-b-4 border-orange-950 w-full pb-2 mb-4">
       <h2 id="basesite-alert-title" class="text-xl font-bold text-orange-950">Notice</h2>
     </div>
-    <p id="basesite-alert-message" class="text-lg font-bold text-gray-800 my-4">Üzenet helye</p>
+    <p id="basesite-alert-message" class="text-lg font-bold text-gray-800 my-4">Message goes here</p>
     <button id="basesite-alert-ok-btn" class="bg-yellow-500 px-6 py-2 font-bold text-orange-950 border-2 border-orange-950 rounded shadow-[2px_2px_0px_#000] mt-4">OK</button>
   </div>
 </div>

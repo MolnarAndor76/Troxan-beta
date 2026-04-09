@@ -45,4 +45,56 @@ error_reporting(E_ALL);
 // --- 4. MVC ÉS ADATBÁZIS BETÖLTÉSE ---
 require 'core/config.php';
 require 'core/connect.php'; 
+
+if (isset($_SESSION['user_id']) && !empty($_SESSION['logged_in'])) {
+    try {
+        $pdo->exec("CREATE TABLE IF NOT EXISTS `Active_Web_Sessions` (
+            `user_id` INT NOT NULL PRIMARY KEY,
+            `session_token` VARCHAR(128) NOT NULL,
+            `updated_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
+
+        $sessionUserId = (int)$_SESSION['user_id'];
+        $currentToken = $_SESSION['web_session_token'] ?? '';
+
+        if (empty($currentToken)) {
+            $currentToken = bin2hex(random_bytes(32));
+            $_SESSION['web_session_token'] = $currentToken;
+
+            $upsertStmt = $pdo->prepare("INSERT INTO `Active_Web_Sessions` (user_id, session_token) VALUES (?, ?) ON DUPLICATE KEY UPDATE session_token = VALUES(session_token), updated_at = NOW()");
+            $upsertStmt->execute([$sessionUserId, $currentToken]);
+        } else {
+            $getStmt = $pdo->prepare("SELECT session_token FROM `Active_Web_Sessions` WHERE user_id = ? LIMIT 1");
+            $getStmt->execute([$sessionUserId]);
+            $dbToken = $getStmt->fetchColumn();
+
+            if (!$dbToken) {
+                $upsertStmt = $pdo->prepare("INSERT INTO `Active_Web_Sessions` (user_id, session_token) VALUES (?, ?) ON DUPLICATE KEY UPDATE session_token = VALUES(session_token), updated_at = NOW()");
+                $upsertStmt->execute([$sessionUserId, $currentToken]);
+            } elseif (!hash_equals((string)$dbToken, (string)$currentToken)) {
+                $_SESSION = [];
+                if (ini_get("session.use_cookies")) {
+                    $params = session_get_cookie_params();
+                    setcookie(session_name(), '', time() - 42000,
+                        $params["path"], $params["domain"],
+                        $params["secure"], $params["httponly"]
+                    );
+                }
+                session_destroy();
+
+                json_response([
+                    "status" => "error",
+                    "message" => "Your account was used on another browser. Please log in again."
+                ], 401);
+                exit();
+            } else {
+                $touchStmt = $pdo->prepare("UPDATE `Active_Web_Sessions` SET updated_at = NOW() WHERE user_id = ?");
+                $touchStmt->execute([$sessionUserId]);
+            }
+        }
+    } catch (Throwable $e) {
+        // fail-open: do not block whole API if session-table maintenance fails
+    }
+}
+
 require CORE . 'router.php';

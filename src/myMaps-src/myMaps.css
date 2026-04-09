@@ -2,11 +2,19 @@
 
 @layer components {
     .mymaps-site {
-        @apply h-[80vh] w-[90%] max-w-6xl mx-auto bg-orange-50 rounded-xl shadow-[8px_8px_0px_rgba(0,0,0,1)] border-4 border-orange-950 flex flex-col overflow-hidden;
+        @apply h-[80vh] w-[90%] max-w-6xl mx-auto bg-orange-50 rounded-xl shadow-[8px_8px_0px_rgba(0,0,0,1)] border-4 border-orange-950 flex flex-col overflow-hidden min-h-0;
     }
 
     .mymaps-header {
-        @apply flex flex-col md:flex-row items-center justify-between p-4 md:p-6 bg-orange-900 border-b-4 border-orange-950 shadow-md gap-4 z-20;
+        @apply relative flex flex-col md:flex-row items-center justify-between p-4 md:p-6 bg-orange-900 border-b-4 border-orange-950 shadow-md gap-4 z-20;
+    }
+
+    .mymaps-header-top {
+        @apply w-full flex items-center justify-between md:w-auto;
+    }
+
+    .mymaps-ham-btn {
+        @apply bg-yellow-500 hover:bg-yellow-400 text-orange-950 text-2xl font-black w-11 h-11 rounded-sm border-2 border-orange-950 shadow-[3px_3px_0px_rgba(0,0,0,1)] transition-all hover:translate-y-[1px] hover:shadow-[1px_1px_0px_rgba(0,0,0,1)] cursor-pointer;
     }
 
     #mymaps-title {
@@ -17,13 +25,38 @@
         @apply flex flex-col sm:flex-row w-full md:w-auto gap-4 items-center justify-center flex-1 md:ml-8;
     }
 
+    #mymaps-controls-row.mymaps-mobile-open {
+        @apply flex w-full mt-2 p-3 border-2 border-orange-950 rounded-sm bg-orange-800/95 shadow-[4px_4px_0px_rgba(0,0,0,1)];
+    }
+
+    #mymaps-controls-row.mymaps-mobile-open {
+        @apply items-center text-center;
+    }
+
+    #mymaps-controls-row.mymaps-mobile-open #mymaps-search,
+    #mymaps-controls-row.mymaps-mobile-open .mymaps-sort-box,
+    #mymaps-controls-row.mymaps-mobile-open .mymaps-sort-btn,
+    #mymaps-controls-row.mymaps-mobile-open .mymaps-nav-buttons,
+    #mymaps-controls-row.mymaps-mobile-open .mymaps-nav-btn {
+        @apply w-full;
+    }
+
+    #mymaps-controls-row.mymaps-mobile-open .mymaps-sort-btn,
+    #mymaps-controls-row.mymaps-mobile-open .mymaps-nav-btn {
+        @apply justify-center;
+    }
+
+    #mymaps-controls-row.mymaps-mobile-open .mymaps-nav-buttons {
+        @apply flex flex-col gap-3;
+    }
+
     #mymaps-search {
         @apply w-full md:w-64 bg-white border-4 border-orange-950 p-2 rounded-sm text-orange-950 font-bold focus:outline-none focus:border-yellow-500 shadow-[inset_0_4px_4px_rgba(0,0,0,0.05)] placeholder-gray-400;
     }
 
     .mymaps-sort-box { @apply relative w-full sm:w-auto; }
     .mymaps-nav-buttons { @apply flex items-center gap-2; }
-    .mymaps-nav-btn { @apply bg-blue-600 hover:bg-blue-500 text-white font-bold py-2 px-4 rounded-sm border-2 border-blue-950 shadow-[2px_2px_0px_rgba(0,0,0,1)] transition-all hover:translate-y-[1px] hover:shadow-[1px_1px_0px_rgba(0,0,0,1)]; }
+    .mymaps-nav-btn { @apply inline-flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-500 text-white font-bold py-2 px-4 rounded-sm border-2 border-blue-950 shadow-[2px_2px_0px_rgba(0,0,0,1)] transition-all hover:translate-y-[1px] hover:shadow-[1px_1px_0px_rgba(0,0,0,1)]; }
     .mymaps-profile-avatar { @apply w-9 h-9 rounded-full object-cover border-2 border-white; }
     .mymaps-sort-btn {
         @apply sm:w-48 bg-yellow-500 hover:bg-yellow-400 text-orange-950 font-bold py-2.5 px-4 rounded-sm transition-all flex items-center justify-between border-2 border-orange-950 shadow-[3px_3px_0px_rgba(0,0,0,1)] hover:translate-y-[1px] hover:shadow-[1px_1px_0px_rgba(0,0,0,1)] cursor-pointer uppercase tracking-wide;
@@ -36,7 +69,7 @@
     }
 
     .mymaps-scroll-area {
-        @apply flex-1 overflow-y-auto p-4 md:p-8 bg-orange-50;
+        @apply flex-1 min-h-0 overflow-y-auto overflow-x-hidden p-4 md:p-8 pr-2 pb-4 bg-orange-50;
     }
     .mymaps-scroll-area::-webkit-scrollbar { width: 14px; }
     .mymaps-scroll-area::-webkit-scrollbar-track { @apply bg-orange-200 border-l-4 border-orange-950; }
@@ -44,7 +77,7 @@
     .mymaps-scroll-area::-webkit-scrollbar-thumb:hover { @apply bg-yellow-600; }
 
     .mymaps-grid {
-        @apply grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8 justify-items-center;
+        @apply grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8 justify-items-center auto-rows-max;
     }
 
     .mymaps-card {

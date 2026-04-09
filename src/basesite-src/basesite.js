@@ -1,6 +1,8 @@
 // ====== UNIVERZÁLIS CUSTOM ALERT & CONFIRM LOGIKA ======
 let alertCallback = null;
 let confirmCallback = null;
+let patchActionInProgress = false;
+let activeEditPatchId = null;
 
 function showCustomAlert(title, message, type = 'info', callback = null) {
     const modal = document.getElementById('basesite-alert-modal');
@@ -112,6 +114,17 @@ document.addEventListener('click', async (event) => {
     });
     const apiUrl = '/app/api.php?path=main';
 
+    const patchActionTarget = event.target.closest('.patch-lock-btn, .patch-delete-btn, .patch-edit-btn, .patch-save-btn, .patch-restore-btn, #patch-publish-btn, #patch-discard-btn');
+    if (patchActionInProgress && patchActionTarget) {
+        showCustomAlert('Please wait', 'Another patch action is in progress. Wait for completion or page refresh.', 'info');
+        return;
+    }
+
+    if (activeEditPatchId && patchActionTarget && !event.target.closest('.patch-save-btn')) {
+        showCustomAlert('Edit in progress', 'Save the currently edited patch first. After saving, the page will refresh.', 'info');
+        return;
+    }
+
     // --- 0. LAKAT (Toggle Lock - Csak Engineer) ---
     const lockBtn = event.target.closest('.patch-lock-btn');
     if (lockBtn) {
@@ -119,6 +132,7 @@ document.addEventListener('click', async (event) => {
         const patchId = card.getAttribute('data-id');
 
         try {
+            patchActionInProgress = true;
             lockBtn.innerHTML = '⏳';
             const response = await fetch(apiUrl, fetchConfig({ action: 'toggle_lock', id: patchId }));
             const result = await response.json();
@@ -128,10 +142,12 @@ document.addEventListener('click', async (event) => {
             } else { 
                 showCustomAlert("Error", result.message, "error"); 
                 lockBtn.innerHTML = '🔒'; 
+                patchActionInProgress = false;
             }
         } catch (e) { 
             showCustomAlert("Error", "Server error!", "error"); 
             lockBtn.innerHTML = '🔒'; 
+            patchActionInProgress = false;
         }
         return;
     }
@@ -143,13 +159,19 @@ document.addEventListener('click', async (event) => {
         const patchId = card.getAttribute('data-id');
         showCustomConfirm("Confirm deletion", "Are you sure you want to move this patch to recycle bin?", "danger", async () => {
             try {
+                patchActionInProgress = true;
                 const response = await fetch(apiUrl, fetchConfig({ action: 'delete', id: patchId }));
                 const result = await response.json();
                 if (response.ok) {
-                    card.style.transition = "opacity 0.3s, transform 0.3s"; card.style.opacity = "0"; card.style.transform = "scale(0.9)";
-                    setTimeout(() => card.remove(), 300);
-                } else showCustomAlert("Error", result.message, "error");
-            } catch (e) { showCustomAlert("Error", "Server connection error!", "error"); }
+                    showCustomAlert("Success", result.message || "Patch moved to recycle bin.", "success", () => window.location.reload());
+                } else {
+                    showCustomAlert("Error", result.message, "error");
+                    patchActionInProgress = false;
+                }
+            } catch (e) {
+                showCustomAlert("Error", "Server connection error!", "error");
+                patchActionInProgress = false;
+            }
         });
         return; 
     }
@@ -158,6 +180,7 @@ document.addEventListener('click', async (event) => {
     const editBtn = event.target.closest('.patch-edit-btn');
     if (editBtn) {
         const card = editBtn.closest('[data-id]');
+        const patchId = card.getAttribute('data-id');
         const titleEl = card.querySelector('.patch-title');
         const descEl = card.querySelector('.patch-desc');
         const currentTitle = titleEl.innerText;
@@ -167,6 +190,7 @@ document.addEventListener('click', async (event) => {
         descEl.innerHTML = `<textarea class="edit-desc-input w-full h-32 bg-white border-2 border-orange-950 p-2 text-gray-800 rounded mt-2">${currentDesc}</textarea>`;
 
         editBtn.innerHTML = '💾'; editBtn.title = "Save Changes"; editBtn.classList.replace('patch-edit-btn', 'patch-save-btn');
+        activeEditPatchId = patchId;
         return; 
     }
 
@@ -179,13 +203,22 @@ document.addEventListener('click', async (event) => {
         const newDesc = card.querySelector('.edit-desc-input').value;
 
         try {
+            patchActionInProgress = true;
             saveBtn.innerHTML = '⏳'; 
             const response = await fetch(apiUrl, fetchConfig({ action: 'edit', id: patchId, name: newTitle, description: newDesc }));
             const result = await response.json();
             
             if (response.ok) { window.location.reload(); } 
-            else { showCustomAlert("Error", result.message, "error"); saveBtn.innerHTML = '💾'; }
-        } catch (e) { showCustomAlert("Error", "Server error!", "error"); saveBtn.innerHTML = '💾'; }
+            else {
+                showCustomAlert("Error", result.message, "error");
+                saveBtn.innerHTML = '💾';
+                patchActionInProgress = false;
+            }
+        } catch (e) {
+            showCustomAlert("Error", "Server error!", "error");
+            saveBtn.innerHTML = '💾';
+            patchActionInProgress = false;
+        }
         return; 
     }
 
@@ -240,11 +273,12 @@ document.addEventListener('click', async (event) => {
         const title = document.getElementById('new-patch-title').value; const desc = document.getElementById('new-patch-desc').value;
         if (title.trim() === '' || desc.trim() === '') { showCustomAlert("Attention", "All fields are required!", "error"); return; }
         try {
+            patchActionInProgress = true;
             const btn = event.target.closest('#patch-publish-btn'); btn.innerHTML = 'Publishing...';
             const response = await fetch(apiUrl, fetchConfig({ action: 'create', name: title, description: desc }));
             if (response.ok) showCustomAlert("Success", "Patch published!", "success", () => window.location.reload());
-            else { showCustomAlert("Error", "Error publishing patch!", "error"); btn.innerHTML = 'Publish'; }
-        } catch (e) { showCustomAlert("Error", "Server error!", "error"); }
+            else { showCustomAlert("Error", "Error publishing patch!", "error"); btn.innerHTML = 'Publish'; patchActionInProgress = false; }
+        } catch (e) { showCustomAlert("Error", "Server error!", "error"); patchActionInProgress = false; }
     }
 
     // RESTORE
@@ -252,11 +286,12 @@ document.addEventListener('click', async (event) => {
         const btn = event.target.closest('.patch-restore-btn');
         const patchId = btn.closest('[data-id]').getAttribute('data-id');
         try {
+            patchActionInProgress = true;
             btn.innerHTML = '⏳';
             const response = await fetch(apiUrl, fetchConfig({ action: 'restore', id: patchId }));
             const result = await response.json();
             if (response.ok) showCustomAlert("Success", "Patch restored!", "success", () => window.location.reload());
-            else { showCustomAlert("Error", result.message, "error"); btn.innerHTML = 'Restore'; }
-        } catch (e) { showCustomAlert("Error", "Server error!", "error"); }
+            else { showCustomAlert("Error", result.message, "error"); btn.innerHTML = 'Restore'; patchActionInProgress = false; }
+        } catch (e) { showCustomAlert("Error", "Server error!", "error"); patchActionInProgress = false; }
     }
 });

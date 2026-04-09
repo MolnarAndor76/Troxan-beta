@@ -62,11 +62,44 @@ function handleGameUpdateStats()
         $updateUser = $pdo->prepare("UPDATE `User` SET coins = ?, level = ? WHERE user_id = ?");
         $updateUser->execute([$coins, $level, $user['user_id']]);
 
-// 3. STATISTICS TÁBLA FRISSÍTÉSE (Minden mentés egy ÚJ SOR lesz!)
+// 3. STATISTICS TÁBLA FRISSÍTÉSE (ÖSSZEGZETT statokkal, minden mentés új sor)
         if (isset($input['statistics'])) {
-            $statsJson = json_encode($input['statistics']);
+            $incomingStats = is_array($input['statistics']) ? $input['statistics'] : [];
+
+            $prevStmt = $pdo->prepare("SELECT statistics_file FROM `Statistics` WHERE user_id = ? ORDER BY id DESC LIMIT 1");
+            $prevStmt->execute([$user['user_id']]);
+            $prevRow = $prevStmt->fetch(PDO::FETCH_ASSOC);
+            $previousStats = [];
+
+            if ($prevRow && !empty($prevRow['statistics_file'])) {
+                $decodedPrev = json_decode($prevRow['statistics_file'], true);
+                if (is_array($decodedPrev)) {
+                    $previousStats = $decodedPrev;
+                }
+            }
+
+            $sumKeys = [
+                'num_of_story_finished',
+                'num_of_enemies_killed',
+                'num_of_deaths',
+                'score',
+                'Story finished',
+                'Mobs killed',
+                'Deaths',
+                'Experience points'
+            ];
+
+            $mergedStats = array_merge($previousStats, $incomingStats);
+            foreach ($sumKeys as $key) {
+                $prevVal = isset($previousStats[$key]) ? (int)$previousStats[$key] : 0;
+                $newVal = isset($incomingStats[$key]) ? (int)$incomingStats[$key] : 0;
+                if (isset($previousStats[$key]) || isset($incomingStats[$key])) {
+                    $mergedStats[$key] = $prevVal + $newVal;
+                }
+            }
+
+            $statsJson = json_encode($mergedStats);
             
-            // NINCS TÖBBÉ FELÜLÍRÁS! Mindig új sort szúrunk be!
             $insertStat = $pdo->prepare("INSERT INTO `Statistics` (user_id, statistics_file, last_updated) VALUES (?, ?, NOW())");
             $insertStat->execute([$user['user_id'], $statsJson]);
         }

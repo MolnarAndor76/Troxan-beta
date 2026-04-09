@@ -154,7 +154,7 @@ function handlePost()
             $libStmt = $pdo->prepare("INSERT INTO `User_Map_Library` (user_id, map_id) VALUES (?, ?)");
             $libStmt->execute([$currentUserId, $mapId]);
 
-            json_response(["status" => "success", "message" => "Map successfully added to My Maps!"], 200);
+            json_response(["status" => "success", "message" => "Map successfully added to My Maps!"], 201);
         }
     } catch (Exception $e) {
         json_response(["status" => "error", "message" => "Database error: " . $e->getMessage()], 500);

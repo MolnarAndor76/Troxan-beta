@@ -7,7 +7,7 @@
 @layer components {
     /* --- FŐ KONTÉNER --- */
     .admin-site-wrapper {
-        @apply w-[95%] max-w-[1200px] min-h-[80vh] mx-auto bg-white border-4 border-orange-950 shadow-[8px_8px_0px_rgba(0,0,0,1)] rounded-xl p-4 md:p-8 my-8 text-gray-800;
+        @apply w-[95%] max-w-[1200px] min-h-[80vh] mx-auto bg-white border-4 border-orange-950 shadow-[8px_8px_0px_rgba(0,0,0,1)] rounded-xl p-4 md:p-8 my-8 text-gray-800 overflow-x-hidden;
     }
 
     /* --- HEADER ÉS KERESŐ --- */
@@ -112,19 +112,7 @@
     }
 
     .admin-card-actions.menu-open {
-        @apply fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-[100] flex flex-col w-[85%] max-w-[320px] bg-orange-50 border-4 border-orange-950 p-6 pt-12 rounded-xl shadow-[8px_8px_0px_rgba(0,0,0,1)] gap-4 items-stretch;
-    }
-
-    .admin-card-actions.menu-open::before {
-        content: '';
-        position: fixed;
-        top: 0;
-        left: 0;
-        width: 100vw;
-        height: 100vh;
-        background-color: rgba(0, 0, 0, 0.7);
-        z-index: -1;
-        pointer-events: all;
+        @apply fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-[300] flex flex-col w-[88vw] max-w-[340px] bg-orange-50 border-4 border-orange-950 p-5 pt-12 rounded-xl shadow-[8px_8px_0px_rgba(0,0,0,1)] gap-3 items-stretch max-h-[80vh] overflow-y-auto;
     }
 
     .admin-close-menu-btn {

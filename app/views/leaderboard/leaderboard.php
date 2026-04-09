@@ -5,16 +5,16 @@
       <h1 id="leaderboard-title">The best warriors in TROXAN</h1>
       </div>
 
-    <div class="leaderboard-table-container">
-      <table id="leaderboard-table">
-        <thead class="leaderboard-thead">
-          <tr>
-            <th class="leaderboard-th-rank">Rank</th>
-            <th class="leaderboard-th-user">Username</th>
-            <th class="leaderboard-th-score">Score</th>
-          </tr>
-        </thead>
-        <tbody>
+    <div class="leaderboard-table-shell">
+      <div class="leaderboard-head-bar">
+        <span class="leaderboard-head-rank">Rank</span>
+        <span class="leaderboard-head-user">Username</span>
+        <span class="leaderboard-head-score">Score</span>
+      </div>
+
+      <div class="leaderboard-table-container">
+        <table id="leaderboard-table">
+          <tbody>
           
           <?php if (!empty($top_10)): ?>
               <?php foreach ($top_10 as $player): ?>
@@ -37,17 +37,18 @@
               </tr>
           <?php endif; ?>
 
-          <?php if (!empty($current_user_data)): ?>
-              <tr id="leaderboard-current-user" class="leaderboard-tr">
-                <td class="leaderboard-td-rank"><?= $current_user_data['rank'] ?></td>
-                <td class="leaderboard-td-user"><?= htmlspecialchars($current_user_data['username']) ?> (You)</td>
-                <td class="leaderboard-td-score"><?= number_format($current_user_data['score'], 0, '', '_') ?></td>
-              </tr>
-          <?php endif; ?>
-
-        </tbody>
-      </table>
+          </tbody>
+        </table>
+      </div>
     </div>
+
+    <?php if (!empty($current_user_data)): ?>
+      <div class="leaderboard-current-user-bar">
+        <span class="leaderboard-current-rank">#<?= $current_user_data['rank'] ?></span>
+        <span class="leaderboard-current-name"><?= htmlspecialchars($current_user_data['username']) ?> (You)</span>
+        <span class="leaderboard-current-score"><?= number_format($current_user_data['score'], 0, '', '_') ?></span>
+      </div>
+    <?php endif; ?>
 
     <div class="leaderboard-last-updated">
         Last time updated: <span id="leaderboard-last-updated-time"></span>

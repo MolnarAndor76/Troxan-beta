@@ -7,9 +7,13 @@
 
 /* 2. Formázzuk a body-t */
 @layer base {
+    html {
+        @apply overflow-x-hidden;
+    }
+
     body {
         /* Tailwind osztályok a simításhoz, méretezéshez és rögzítéshez */
-        @apply antialiased bg-cover bg-center bg-fixed w-full h-screen;
+        @apply antialiased bg-cover bg-center bg-fixed w-full h-screen overflow-x-hidden;
 
         /* A háttérkép behívása tisztán, hagyományos CSS-sel (ez működik a Vite-tal) */
         background-image: url('./ai-var.jpg');

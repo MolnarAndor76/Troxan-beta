@@ -7,8 +7,8 @@
 @layer components {
     /* --- ALAP KONTÉNER (RETRO HÁTTÉRREL) --- */
     .leaderboard-site {
-        /* A túlcsordulás rejtve, hogy a fejléc szépen kitöltse a tetejét */
-        @apply h-[80vh] w-[90%] max-w-5xl mx-auto bg-orange-50 rounded-xl shadow-[8px_8px_0px_rgba(0,0,0,1)] border-4 border-orange-950 flex flex-col overflow-hidden;
+        @apply w-[90%] max-w-5xl mx-auto bg-orange-50 rounded-xl shadow-[8px_8px_0px_rgba(0,0,0,1)] border-4 border-orange-950 flex flex-col overflow-hidden min-h-[420px];
+        height: clamp(420px, 70vh, 760px);
     }
 
     /* --- BELSŐ SZEKCIÓ --- */
@@ -44,8 +44,21 @@
     }
 
     /* --- TÁBLÁZAT ÉS EGYEDI GÖRGETŐSÁV --- */
+    .leaderboard-table-shell {
+        @apply flex-1 min-h-0 w-full flex flex-col bg-orange-50;
+    }
+
+    .leaderboard-head-bar {
+        @apply shrink-0 grid items-center px-2 md:px-6 py-2 md:py-3 border-b-4 border-orange-950 bg-orange-50 text-orange-950 font-extrabold uppercase tracking-widest;
+        grid-template-columns: 18% 52% 30%;
+    }
+
+    .leaderboard-head-rank { @apply text-center text-base md:text-xl; }
+    .leaderboard-head-user { @apply text-left pl-1 md:pl-2 text-base md:text-xl; }
+    .leaderboard-head-score { @apply text-right text-base md:text-xl; }
+
     .leaderboard-table-container {
-        @apply flex-1 w-full overflow-y-auto bg-orange-50 p-2 md:p-6;
+        @apply flex-1 min-h-0 w-full overflow-y-auto overflow-x-hidden bg-orange-50 p-2 md:p-4;
     }
     
     /* EGYEDI GÖRGETŐSÁV (Csak a táblázat mellett) */
@@ -64,9 +77,10 @@
 
     #leaderboard-table {
         @apply w-full text-lg md:text-xl border-collapse;
+        table-layout: fixed;
     }
     .leaderboard-thead {
-        @apply text-orange-950 border-b-4 border-orange-950 sticky top-0 bg-orange-50 z-10 font-extrabold uppercase tracking-widest;
+        @apply hidden;
     }
     .leaderboard-tr {
         @apply border-b-2 border-orange-950/10 text-orange-950 transition-colors hover:bg-orange-200/50;
@@ -75,35 +89,46 @@
     /* --- CELLA STÍLUSOK (RESZPONZÍV MEGOLDÁSOK) --- */
     /* Mobilon kisebb szélesség és betűméret a Helyezésnek */
     .leaderboard-th-rank, .leaderboard-td-rank { 
-        @apply text-center p-2 md:p-3 w-8 md:w-20 font-bold text-base md:text-xl; 
+        @apply text-center p-2 md:p-3 w-[18%] md:w-20 font-bold text-base md:text-xl; 
     }
     
     /* A nevek nem tolják le a pontszámot, ha túl hosszúak, kipontozódnak */
     .leaderboard-th-user, .leaderboard-td-user { 
-        @apply text-left p-2 md:p-3 font-bold truncate max-w-[120px] md:max-w-[300px]; 
+        @apply text-left p-2 md:p-3 font-bold truncate w-[52%] md:w-auto; 
     }
     
     .leaderboard-th-score, .leaderboard-td-score { 
-        @apply text-right p-2 md:p-3 font-extrabold text-orange-800; 
+        @apply text-right p-2 md:p-3 font-extrabold text-orange-800 w-[30%] md:w-auto; 
     }
 
     /* --- TOP 3 SZÍNEK (Dobozos, trófea-szerű kiemelés) --- */
-    .leaderboard-top-1 { @apply bg-yellow-400/30 text-xl md:text-3xl; }
-    .leaderboard-top-1 .leaderboard-td-rank { @apply text-2xl md:text-4xl text-yellow-500 drop-shadow-[2px_2px_0px_rgba(0,0,0,1)]; }
+    .leaderboard-top-1 { @apply bg-yellow-400/30 text-lg md:text-3xl; }
+    .leaderboard-top-1 .leaderboard-td-rank { @apply text-xl md:text-4xl text-yellow-500 drop-shadow-[2px_2px_0px_rgba(0,0,0,1)]; }
 
-    .leaderboard-top-2 { @apply bg-gray-300/30 text-lg md:text-2xl; }
+    .leaderboard-top-2 { @apply bg-gray-300/30 text-base md:text-2xl; }
     .leaderboard-top-2 .leaderboard-td-rank { @apply text-xl md:text-3xl text-gray-400 drop-shadow-[2px_2px_0px_rgba(0,0,0,1)]; }
 
-    .leaderboard-top-3 { @apply bg-orange-500/20 text-lg md:text-2xl; }
+    .leaderboard-top-3 { @apply bg-orange-500/20 text-base md:text-2xl; }
     .leaderboard-top-3 .leaderboard-td-rank { @apply text-xl md:text-3xl text-amber-600 drop-shadow-[2px_2px_0px_rgba(0,0,0,1)]; }
 
-    /* --- JELENLEGI FELHASZNÁLÓ --- */
-    #leaderboard-current-user {
-        @apply bg-yellow-400 text-orange-950 font-extrabold border-t-4 border-orange-950 sticky bottom-0 z-10 shadow-[0_-4px_0px_rgba(0,0,0,0.15)];
+    .leaderboard-current-user-bar {
+        @apply shrink-0 flex items-center gap-2 md:gap-3 px-3 md:px-5 py-2 md:py-3 bg-yellow-400 text-orange-950 font-extrabold border-t-4 border-orange-950 shadow-[0_-4px_0px_rgba(0,0,0,0.15)];
+    }
+
+    .leaderboard-current-rank {
+        @apply text-sm md:text-base min-w-[52px] md:min-w-[70px] text-center;
+    }
+
+    .leaderboard-current-name {
+        @apply flex-1 truncate text-sm md:text-base;
+    }
+
+    .leaderboard-current-score {
+        @apply text-sm md:text-base text-right min-w-[86px] md:min-w-[120px];
     }
 
     /* --- LEADERBOARD DÁTUM FOOTER --- */
     .leaderboard-last-updated {
-        @apply mt-6 text-center font-['Press_Start_2P',_monospace] text-[0.6rem] md:text-xs text-[#5b2401] opacity-80;
+        @apply shrink-0 text-center font-['Press_Start_2P',_monospace] text-[0.6rem] md:text-xs text-[#5b2401] opacity-80 px-2 py-2;
     }
 }

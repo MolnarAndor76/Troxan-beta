@@ -109,7 +109,7 @@ $hasAdminAccess = in_array($user['role_name'], ['Admin', 'Engineer']);
                     <div id="basesite-alert-header" class="border-b-4 border-orange-950 w-full pb-2 mb-4">
                     <h2 id="basesite-alert-title" class="text-xl font-bold text-orange-950">Notice</h2>
                     </div>
-                    <p id="basesite-alert-message" class="text-lg font-bold text-gray-800 my-4">Üzenet helye</p>
+                    <p id="basesite-alert-message" class="text-lg font-bold text-gray-800 my-4">Message goes here</p>
                     <button id="basesite-alert-ok-btn" class="bg-yellow-500 px-6 py-2 font-bold text-orange-950 border-2 border-orange-950 rounded shadow-[2px_2px_0px_#000] mt-4 hover:translate-y-[1px] hover:shadow-[1px_1px_0px_#000] transition-all">OK</button>
                 </div>
             </div>

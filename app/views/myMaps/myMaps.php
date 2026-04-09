@@ -1,10 +1,13 @@
 <div class="mymaps-site">
-  <div id="mymaps-main">
-    <section id="mymaps-wrapper" class="content-box">
+  <div id="mymaps-main" class="flex-1 min-h-0 flex flex-col">
+    <section id="mymaps-wrapper" class="content-box flex-1 min-h-0 flex flex-col">
       <header class="mymaps-header">
-        <h2 id="mymaps-title">MY MAPS</h2>
+        <div class="mymaps-header-top">
+          <h2 id="mymaps-title">MY MAPS</h2>
+          <button id="mymaps-mobile-menu-btn" class="mymaps-ham-btn md:hidden" type="button" aria-label="Open my maps menu">☰</button>
+        </div>
 
-        <div class="mymaps-controls-row">
+        <div id="mymaps-controls-row" class="mymaps-controls-row hidden md:flex">
           <input type="text" id="mymaps-search" placeholder="Search my library...">
           
           <div class="mymaps-sort-box relative">
@@ -21,14 +24,15 @@
 
           <div class="mymaps-nav-buttons flex items-center gap-2">
             <button id="mymaps-nav-maps" class="mymaps-nav-btn" type="button">Maps</button>
-            <button id="mymaps-nav-profile" class="mymaps-nav-btn p-0" type="button" aria-label="Profile">
+            <button id="mymaps-nav-profile" class="mymaps-nav-btn" type="button" aria-label="Profile">
               <img id="mymaps-nav-profile-avatar" class="mymaps-profile-avatar" src="https://picsum.photos/id/1025/200/200" alt="Profile">
+              <span>Profile</span>
             </button>
           </div>
         </div>
       </header>
 
-      <div class="mymaps-scroll-area max-h-[600px] overflow-y-auto pr-2">
+      <div class="mymaps-scroll-area">
         <div class="mymaps-grid">
          <?php if (empty($my_maps)): ?>
              <p id="live-mymaps-empty-msg" class="text-orange-900 font-bold text-xl col-span-full mt-10 text-center w-full">Könyvtárad jelenleg üres! Adj hozzá pályákat a Maps menüből! 🏝️</p>
