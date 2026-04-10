@@ -9,15 +9,15 @@ let pendingRename = null;
 function openModalById(id) {
     const modal = document.getElementById(id);
     if (!modal) return;
-    modal.classList.remove('hidden');
-    modal.classList.add('flex');
+    modal.classList.remove('mymaps-hidden');
+    modal.classList.add('mymaps-flex');
 }
 
 function closeModalById(id) {
     const modal = document.getElementById(id);
     if (!modal) return;
-    modal.classList.add('hidden');
-    modal.classList.remove('flex');
+    modal.classList.add('mymaps-hidden');
+    modal.classList.remove('mymaps-flex');
 }
 
 function showCustomAlert(title, message, type = 'info', callback = null) {
@@ -35,14 +35,14 @@ function showCustomAlert(title, message, type = 'info', callback = null) {
     if (msgEl) msgEl.innerHTML = message;
 
     if (type === 'error') {
-        if (headerEl) headerEl.className = 'border-b-4 border-red-950 pb-2 mb-4';
-        if (titleEl) titleEl.className = 'text-xl font-bold text-red-600';
+        if (headerEl) headerEl.className = 'mymaps-modal-header mymaps-modal-header-danger';
+        if (titleEl) titleEl.className = 'mymaps-modal-title mymaps-modal-title-error';
     } else if (type === 'success') {
-        if (headerEl) headerEl.className = 'border-b-4 border-green-950 pb-2 mb-4';
-        if (titleEl) titleEl.className = 'text-xl font-bold text-green-700';
+        if (headerEl) headerEl.className = 'mymaps-modal-header mymaps-modal-header-success';
+        if (titleEl) titleEl.className = 'mymaps-modal-title mymaps-modal-title-success';
     } else {
-        if (headerEl) headerEl.className = 'border-b-4 border-orange-950 pb-2 mb-4';
-        if (titleEl) titleEl.className = 'text-xl font-bold text-orange-950';
+        if (headerEl) headerEl.className = 'mymaps-modal-header';
+        if (titleEl) titleEl.className = 'mymaps-modal-title';
     }
 
     window.alertCallback = callback;
@@ -65,13 +65,13 @@ function showCustomConfirm(title, message, type = 'danger', onConfirm = null) {
     if (msgEl) msgEl.innerHTML = message;
 
     if (type === 'danger') {
-        if (headerEl) headerEl.className = 'border-b-4 border-red-950 pb-2 mb-4';
-        if (titleEl) titleEl.className = 'text-xl font-bold text-red-600';
-        if (okBtn) okBtn.className = 'bg-red-600 hover:bg-red-500 text-white font-extrabold py-2 px-6 rounded border-2 border-red-900 shadow-[3px_3px_0px_rgba(0,0,0,1)] transition-transform hover:translate-y-1 cursor-pointer';
+        if (headerEl) headerEl.className = 'mymaps-modal-header mymaps-modal-header-danger';
+        if (titleEl) titleEl.className = 'mymaps-modal-title mymaps-modal-title-danger';
+        if (okBtn) okBtn.className = 'mymaps-modal-btn-confirm';
     } else {
-        if (headerEl) headerEl.className = 'border-b-4 border-orange-950 pb-2 mb-4';
-        if (titleEl) titleEl.className = 'text-xl font-bold text-orange-950';
-        if (okBtn) okBtn.className = 'bg-yellow-500 hover:bg-yellow-400 text-orange-950 font-extrabold py-2 px-6 rounded border-2 border-orange-950 shadow-[3px_3px_0px_rgba(0,0,0,1)] transition-transform hover:translate-y-1 cursor-pointer';
+        if (headerEl) headerEl.className = 'mymaps-modal-header';
+        if (titleEl) titleEl.className = 'mymaps-modal-title';
+        if (okBtn) okBtn.className = 'mymaps-modal-btn-ok';
     }
 
     window.confirmCallback = onConfirm;
@@ -131,7 +131,7 @@ function filterAndSortMyMaps() {
         if (!emptyMsg) {
             emptyMsg = document.createElement('p');
             emptyMsg.id = 'live-mymaps-empty-msg';
-            emptyMsg.className = 'text-orange-900 font-bold text-xl col-span-full mt-10 text-center w-full';
+            emptyMsg.className = 'mymaps-empty-msg';
             emptyMsg.innerText = 'No maps found for the current search! 🏝️';
             grid.appendChild(emptyMsg);
         }
@@ -186,7 +186,7 @@ document.addEventListener('click', (event) => {
     const mobileMenuBtn = event.target.closest('#mymaps-mobile-menu-btn');
     const controlsRow = document.getElementById('mymaps-controls-row');
     if (mobileMenuBtn && controlsRow) {
-        controlsRow.classList.toggle('hidden');
+        controlsRow.classList.toggle('mymaps-controls-row-collapsed');
         controlsRow.classList.toggle('mymaps-mobile-open');
         return;
     }
@@ -195,7 +195,7 @@ document.addEventListener('click', (event) => {
         const clickedInsideMenu = !!event.target.closest('#mymaps-controls-row');
         const clickedMenuBtn = !!event.target.closest('#mymaps-mobile-menu-btn');
         if (!clickedInsideMenu && !clickedMenuBtn) {
-            controlsRow.classList.add('hidden');
+            controlsRow.classList.add('mymaps-controls-row-collapsed');
             controlsRow.classList.remove('mymaps-mobile-open');
         }
     }
@@ -286,24 +286,24 @@ document.addEventListener('click', (event) => {
     const sortItem = event.target.closest('.mymaps-dropdown-item');
 
     if (sortTrigger && sortDropdown) {
-        sortDropdown.classList.toggle('hidden');
+        sortDropdown.classList.toggle('mymaps-hidden');
         return;
     }
     if (sortItem) {
         document.getElementById('mymaps-selected-sort').textContent = sortItem.textContent.trim();
-        sortDropdown.classList.add('hidden');
+        sortDropdown.classList.add('mymaps-hidden');
         filterAndSortMyMaps();
         return;
     }
-    if (sortDropdown && !sortDropdown.classList.contains('hidden') && !event.target.closest('.mymaps-sort-box')) {
-        sortDropdown.classList.add('hidden');
+    if (sortDropdown && !sortDropdown.classList.contains('mymaps-hidden') && !event.target.closest('.mymaps-sort-box')) {
+        sortDropdown.classList.add('mymaps-hidden');
     }
 
     // --- NAV BUTTONS ---
     const mapsNav = event.target.closest('#mymaps-nav-maps');
     if (mapsNav) {
         if (controlsRow && controlsRow.classList.contains('mymaps-mobile-open')) {
-            controlsRow.classList.add('hidden');
+            controlsRow.classList.add('mymaps-controls-row-collapsed');
             controlsRow.classList.remove('mymaps-mobile-open');
         }
         window.location.href = '/maps';
@@ -313,7 +313,7 @@ document.addEventListener('click', (event) => {
     const profileNav = event.target.closest('#mymaps-nav-profile');
     if (profileNav) {
         if (controlsRow && controlsRow.classList.contains('mymaps-mobile-open')) {
-            controlsRow.classList.add('hidden');
+            controlsRow.classList.add('mymaps-controls-row-collapsed');
             controlsRow.classList.remove('mymaps-mobile-open');
         }
         window.location.href = '/profile';

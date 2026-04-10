@@ -1,6 +1,14 @@
 //URL
 const registerUrl = `/app/api.php?path=registration`;
 
+function lockBodyScroll() {
+    document.body.classList.add('troxan-no-scroll');
+}
+
+function unlockBodyScroll() {
+    document.body.classList.remove('troxan-no-scroll');
+}
+
 // Show notification modal
 function showNotification(title, message, callback = null) {
     const modal = document.getElementById('notification-modal');
@@ -10,13 +18,15 @@ function showNotification(title, message, callback = null) {
     
     titleEl.textContent = title;
     msgEl.textContent = message;
-    modal.classList.remove('hidden');
-    document.body.style.overflow = 'hidden';
+    modal.classList.remove('register-hidden');
+    lockBodyScroll();
     
     const closeHandler = () => {
-        modal.classList.add('hidden');
-        document.body.style.overflow = 'auto';
+        modal.classList.add('register-hidden');
+        unlockBodyScroll();
         if (callback) callback();
+        btn.removeEventListener('click', closeHandler);
+        document.getElementById('close-notification-btn').removeEventListener('click', closeHandler);
     };
     
     btn.addEventListener('click', closeHandler);
@@ -31,8 +41,8 @@ document.addEventListener('click', (event) => {
     // 1. Open: When the terms button is clicked
     if (event.target.closest('.register-terms-btn')) {
         event.preventDefault(); // Prevent accidentally checking the checkbox
-        termsModal.classList.remove('hidden');
-        document.body.style.overflow = 'hidden'; // Disable page scrolling
+        termsModal.classList.remove('register-hidden');
+        lockBodyScroll();
     }
 
     // 2. Close: X button, "Understood" button, OR click on dark background
@@ -40,8 +50,8 @@ document.addEventListener('click', (event) => {
         event.target.closest('#accept-terms-btn') || 
         event.target === termsModal) {
         
-        termsModal.classList.add('hidden');
-        document.body.style.overflow = 'auto'; // Re-enable scrolling
+        termsModal.classList.add('register-hidden');
+        unlockBodyScroll();
     }
 });
 

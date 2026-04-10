@@ -19,13 +19,13 @@ let currentLogsData = [];
 function openModalById(id) {
     const modal = document.getElementById(id);
     if (!modal) return;
-    modal.classList.remove('hidden', 'basesite-hidden');
+    modal.classList.remove('admin-hidden');
 }
 
 function closeModalById(id) {
     const modal = document.getElementById(id);
     if (!modal) return;
-    modal.classList.add('hidden', 'basesite-hidden');
+    modal.classList.add('admin-hidden');
 }
 
 function showCustomAlert(title, message, type = 'info', callback = null) {
@@ -39,9 +39,9 @@ function showCustomAlert(title, message, type = 'info', callback = null) {
     document.getElementById('basesite-alert-message').innerHTML = message;
     
     const titleEl = document.getElementById('basesite-alert-title');
-    if (type === 'error') titleEl.className = 'text-xl font-bold text-red-600';
-    else if (type === 'success') titleEl.className = 'text-xl font-bold text-green-600';
-    else titleEl.className = 'text-xl font-bold text-orange-950';
+    titleEl.className = 'admin-modal-alert-title';
+    if (type === 'error') titleEl.classList.add('admin-modal-alert-title-danger');
+    else if (type === 'success') titleEl.classList.add('admin-modal-alert-title-success');
 
     window.alertCallback = callback;
     openModalById('basesite-alert-modal');
@@ -57,16 +57,18 @@ function showCustomConfirm(title, message, type = 'danger', onConfirm = null) {
     document.getElementById('basesite-confirm-message').innerHTML = message;
     
     const headerEl = document.getElementById('basesite-confirm-header');
+    const titleEl = document.getElementById('basesite-confirm-title');
     const okBtn = document.getElementById('basesite-confirm-ok-btn');
 
+    headerEl.className = 'admin-modal-alert-header';
+    titleEl.className = 'admin-modal-alert-title';
+    okBtn.className = 'admin-action-btn admin-btn-red admin-confirm-btn';
+
     if (type === 'danger') {
-        headerEl.className = 'border-b-4 border-red-950 pb-2 mb-4';
-        document.getElementById('basesite-confirm-title').className = 'text-xl font-bold text-red-600';
-        okBtn.className = 'admin-action-btn admin-btn-red py-2 px-6';
+        headerEl.classList.add('admin-modal-alert-header-danger');
+        titleEl.classList.add('admin-modal-alert-title-danger');
     } else {
-        headerEl.className = 'border-b-4 border-orange-950 pb-2 mb-4';
-        document.getElementById('basesite-confirm-title').className = 'text-xl font-bold text-orange-950';
-        okBtn.className = 'admin-action-btn admin-btn-yellow py-2 px-6';
+        okBtn.className = 'admin-action-btn admin-btn-yellow admin-confirm-btn';
     }
 
     window.confirmCallback = onConfirm;
@@ -102,7 +104,7 @@ document.addEventListener('input', function(event) {
             if (!emptyMsg && listContainer) {
                 emptyMsg = document.createElement('p');
                 emptyMsg.id = 'live-search-empty-msg';
-                emptyMsg.className = 'admin-empty-msg text-center text-gray-500 font-bold text-lg mt-10';
+                emptyMsg.className = 'admin-empty-msg';
                 emptyMsg.innerText = 'No players found matching your search.';
                 listContainer.appendChild(emptyMsg);
             }
@@ -133,37 +135,37 @@ function renderAdminMaps() {
     }
 
     if (filteredMaps.length === 0) {
-        grid.innerHTML = '<p class="col-span-full text-center font-bold text-orange-900 text-xl mt-10">Library is empty or no maps match the filter. 🏝️</p>';
+        grid.innerHTML = '<p class="admin-grid-message">Library is empty or no maps match the filter. 🏝️</p>';
         return;
     }
 
     filteredMaps.forEach(map => {
         let statusBadge = '';
-        if (map.status == 1) statusBadge = '<span class="bg-green-600 text-white text-[10px] px-1.5 py-0.5 rounded-sm border border-green-900 absolute top-1 right-1 font-bold shadow-md z-10 uppercase">Pub</span>';
-        else if (map.status == 0) statusBadge = '<span class="bg-gray-500 text-white text-[10px] px-1.5 py-0.5 rounded-sm border border-gray-900 absolute top-1 right-1 font-bold shadow-md z-10 uppercase">Draft</span>';
-        else if (map.status == 3) statusBadge = '<span class="bg-orange-500 text-white text-[10px] px-1.5 py-0.5 rounded-sm border border-orange-900 absolute top-1 right-1 font-bold shadow-md z-10 uppercase">Unpub</span>';
-        else if (map.status == 4) statusBadge = '<span class="bg-red-600 text-white text-[10px] px-1.5 py-0.5 rounded-sm border border-red-900 absolute top-1 right-1 font-bold shadow-md z-10 uppercase">Banned</span>';
-        else if (map.status == 5) statusBadge = '<span class="bg-gray-700 text-white text-[10px] px-1.5 py-0.5 rounded-sm border border-black absolute top-1 right-1 font-bold shadow-md z-10 uppercase">Scrap</span>';
+        if (map.status == 1) statusBadge = '<span class="admin-map-status-badge admin-map-status-pub">Pub</span>';
+        else if (map.status == 0) statusBadge = '<span class="admin-map-status-badge admin-map-status-draft">Draft</span>';
+        else if (map.status == 3) statusBadge = '<span class="admin-map-status-badge admin-map-status-unpub">Unpub</span>';
+        else if (map.status == 4) statusBadge = '<span class="admin-map-status-badge admin-map-status-banned">Banned</span>';
+        else if (map.status == 5) statusBadge = '<span class="admin-map-status-badge admin-map-status-scrap">Scrap</span>';
 
         const isCreatorEngineer = (map.creator_role === 'Engineer');
-        const cardBorder = isCreatorEngineer ? 'border-cyan-900 shadow-cyan-900/50' : 'border-orange-950 shadow-[2px_2px_0px_#000]';
+        const cardBorder = isCreatorEngineer ? 'admin-map-image-engineer' : 'admin-map-image-default';
 
         const isCreatedByTargetPlayer = Number(map.creator_user_id) === Number(currentAdminTargetUser.id);
         const removeBtnHtml = isCreatedByTargetPlayer
             ? ''
-            : `<button class="admin-remove-map-btn text-xl hover:scale-110 transition-transform cursor-pointer drop-shadow-md ml-auto" data-mapid="${map.id}" title="Remove from player's library">🗑️</button>`;
+            : `<button class="admin-remove-map-btn" data-mapid="${map.id}" title="Remove from player's library">🗑️</button>`;
 
         const cardHtml = `
-            <article class="admin-map-card relative w-[240px] h-[340px] p-4 flex flex-col items-center justify-between transition-transform duration-300 hover:-translate-y-1" data-mapid="${map.id}">
-                <div class="w-full h-28 border-4 ${cardBorder} rounded-sm overflow-hidden mb-2 relative shadow-[2px_2px_0px_#000]">
+            <article class="admin-map-card" data-mapid="${map.id}">
+                <div class="admin-map-image ${cardBorder}">
                     ${statusBadge}
-                    <img src="${map.map_picture}" class="w-full h-full object-cover">
+                    <img src="${map.map_picture}" class="admin-map-image-img">
                 </div>
-                <div class="w-full flex flex-col items-center flex-1 justify-center">
-                    <p class="font-extrabold text-lg text-yellow-400 drop-shadow-[2px_2px_0px_#000] text-center w-full truncate mb-1 admin-map-name-text">${map.map_name}</p>
-                    <p class="text-xs font-bold text-white drop-shadow-[1px_1px_0px_#000] text-center w-full mb-auto truncate">${isCreatorEngineer ? '🛠️ ' : ''}By: ${map.creator_name}</p>
-                    <div class="mt-2 flex justify-between items-center w-full gap-2 p-2 bg-orange-950/30 rounded-sm border border-orange-950/50">
-                        <button class="admin-edit-map-name-btn bg-blue-600 hover:bg-blue-500 text-white font-extrabold py-1.5 px-3 border-2 border-blue-950 rounded-sm shadow-[2px_2px_0px_#000] text-[10px] uppercase" data-mapid="${map.id}">✏️ Edit</button>
+                <div class="admin-map-info">
+                    <p class="admin-map-name-text">${map.map_name}</p>
+                    <p class="admin-map-creator">${isCreatorEngineer ? '🛠️ ' : ''}By: ${map.creator_name}</p>
+                    <div class="admin-map-actions">
+                        <button class="admin-edit-map-name-btn admin-map-edit-btn" data-mapid="${map.id}">✏️ Edit</button>
                         ${removeBtnHtml}
                     </div>
                 </div>
@@ -178,24 +180,24 @@ function renderLogs(logs) {
     if (!logsContainer) return;
 
     if (logs.length === 0) {
-        logsContainer.innerHTML = '<p class="text-center font-bold text-orange-900">No logs match this date filter.</p>';
+        logsContainer.innerHTML = '<p class="admin-log-message">No logs match this date filter.</p>';
         return;
     }
 
     let html = '';
     logs.forEach(log => {
         html += `
-            <div class="border-2 border-orange-950 rounded-md bg-orange-100 p-3 mb-2 shadow-sm transition-all">
-                <div class="flex justify-between items-center cursor-pointer admin-log-header hover:bg-orange-200 p-1 rounded" data-logid="${log.id}">
-                    <div class="font-bold text-orange-950 text-xs md:text-sm">🗓️ ${log.date}</div>
-                    <div class="font-bold text-orange-950 text-xs md:text-sm">⭐ ${log.score}</div>
-                    <button class="bg-blue-400 text-white px-3 py-1 rounded border-2 border-orange-950 font-bold text-xs hover:bg-blue-500 shadow-[2px_2px_0px_rgba(0,0,0,1)] hover:translate-y-[1px] hover:shadow-[1px_1px_0px_rgba(0,0,0,1)]">View</button>
+            <div class="admin-log-card">
+                <div class="admin-log-header" data-logid="${log.id}">
+                    <div class="admin-log-meta">🗓️ ${log.date}</div>
+                    <div class="admin-log-meta">⭐ ${log.score}</div>
+                    <button class="admin-log-view-btn">View</button>
                 </div>
-                <div id="log-details-${log.id}" class="hidden mt-3 pt-3 border-t-2 border-orange-950/30 text-sm font-bold text-orange-900 flex flex-col gap-1">
-                    <p>⚔️ Enemies killed: <span class="font-normal">${log.details['Enemies killed']}</span></p>
-                    <p>💀 Deaths: <span class="font-normal">${log.details['Deaths']}</span></p>
-                    <p>📖 Story finishes: <span class="font-normal">${log.details['Story finished']}</span></p>
-                    <p>⏱️ Time played: <span class="font-normal">${log.details['Time played']}</span></p>
+                <div id="log-details-${log.id}" class="admin-log-details admin-hidden">
+                    <p>⚔️ Enemies killed: <span class="admin-log-details-value">${log.details['Enemies killed']}</span></p>
+                    <p>💀 Deaths: <span class="admin-log-details-value">${log.details['Deaths']}</span></p>
+                    <p>📖 Story finishes: <span class="admin-log-details-value">${log.details['Story finished']}</span></p>
+                    <p>⏱️ Time played: <span class="admin-log-details-value">${log.details['Time played']}</span></p>
                 </div>
             </div>`;
     });
@@ -236,7 +238,7 @@ document.addEventListener('change', (event) => {
 
 function fetchAdminMaps(userId) {
     const grid = document.getElementById('admin-maps-grid');
-grid.innerHTML = '<p class="col-span-full text-center font-bold text-orange-900 text-xl animate-pulse mt-10">Loading maps...</p>';
+grid.innerHTML = '<p class="admin-grid-message admin-grid-message-loading">Loading maps...</p>';
     
     fetch(adminUrl, {
         method: 'POST', credentials: 'include', headers: { 'Content-Type': 'application/json' },
@@ -246,10 +248,10 @@ grid.innerHTML = '<p class="col-span-full text-center font-bold text-orange-900 
             currentAdminMaps = data.maps;
             renderAdminMaps();
         } else {
-            grid.innerHTML = `<p class="col-span-full text-center font-bold text-red-600 text-xl mt-10">Error: ${data.message}</p>`;
+            grid.innerHTML = `<p class="admin-grid-message admin-grid-message-error">Error: ${data.message}</p>`;
         }
     }).catch(err => {
-            grid.innerHTML = '<p class="col-span-full text-center font-bold text-red-600 text-xl mt-10">Network error occurred.</p>';
+            grid.innerHTML = '<p class="admin-grid-message admin-grid-message-error">Network error occurred.</p>';
     });
 }
 
@@ -355,7 +357,7 @@ document.addEventListener('click', function(event) {
     if (usernameBtn) {
         const userId = usernameBtn.getAttribute('data-userid');
         const modal = document.getElementById(`details-modal-${userId}`);
-        if (modal) modal.classList.remove('hidden');
+        if (modal) modal.classList.remove('admin-hidden');
         return;
     }
 
@@ -375,22 +377,22 @@ document.addEventListener('click', function(event) {
     const closeDetailsBtn = event.target.closest('.admin-close-details-btn');
     if (closeDetailsBtn && closeDetailsBtn.id !== 'basesite-alert-close-btn' && closeDetailsBtn.id !== 'basesite-confirm-close-btn') {
         const modal = closeDetailsBtn.closest('.admin-details-modal');
-        if (modal) modal.classList.add('hidden');
+        if (modal) modal.classList.add('admin-hidden');
         return;
     }
 
     if (event.target.classList.contains('admin-details-modal')) {
         if (event.target.id === 'basesite-alert-modal') {
-            event.target.classList.add('hidden');
+            event.target.classList.add('admin-hidden');
             window.alertCallback = null;
             return;
         }
         if (event.target.id === 'basesite-confirm-modal') {
-            event.target.classList.add('hidden');
+            event.target.classList.add('admin-hidden');
             window.confirmCallback = null;
             return;
         }
-        event.target.classList.add('hidden');
+        event.target.classList.add('admin-hidden');
         return;
     }
 
@@ -400,12 +402,12 @@ document.addEventListener('click', function(event) {
         const userId = viewLogsBtn.getAttribute('data-userid');
         const username = viewLogsBtn.getAttribute('data-username');
         const detailsModal = viewLogsBtn.closest('.admin-details-modal');
-        if (detailsModal) detailsModal.classList.add('hidden');
+        if (detailsModal) detailsModal.classList.add('admin-hidden');
         
         const logsModal = document.getElementById('global-logs-modal');
         const logsContainer = document.getElementById('logs-container');
         document.getElementById('logs-modal-title').innerText = username + " - Logs";
-        logsContainer.innerHTML = '<p class="text-center font-bold animate-pulse text-orange-900">Fetching logs from server...</p>';
+        logsContainer.innerHTML = '<p class="admin-log-message admin-log-message-loading">Fetching logs from server...</p>';
         openModalById('global-logs-modal');
 
         fetch(adminUrl, {
@@ -414,9 +416,9 @@ document.addEventListener('click', function(event) {
         }).then(res => res.json()).then(data => {
             if (data.status === 'success') {
                 currentLogsData = data.logs || [];
-                if (currentLogsData.length === 0) { logsContainer.innerHTML = '<p class="text-center font-bold text-orange-900">No logs found for this player.</p>'; return; }
+                if (currentLogsData.length === 0) { logsContainer.innerHTML = '<p class="admin-log-message">No logs found for this player.</p>'; return; }
                 renderLogs(currentLogsData);
-            } else logsContainer.innerHTML = `<p class="text-center font-bold text-red-600">Error: ${data.message}</p>`;
+            } else logsContainer.innerHTML = `<p class="admin-log-message admin-log-message-error">Error: ${data.message}</p>`;
         });
         return;
     }
@@ -542,7 +544,7 @@ document.addEventListener('click', function(event) {
     if (logHeader) {
         const logId = logHeader.getAttribute('data-logid');
         const detailsDiv = document.getElementById(`log-details-${logId}`);
-        if (detailsDiv) detailsDiv.classList.toggle('hidden');
+        if (detailsDiv) detailsDiv.classList.toggle('admin-hidden');
         return;
     }
 

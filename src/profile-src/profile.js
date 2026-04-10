@@ -20,15 +20,15 @@ function showCustomAlert(title, message, type = 'info', callback = null) {
     document.getElementById('basesite-alert-message').innerHTML = message;
 
     const titleEl = document.getElementById('basesite-alert-title');
-    if (type === 'error') titleEl.className = 'text-xl font-bold text-red-600';
-    else if (type === 'success') titleEl.className = 'text-xl font-bold text-green-600';
-    else titleEl.className = 'text-xl font-bold text-orange-950';
+    if (type === 'error') titleEl.className = 'profile-popup-title profile-popup-title-error';
+    else if (type === 'success') titleEl.className = 'profile-popup-title profile-popup-title-success';
+    else titleEl.className = 'profile-popup-title';
 
     window.alertCallback = callback;
     
     // Kőkemény biztosíték, hogy garantáltan megjelenjen!
-    modal.classList.remove('hidden');
-    modal.classList.add('flex'); 
+    modal.classList.remove('profile-hidden');
+    modal.classList.add('profile-flex'); 
 }
 
 function showCustomPrompt(title, placeholder, onConfirm) {
@@ -42,8 +42,8 @@ function showCustomPrompt(title, placeholder, onConfirm) {
     
     window.promptCallback = onConfirm;
     
-    modal.classList.remove('hidden');
-    modal.classList.add('flex');
+    modal.classList.remove('profile-hidden');
+    modal.classList.add('profile-flex');
     inputEl.focus();
 }
 
@@ -83,14 +83,14 @@ document.addEventListener('click', async (event) => {
         const backdrop = modalElement.querySelector('div[id$="-backdrop"], div[id$="-backdrop-id"]');
         const box = modalElement.querySelector('.profile-modal-box');
         
-        modalElement.classList.remove('hidden');
-        modalElement.classList.add('flex');
+        modalElement.classList.remove('profile-hidden');
+        modalElement.classList.add('profile-flex');
         
         setTimeout(() => {
-            if(backdrop) { backdrop.classList.remove('opacity-0'); backdrop.classList.add('opacity-100'); }
+            if(backdrop) { backdrop.classList.remove('profile-backdrop-hidden'); backdrop.classList.add('profile-backdrop-visible'); }
             if(box) { 
-                box.classList.remove('opacity-0', 'scale-95', 'translate-y-4'); 
-                box.classList.add('opacity-100', 'scale-100', 'translate-y-0'); 
+                box.classList.remove('profile-modal-box-hidden'); 
+                box.classList.add('profile-modal-box-visible'); 
             }
         }, 10);
     };
@@ -100,15 +100,15 @@ document.addEventListener('click', async (event) => {
         const backdrop = modalElement.querySelector('div[id$="-backdrop"], div[id$="-backdrop-id"]');
         const box = modalElement.querySelector('.profile-modal-box');
         
-        if(backdrop) { backdrop.classList.remove('opacity-100'); backdrop.classList.add('opacity-0'); }
+        if(backdrop) { backdrop.classList.remove('profile-backdrop-visible'); backdrop.classList.add('profile-backdrop-hidden'); }
         if(box) { 
-            box.classList.remove('opacity-100', 'scale-100', 'translate-y-0'); 
-            box.classList.add('opacity-0', 'scale-95', 'translate-y-4'); 
+            box.classList.remove('profile-modal-box-visible'); 
+            box.classList.add('profile-modal-box-hidden'); 
         }
         
         setTimeout(() => {
-            modalElement.classList.remove('flex');
-            modalElement.classList.add('hidden');
+            modalElement.classList.remove('profile-flex');
+            modalElement.classList.add('profile-hidden');
         }, 300);
     };
 
@@ -119,9 +119,9 @@ document.addEventListener('click', async (event) => {
     if (event.target.closest('#basesite-alert-ok-btn') || event.target.id === 'basesite-alert-backdrop') {
         event.preventDefault(); 
         const alertModal = document.getElementById('basesite-alert-modal');
-        if (!alertModal.classList.contains('hidden')) {
-            alertModal.classList.add('hidden');
-            alertModal.classList.remove('flex');
+        if (!alertModal.classList.contains('profile-hidden')) {
+            alertModal.classList.add('profile-hidden');
+            alertModal.classList.remove('profile-flex');
             if (window.alertCallback) { 
                 window.alertCallback(); 
                 window.alertCallback = null; 
@@ -133,8 +133,8 @@ document.addEventListener('click', async (event) => {
     if (event.target.closest('#basesite-prompt-cancel-btn')) {
         event.preventDefault(); 
         const promptModal = document.getElementById('basesite-prompt-modal');
-        promptModal.classList.add('hidden');
-        promptModal.classList.remove('flex');
+        promptModal.classList.add('profile-hidden');
+        promptModal.classList.remove('profile-flex');
         window.promptCallback = null;
         return;
     }
@@ -143,8 +143,8 @@ document.addEventListener('click', async (event) => {
         event.preventDefault(); 
         const inputVal = document.getElementById('basesite-prompt-input').value;
         const promptModal = document.getElementById('basesite-prompt-modal');
-        promptModal.classList.add('hidden');
-        promptModal.classList.remove('flex');
+        promptModal.classList.add('profile-hidden');
+        promptModal.classList.remove('profile-flex');
         if (window.promptCallback) {
             window.promptCallback(inputVal);
             window.promptCallback = null;
@@ -159,8 +159,8 @@ document.addEventListener('click', async (event) => {
     if (event.target.closest('#basesite-password-cancel-btn') || event.target.id === 'basesite-password-backdrop') {
         event.preventDefault();
         const passModal = document.getElementById('basesite-password-modal');
-        passModal.classList.add('hidden');
-        passModal.classList.remove('flex');
+        passModal.classList.add('profile-hidden');
+        passModal.classList.remove('profile-flex');
         return;
     }
 
@@ -174,7 +174,7 @@ document.addEventListener('click', async (event) => {
 
         const showPassError = (msg) => {
             errorMsg.innerText = msg;
-            errorMsg.classList.remove('hidden');
+            errorMsg.classList.remove('profile-hidden');
         };
 
         // Csak azt ellenőrizzük, hogy üres-e, a prioritásos vizsgálatot rábízzuk a PHP-ra!
@@ -193,8 +193,8 @@ document.addEventListener('click', async (event) => {
             if (data.status === 'success') {
                 // SIKER: Zárjuk az ablakot, és szó nélkül kilépünk a 3..2..1-es modal segítségével!
                 const passModal = document.getElementById('basesite-password-modal');
-                passModal.classList.add('hidden');
-                passModal.classList.remove('flex');
+                passModal.classList.add('profile-hidden');
+                passModal.classList.remove('profile-flex');
                 
                 document.getElementById('profile-log-out').click(); 
             } else {
@@ -215,7 +215,7 @@ document.addEventListener('click', async (event) => {
     
     if (event.target.closest('#btn-change-username')) {
         event.preventDefault(); 
-        const currentSettingsModal = event.target.closest('.fixed.inset-0');
+        const currentSettingsModal = event.target.closest('.profile-modal-overlay');
         profileCloseModal(currentSettingsModal);
         
         showCustomPrompt("Change Username", "4-12 characters", (newName) => {
@@ -248,7 +248,7 @@ document.addEventListener('click', async (event) => {
 
     if (event.target.closest('#btn-change-password')) {
         event.preventDefault(); 
-        const currentSettingsModal = event.target.closest('.fixed.inset-0');
+        const currentSettingsModal = event.target.closest('.profile-modal-overlay');
         profileCloseModal(currentSettingsModal);
         
         const passModal = document.getElementById('basesite-password-modal');
@@ -258,11 +258,11 @@ document.addEventListener('click', async (event) => {
             document.getElementById('pass-confirm').value = '';
             
             // ELTÜNTETJÜK A RÉGI PIROS SZÖVEGET KINYITÁSKOR!
-            document.getElementById('password-error-msg').classList.add('hidden');
+            document.getElementById('password-error-msg').classList.add('profile-hidden');
             document.getElementById('password-error-msg').innerText = '';
             
-            passModal.classList.remove('hidden');
-            passModal.classList.add('flex');
+            passModal.classList.remove('profile-hidden');
+            passModal.classList.add('profile-flex');
             document.getElementById('pass-old').focus();
         }
         return;
@@ -300,12 +300,12 @@ document.addEventListener('click', async (event) => {
                 const logoutMessageEl = logoutModal.querySelector('h3');
                 if (logoutMessageEl) {
                     let timeLeft = 3;
-                    logoutMessageEl.innerHTML = `You have been logged out!<br>The site will refresh in <span class="text-red-600 font-black text-2xl">${timeLeft}</span>...`;
+                    logoutMessageEl.innerHTML = `You have been logged out!<br>The site will refresh in <span class="profile-countdown-text">${timeLeft}</span>...`;
                     
                     const countdown = setInterval(() => {
                         timeLeft--;
                         if (timeLeft > 0) {
-                            logoutMessageEl.innerHTML = `You have been logged out!<br>The site will refresh in <span class="text-red-600 font-black text-2xl">${timeLeft}</span>...`;
+                            logoutMessageEl.innerHTML = `You have been logged out!<br>The site will refresh in <span class="profile-countdown-text">${timeLeft}</span>...`;
                         } else {
                             clearInterval(countdown);
                             window.location.href = '/login';
@@ -323,7 +323,7 @@ document.addEventListener('click', async (event) => {
 
     if (isCloseBtn || (event.target.id && event.target.id.includes('backdrop'))) {
         event.preventDefault();
-        const currentModal = event.target.closest('.fixed.inset-0');
+        const currentModal = event.target.closest('.profile-modal-overlay');
         profileCloseModal(currentModal);
         return;
     }

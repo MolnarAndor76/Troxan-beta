@@ -1,8 +1,8 @@
-<div class="p-2 md:p-6 overflow-x-hidden">
+<div class="admin-page-shell">
     <div class="admin-site-wrapper">
 
         <div class="admin-header">
-            <button id="admin-back-btn" class="admin-action-btn admin-btn-gray text-sm px-3 py-2 mr-3">Back</button>
+            <button id="admin-back-btn" class="admin-action-btn admin-btn-gray admin-back-btn">Back</button>
             <h1 class="admin-title">🛡️ ADMIN AREA</h1>
 
             <div class="admin-search-wrapper">
@@ -49,19 +49,19 @@
                     if ($isTargetAdmin && !$iAmEngineer) $canModify = false; // Admint csak Engineer
 
                     // Színek
-                    $roleBadgeClass = 'bg-orange-200 text-orange-900 border-orange-950';
+                    $roleBadgeClass = 'admin-role-badge-player';
                     if ($roleName === 'Engineer') {
-                        $avatarClass = 'admin-avatar-engineer'; $nameClass = 'admin-username-engineer'; $roleBadgeClass = 'bg-cyan-100 text-cyan-900 border-cyan-950';
+                        $avatarClass = 'admin-avatar-engineer'; $nameClass = 'admin-username-engineer'; $roleBadgeClass = 'admin-role-badge-engineer';
                     } elseif ($roleName === 'Admin') {
                         $avatarClass = 'admin-avatar-admin'; $nameClass = 'admin-username-admin';
                     } elseif ($roleName === 'Moderator') {
-                        $avatarClass = 'border-purple-500'; $nameClass = 'bg-purple-200 text-purple-900 border-purple-900';
+                        $avatarClass = 'admin-avatar-moderator'; $nameClass = 'admin-username-moderator';
                     } else {
                         $avatarClass = 'admin-avatar-player'; $nameClass = 'admin-username-player';
                     }
 
                     $isBanned = (int)$player['is_banned'] === 1;
-                    $cardOpacity = $isBanned ? 'opacity-50 grayscale' : '';
+                    $cardOpacity = $isBanned ? 'admin-user-card-banned' : '';
                     ?>
 
                     <div class="admin-user-card <?= $cardOpacity ?>">
@@ -73,12 +73,12 @@
                                         <?= htmlspecialchars($player['username']) ?>
                                     </button>
                                 <?php else: ?>
-                                    <span class="text-lg font-extrabold tracking-wide text-left px-3 py-1 rounded-md border-2 opacity-80 cursor-not-allowed <?= $nameClass ?>" title="Protected profile!">
+                                    <span class="admin-username-protected <?= $nameClass ?>" title="Protected profile!">
                                         <?= htmlspecialchars($player['username']) ?> 🔒
                                     </span>
                                 <?php endif; ?>
                                 <span class="admin-profile-role <?= $roleBadgeClass ?>"><?= htmlspecialchars($roleName) ?></span>
-                                <?php if ($isBanned): ?><span class="text-xs font-bold text-red-600 mt-1 uppercase tracking-widest">⚠️ BANNED</span><?php endif; ?>
+                                <?php if ($isBanned): ?><span class="admin-banned-badge">⚠️ BANNED</span><?php endif; ?>
                             </div>
                         </div>
 
@@ -106,7 +106,7 @@
                                 <?php endif; ?>
 
                                 <?php if ($isBanned): ?>
-                                    <button class="admin-action-btn bg-green-500 text-white admin-ban-toggle-btn" data-userid="<?= $player['user_id'] ?>" data-username="<?= htmlspecialchars($player['username']) ?>" data-action="unban" title="Unban Player">🕊️ Unban</button>
+                                    <button class="admin-action-btn admin-btn-green admin-ban-toggle-btn" data-userid="<?= $player['user_id'] ?>" data-username="<?= htmlspecialchars($player['username']) ?>" data-action="unban" title="Unban Player">🕊️ Unban</button>
                                 <?php else: ?>
                                     <button class="admin-action-btn admin-btn-red admin-ban-toggle-btn" data-userid="<?= $player['user_id'] ?>" data-username="<?= htmlspecialchars($player['username']) ?>" data-action="ban" title="Ban Player">🔨 Ban</button>
                                 <?php endif; ?>
@@ -115,29 +115,29 @@
                     </div>
 
                     <?php if ($canViewDetails): ?>
-                    <div id="details-modal-<?= $player['user_id'] ?>" class="admin-details-modal hidden">
+                    <div id="details-modal-<?= $player['user_id'] ?>" class="admin-details-modal admin-hidden">
                         <div class="admin-details-content">
                             <button class="admin-close-details-btn">✖</button>
-                            <h2 class="text-xl md:text-2xl font-['Press_Start_2P',_monospace] text-center border-b-4 border-orange-950 pb-4 mb-4 text-orange-950">
+                            <h2 class="admin-details-title">
                                 <?= htmlspecialchars($player['username']) ?>
                             </h2>
-                            <div class="flex flex-col gap-3 text-orange-950 font-bold text-base md:text-lg">
-                                <p>📧 Email: <span class="font-normal"><?= htmlspecialchars($player['email']) ?></span></p>
-                                <p>🗓️ Reg: <span class="font-normal"><?= troxan_format_db_datetime($player['created_at'], 'Y-m-d', '-') ?></span></p>
-                                <p>🟢 Last: <span class="font-normal"><?= troxan_format_db_datetime($player['last_time_online'], 'Y-m-d H:i', 'Never') ?></span></p>
-                                <p>⏱️ Play: <span class="font-normal"><?= $playtime ?></span></p>
-                                <p>🔁 Last username change: <span class="font-normal"><?= troxan_format_db_datetime($player['last_username_change'], 'Y-m-d H:i', 'N/A') ?></span></p>
-                                <p>🔐 Last password change: <span class="font-normal"><?= troxan_format_db_datetime($player['last_password_change'], 'Y-m-d H:i', 'N/A') ?></span></p>
+                            <div class="admin-details-info-list">
+                                <p>📧 Email: <span class="admin-details-info-value"><?= htmlspecialchars($player['email']) ?></span></p>
+                                <p>🗓️ Reg: <span class="admin-details-info-value"><?= troxan_format_db_datetime($player['created_at'], 'Y-m-d', '-') ?></span></p>
+                                <p>🟢 Last: <span class="admin-details-info-value"><?= troxan_format_db_datetime($player['last_time_online'], 'Y-m-d H:i', 'Never') ?></span></p>
+                                <p>⏱️ Play: <span class="admin-details-info-value"><?= $playtime ?></span></p>
+                                <p>🔁 Last username change: <span class="admin-details-info-value"><?= troxan_format_db_datetime($player['last_username_change'], 'Y-m-d H:i', 'N/A') ?></span></p>
+                                <p>🔐 Last password change: <span class="admin-details-info-value"><?= troxan_format_db_datetime($player['last_password_change'], 'Y-m-d H:i', 'N/A') ?></span></p>
                             </div>
 
-                            <div class="admin-change-name-section mt-4 border-t border-orange-950/50 pt-4">
-                                <button class="admin-action-btn admin-btn-blue w-full py-2 admin-change-name-open-btn" data-userid="<?= $player['user_id'] ?>" data-username="<?= htmlspecialchars($player['username']) ?>">📝 Change username</button>
+                            <div class="admin-change-name-section admin-section-top-divider">
+                                <button class="admin-action-btn admin-btn-blue admin-action-full admin-action-medium admin-change-name-open-btn" data-userid="<?= $player['user_id'] ?>" data-username="<?= htmlspecialchars($player['username']) ?>">📝 Change username</button>
                             </div>
 
-                            <button class="admin-action-btn admin-btn-gray mt-8 w-full py-3 admin-view-logs-btn" data-userid="<?= $player['user_id'] ?>" data-username="<?= htmlspecialchars($player['username']) ?>">📜 View Logs</button>
+                            <button class="admin-action-btn admin-btn-gray admin-action-full admin-action-large admin-view-logs-btn admin-mt-8" data-userid="<?= $player['user_id'] ?>" data-username="<?= htmlspecialchars($player['username']) ?>">📜 View Logs</button>
 
                             <?php if ($canModify): ?>
-                                <button class="admin-action-btn admin-btn-red mt-3 w-full py-3 admin-hard-delete-open-btn" data-userid="<?= $player['user_id'] ?>" data-username="<?= htmlspecialchars($player['username']) ?>">🗑️ DELETE PROFILE</button>
+                                <button class="admin-action-btn admin-btn-red admin-action-full admin-action-large admin-hard-delete-open-btn admin-mt-3" data-userid="<?= $player['user_id'] ?>" data-username="<?= htmlspecialchars($player['username']) ?>">🗑️ DELETE PROFILE</button>
                             <?php endif; ?>
                         </div>
                     </div>
@@ -150,104 +150,104 @@
     </div>
 </div>
 
-<div id="admin-change-username-modal" class="admin-details-modal hidden">
-    <div class="admin-details-content !max-w-md">
-        <button class="admin-close-details-btn absolute top-3 right-4">✖</button>
-        <h2 class="text-lg font-bold text-orange-950 mb-3">Change Username</h2>
-        <p class="text-sm text-orange-900 mb-2">Target: <span id="change-username-target"></span></p>
-        <input id="change-username-input" type="text" class="w-full border border-orange-950 rounded p-2 mb-3" placeholder="New username (4-12 chars)">
-        <textarea id="change-username-reason-input" class="w-full border border-orange-950 rounded p-2 mb-3" placeholder="Reason (required)"></textarea>
-        <button id="change-username-confirm-btn" class="admin-action-btn admin-btn-blue w-full py-2">Change Name</button>
+<div id="admin-change-username-modal" class="admin-details-modal admin-hidden">
+    <div class="admin-details-content admin-details-content-sm">
+        <button class="admin-close-details-btn admin-close-details-btn-fixed">✖</button>
+        <h2 class="admin-modal-subtitle">Change Username</h2>
+        <p class="admin-modal-target">Target: <span id="change-username-target"></span></p>
+        <input id="change-username-input" type="text" class="admin-form-input" placeholder="New username (4-12 chars)">
+        <textarea id="change-username-reason-input" class="admin-form-input admin-form-textarea" placeholder="Reason (required)"></textarea>
+        <button id="change-username-confirm-btn" class="admin-action-btn admin-btn-blue admin-action-full admin-action-medium">Change Name</button>
     </div>
 </div>
 
-<div id="admin-ban-reason-modal" class="admin-details-modal hidden" style="z-index: 9996;">
-    <div class="admin-details-content !max-w-md">
-        <button class="admin-close-details-btn absolute top-3 right-4">✖</button>
-        <h2 class="text-lg font-bold text-orange-950 mb-3" id="ban-reason-title">Ban Player</h2>
-        <p class="text-sm text-orange-900 mb-2">Target: <span id="ban-reason-target"></span></p>
-        <textarea id="ban-reason-input" class="w-full border border-orange-950 rounded p-2 mb-3" placeholder="Reason (required)"></textarea>
-        <button id="ban-reason-confirm-btn" class="admin-action-btn admin-btn-red w-full py-2">Confirm Ban</button>
+<div id="admin-ban-reason-modal" class="admin-details-modal admin-hidden admin-modal-z-ban">
+    <div class="admin-details-content admin-details-content-sm">
+        <button class="admin-close-details-btn admin-close-details-btn-fixed">✖</button>
+        <h2 class="admin-modal-subtitle" id="ban-reason-title">Ban Player</h2>
+        <p class="admin-modal-target">Target: <span id="ban-reason-target"></span></p>
+        <textarea id="ban-reason-input" class="admin-form-input admin-form-textarea" placeholder="Reason (required)"></textarea>
+        <button id="ban-reason-confirm-btn" class="admin-action-btn admin-btn-red admin-action-full admin-action-medium">Confirm Ban</button>
     </div>
 </div>
-<div id="admin-rename-map-modal" class="admin-details-modal hidden" style="z-index: 9997;">
-    <div class="admin-details-content !max-w-md">
-        <button class="admin-close-details-btn absolute top-3 right-4">✖</button>
-        <h2 class="text-lg font-bold text-orange-950 mb-3">Rename Map</h2>
-        <p class="text-sm text-orange-900 mb-2">Old name: <span id="admin-rename-map-old-name"></span></p>
-        <input id="admin-rename-map-input" type="text" class="w-full border border-orange-950 rounded p-2 mb-3" placeholder="New map name (1-64 chars)">
-        <button id="admin-rename-map-confirm-btn" class="admin-action-btn admin-btn-blue w-full py-2">Rename</button>
+<div id="admin-rename-map-modal" class="admin-details-modal admin-hidden admin-modal-z-rename">
+    <div class="admin-details-content admin-details-content-sm">
+        <button class="admin-close-details-btn admin-close-details-btn-fixed">✖</button>
+        <h2 class="admin-modal-subtitle">Rename Map</h2>
+        <p class="admin-modal-target">Old name: <span id="admin-rename-map-old-name"></span></p>
+        <input id="admin-rename-map-input" type="text" class="admin-form-input" placeholder="New map name (1-64 chars)">
+        <button id="admin-rename-map-confirm-btn" class="admin-action-btn admin-btn-blue admin-action-full admin-action-medium">Rename</button>
     </div>
 </div>
 
-<div id="admin-hard-delete-modal" class="admin-details-modal hidden" style="z-index: 9998;">
-    <div class="admin-details-content !max-w-md">
-        <button class="admin-close-details-btn absolute top-3 right-4">✖</button>
-        <h2 class="text-lg font-bold text-red-700 mb-3">Hard Delete Profile</h2>
-        <p class="text-sm text-orange-900 mb-2">Target: <span id="admin-hard-delete-target"></span></p>
-        <p class="text-sm font-bold text-red-700 mb-2">Type CONFIRM to permanently delete this account.</p>
-        <input id="admin-hard-delete-input" type="text" class="w-full border border-red-900 rounded p-2 mb-3" placeholder="CONFIRM">
-        <button id="admin-hard-delete-confirm-btn" class="admin-action-btn admin-btn-red w-full py-2">Permanently Delete</button>
+<div id="admin-hard-delete-modal" class="admin-details-modal admin-hidden admin-modal-z-hard-delete">
+    <div class="admin-details-content admin-details-content-sm">
+        <button class="admin-close-details-btn admin-close-details-btn-fixed">✖</button>
+        <h2 class="admin-modal-subtitle admin-modal-subtitle-danger">Hard Delete Profile</h2>
+        <p class="admin-modal-target">Target: <span id="admin-hard-delete-target"></span></p>
+        <p class="admin-modal-warning">Type CONFIRM to permanently delete this account.</p>
+        <input id="admin-hard-delete-input" type="text" class="admin-form-input admin-form-input-danger" placeholder="CONFIRM">
+        <button id="admin-hard-delete-confirm-btn" class="admin-action-btn admin-btn-red admin-action-full admin-action-medium">Permanently Delete</button>
     </div>
 </div>
-<div id="global-logs-modal" class="admin-details-modal hidden">
-    <div class="admin-details-content w-[95%] max-w-[600px] max-h-[90vh] flex flex-col">
-        <button class="admin-close-logs-btn absolute top-3 right-4 text-3xl text-orange-950 font-black cursor-pointer hover:text-red-600 transition-colors z-20">✖</button>
-        <h2 id="logs-modal-title" class="text-xl md:text-2xl font-['Press_Start_2P',_monospace] text-center border-b-4 border-orange-950 pb-4 mb-4 text-orange-950 shrink-0">Logs</h2>
-        <div class="mb-3 flex flex-wrap gap-2 items-end">
-            <label class="text-orange-950 font-bold text-sm">From:</label>
-            <input id="logs-date-from" type="date" class="border border-orange-950 rounded p-1">
-            <label class="text-orange-950 font-bold text-sm">To:</label>
-            <input id="logs-date-to" type="date" class="border border-orange-950 rounded p-1">
-            <button id="logs-date-filter-btn" class="admin-action-btn admin-btn-yellow py-1 px-3">Filter</button>
-            <button id="logs-date-clear-btn" class="admin-action-btn admin-btn-gray py-1 px-3">Clear</button>
+<div id="global-logs-modal" class="admin-details-modal admin-hidden">
+    <div class="admin-details-content admin-logs-content">
+        <button class="admin-close-logs-btn">✖</button>
+        <h2 id="logs-modal-title" class="admin-details-title admin-details-title-shrink">Logs</h2>
+        <div class="admin-logs-filters">
+            <label class="admin-logs-filter-label">From:</label>
+            <input id="logs-date-from" type="date" class="admin-logs-date-input">
+            <label class="admin-logs-filter-label">To:</label>
+            <input id="logs-date-to" type="date" class="admin-logs-date-input">
+            <button id="logs-date-filter-btn" class="admin-action-btn admin-btn-yellow admin-action-tight">Filter</button>
+            <button id="logs-date-clear-btn" class="admin-action-btn admin-btn-gray admin-action-tight">Clear</button>
         </div>
-        <div id="logs-container" class="flex flex-col gap-3 overflow-y-auto pr-2 pb-4"></div>
+        <div id="logs-container" class="admin-logs-container"></div>
     </div>
 </div>
 
-<div id="basesite-alert-modal" class="admin-details-modal hidden" style="z-index: 9998;">
-  <div class="admin-details-content !max-w-sm text-center">
-    <div id="basesite-alert-header" class="border-b-4 border-orange-950 pb-2 mb-4">
-      <h2 id="basesite-alert-title" class="text-xl font-bold text-orange-950">Notice</h2>
+<div id="basesite-alert-modal" class="admin-details-modal admin-hidden admin-modal-z-alert">
+  <div class="admin-details-content admin-details-content-alert">
+    <div id="basesite-alert-header" class="admin-modal-alert-header">
+      <h2 id="basesite-alert-title" class="admin-modal-alert-title">Notice</h2>
     </div>
     <button id="basesite-alert-close-btn" class="admin-close-details-btn">&times;</button>
-    <p id="basesite-alert-message" class="text-lg font-bold text-gray-800 my-4">Message goes here</p>
-    <button id="basesite-alert-ok-btn" class="admin-action-btn admin-btn-yellow mt-4 py-2 px-8">OK</button>
+    <p id="basesite-alert-message" class="admin-modal-alert-message">Message goes here</p>
+    <button id="basesite-alert-ok-btn" class="admin-action-btn admin-btn-yellow admin-alert-btn">OK</button>
   </div>
 </div>
 
-<div id="basesite-confirm-modal" class="admin-details-modal hidden" style="z-index: 9999;">
-  <div class="admin-details-content !max-w-sm text-center">
-    <div id="basesite-confirm-header" class="border-b-4 border-red-950 pb-2 mb-4">
-      <h2 id="basesite-confirm-title" class="text-xl font-bold text-red-600">Confirmation</h2>
+<div id="basesite-confirm-modal" class="admin-details-modal admin-hidden admin-modal-z-confirm">
+  <div class="admin-details-content admin-details-content-alert">
+    <div id="basesite-confirm-header" class="admin-modal-alert-header admin-modal-alert-header-danger">
+      <h2 id="basesite-confirm-title" class="admin-modal-alert-title admin-modal-alert-title-danger">Confirmation</h2>
     </div>
     <button id="basesite-confirm-close-btn" class="admin-close-details-btn">&times;</button>
-    <p id="basesite-confirm-message" class="text-lg font-bold text-gray-800 my-4">Are you sure?</p>
-    <div class="flex justify-center gap-4 mt-6">
-      <button id="basesite-confirm-cancel-btn" class="admin-action-btn admin-btn-gray py-2 px-6">Cancel</button>
-      <button id="basesite-confirm-ok-btn" class="admin-action-btn admin-btn-red py-2 px-6">Confirm</button>
+    <p id="basesite-confirm-message" class="admin-modal-alert-message">Are you sure?</p>
+    <div class="admin-confirm-actions">
+      <button id="basesite-confirm-cancel-btn" class="admin-action-btn admin-btn-gray admin-confirm-btn">Cancel</button>
+      <button id="basesite-confirm-ok-btn" class="admin-action-btn admin-btn-red admin-confirm-btn">Confirm</button>
     </div>
   </div>
 </div>
 
-<div id="admin-maps-modal" class="admin-details-modal hidden" style="z-index: 9995;">
-    <div class="admin-details-content w-[95%] max-w-[1000px] h-[85vh] flex flex-col p-4 md:p-6 bg-orange-50 border-4 border-orange-950 rounded-xl shadow-[8px_8px_0px_rgba(0,0,0,1)]">
+<div id="admin-maps-modal" class="admin-details-modal admin-hidden admin-modal-z-maps">
+    <div class="admin-details-content admin-maps-content">
         
-        <button class="admin-close-maps-btn absolute top-3 right-4 text-3xl text-orange-950 font-black cursor-pointer hover:text-red-600 transition-colors z-20">✖</button>
+        <button class="admin-close-maps-btn">✖</button>
         
-        <div class="flex flex-col md:flex-row justify-between items-center border-b-4 border-orange-950 pb-4 mb-4 shrink-0 gap-4 mt-6 md:mt-0">
-            <h2 id="admin-maps-title" class="text-xl md:text-3xl font-['Press_Start_2P',_monospace] text-orange-950 truncate max-w-full">
+        <div class="admin-maps-head">
+            <h2 id="admin-maps-title" class="admin-maps-title">
                 Player's Library
             </h2>
             
-            <div class="flex items-center gap-2 bg-orange-200/50 p-2 rounded border-2 border-orange-950/20 font-bold text-orange-950 shadow-inner">
-                <input type="checkbox" id="admin-maps-own-filter" class="w-5 h-5 accent-orange-600 cursor-pointer">
-                <label for="admin-maps-own-filter" class="cursor-pointer tracking-wide uppercase text-xs md:text-sm">Only Created By Player</label>
+            <div class="admin-maps-filter-box">
+                <input type="checkbox" id="admin-maps-own-filter" class="admin-maps-own-filter-input">
+                <label for="admin-maps-own-filter" class="admin-maps-own-filter-label">Only Created By Player</label>
             </div>
         </div>
         
-        <div id="admin-maps-grid" class="flex-1 overflow-y-auto pr-2 pb-4 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 justify-items-center auto-rows-max">
+        <div id="admin-maps-grid" class="admin-maps-grid">
             </div>
         
     </div>

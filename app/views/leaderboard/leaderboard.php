@@ -33,7 +33,7 @@
               <?php endforeach; ?>
           <?php else: ?>
               <tr class="leaderboard-tr">
-                <td colspan="3" class="leaderboard-td-user" style="text-align: center; padding: 20px;">No warriors found.</td>
+                <td colspan="3" class="leaderboard-td-user leaderboard-empty-cell">No warriors found.</td>
               </tr>
           <?php endif; ?>
 

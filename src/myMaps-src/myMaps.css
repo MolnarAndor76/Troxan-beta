@@ -1,6 +1,22 @@
 @import "tailwindcss";
 
 @layer components {
+    .mymaps-main-wrap {
+        @apply flex-1 min-h-0 flex flex-col;
+    }
+
+    .mymaps-wrapper-section {
+        @apply flex-1 min-h-0 flex flex-col;
+    }
+
+    .mymaps-hidden {
+        display: none !important;
+    }
+
+    .mymaps-flex {
+        display: flex !important;
+    }
+
     .mymaps-site {
         @apply h-[80vh] w-[90%] max-w-6xl mx-auto bg-orange-50 rounded-xl shadow-[8px_8px_0px_rgba(0,0,0,1)] border-4 border-orange-950 flex flex-col overflow-hidden min-h-0;
     }
@@ -17,12 +33,20 @@
         @apply bg-yellow-500 hover:bg-yellow-400 text-orange-950 text-2xl font-black w-11 h-11 rounded-sm border-2 border-orange-950 shadow-[3px_3px_0px_rgba(0,0,0,1)] transition-all hover:translate-y-[1px] hover:shadow-[1px_1px_0px_rgba(0,0,0,1)] cursor-pointer;
     }
 
+    .mymaps-ham-btn-mobile {
+        @apply md:hidden;
+    }
+
     #mymaps-title {
         @apply text-4xl md:text-5xl font-extrabold text-yellow-400 tracking-wider uppercase drop-shadow-[2px_2px_0px_#000] m-0;
     }
 
     .mymaps-controls-row {
         @apply flex flex-col sm:flex-row w-full md:w-auto gap-4 items-center justify-center flex-1 md:ml-8;
+    }
+
+    .mymaps-controls-row-collapsed {
+        @apply hidden md:flex;
     }
 
     #mymaps-controls-row.mymaps-mobile-open {
@@ -55,6 +79,7 @@
     }
 
     .mymaps-sort-box { @apply relative w-full sm:w-auto; }
+    .mymaps-sort-icon { @apply w-4 h-4 ml-2 fill-current; }
     .mymaps-nav-buttons { @apply flex items-center gap-2; }
     .mymaps-nav-btn { @apply inline-flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-500 text-white font-bold py-2 px-4 rounded-sm border-2 border-blue-950 shadow-[2px_2px_0px_rgba(0,0,0,1)] transition-all hover:translate-y-[1px] hover:shadow-[1px_1px_0px_rgba(0,0,0,1)]; }
     .mymaps-profile-avatar { @apply w-9 h-9 rounded-full object-cover border-2 border-white; }
@@ -66,6 +91,10 @@
     }
     .mymaps-dropdown-item {
         @apply w-full text-left p-3 hover:bg-yellow-500 hover:text-orange-950 text-orange-900 font-bold transition-colors border-b-2 border-orange-950/20 last:border-0;
+    }
+
+    .mymaps-empty-msg {
+        @apply text-orange-900 font-bold text-xl col-span-full mt-10 text-center w-full;
     }
 
     .mymaps-scroll-area {
@@ -90,10 +119,19 @@
     }
 
     .mymaps-image {
-        @apply w-full h-32 border-4 border-orange-950 rounded-sm overflow-hidden mb-2 shadow-[2px_2px_0px_#000];
+        @apply relative w-full h-32 border-4 rounded-sm overflow-hidden mb-2;
     }
-    .mymaps-image img {
-        @apply w-full h-full object-cover;
+    .mymaps-image-img {
+        @apply w-full h-full object-cover transition-transform duration-300;
+    }
+    .mymaps-image:hover .mymaps-image-img {
+        @apply scale-110;
+    }
+    .mymaps-image-default {
+        @apply border-orange-950 shadow-[2px_2px_0px_#000];
+    }
+    .mymaps-image-engineer {
+        @apply border-cyan-900 shadow-cyan-900/50;
     }
 
     .mymaps-info {
@@ -102,7 +140,107 @@
     .map-name {
         @apply font-extrabold text-xl text-yellow-400 drop-shadow-[2px_2px_0px_#000] text-center w-full truncate mb-1;
     }
+    .mymaps-map-name-default { @apply text-orange-950; }
+    .mymaps-map-name-engineer { @apply text-cyan-950; }
     .mymaps-creator-name {
         @apply text-sm font-bold text-white drop-shadow-[1px_1px_0px_#000] text-center w-full mb-auto;
+    }
+
+    .mymaps-btns-stats {
+        @apply mt-2 flex justify-between items-center w-full gap-2 p-2 bg-orange-950/30 rounded-sm border border-orange-950/50;
+    }
+
+    .mymaps-status-badge {
+        @apply text-white text-xs px-2 py-0.5 rounded-sm border absolute top-2 right-2 font-bold shadow-md z-10 uppercase;
+    }
+    .mymaps-status-published { @apply bg-green-600 border-green-900; }
+    .mymaps-status-draft { @apply bg-gray-500 border-gray-900; }
+    .mymaps-status-unpublished { @apply bg-orange-500 border-orange-900; }
+
+    .mymaps-btn-edit {
+        @apply bg-blue-600 hover:bg-blue-500 text-white font-extrabold py-1.5 px-3 border-2 border-blue-950 rounded-sm shadow-[2px_2px_0px_#000] text-xs uppercase;
+    }
+    .mymaps-btn-edit-locked {
+        @apply bg-gray-500 text-white font-extrabold py-1.5 px-3 border-2 border-gray-900 rounded-sm shadow-[2px_2px_0px_#000] text-xs uppercase cursor-not-allowed;
+    }
+    .mymaps-btn-unpublish {
+        @apply bg-orange-600 hover:bg-orange-500 text-white font-extrabold py-1.5 px-2 border-2 border-orange-950 rounded-sm shadow-[2px_2px_0px_#000] text-[10px] uppercase tracking-wide;
+    }
+    .mymaps-btn-publish {
+        @apply bg-green-600 hover:bg-green-500 text-white font-extrabold py-1.5 px-3 border-2 border-green-950 rounded-sm shadow-[2px_2px_0px_#000] text-[10px] uppercase tracking-wide;
+    }
+    .mymaps-btn-remove {
+        @apply text-xl hover:scale-110 transition-transform cursor-pointer drop-shadow-md ml-auto;
+    }
+
+    .mymaps-modal-overlay {
+        @apply fixed inset-0 items-center justify-center;
+    }
+    .mymaps-modal-backdrop {
+        @apply absolute inset-0 bg-black/80;
+    }
+    .mymaps-modal-box {
+        @apply relative z-10 w-[90%] bg-orange-50 border-4 border-orange-950 p-6 rounded-xl shadow-[8px_8px_0px_rgba(0,0,0,1)] flex flex-col;
+    }
+    .mymaps-modal-box-alert { @apply max-w-[400px]; }
+    .mymaps-modal-box-confirm { @apply max-w-[420px]; }
+    .mymaps-modal-box-rename { @apply max-w-[460px]; }
+    .mymaps-modal-close {
+        @apply absolute top-3 right-4 text-3xl text-orange-950 font-black cursor-pointer hover:text-red-600 transition-colors z-20;
+    }
+    .mymaps-modal-header {
+        @apply border-b-4 border-orange-950 pb-2 mb-4;
+    }
+    .mymaps-modal-header-danger {
+        @apply border-red-950;
+    }
+    .mymaps-modal-header-success {
+        @apply border-green-950;
+    }
+    .mymaps-modal-title {
+        @apply text-xl font-bold text-orange-950;
+    }
+    .mymaps-modal-title-danger {
+        @apply text-red-600;
+    }
+    .mymaps-modal-title-error {
+        @apply text-red-600;
+    }
+    .mymaps-modal-title-success {
+        @apply text-green-700;
+    }
+    .mymaps-modal-message {
+        @apply text-lg font-bold text-gray-800 my-4;
+    }
+    .mymaps-modal-actions {
+        @apply flex justify-center gap-4 mt-6;
+    }
+    .mymaps-modal-btn-ok {
+        @apply bg-yellow-500 hover:bg-yellow-400 text-orange-950 font-extrabold py-2 px-8 rounded border-2 border-orange-950 shadow-[3px_3px_0px_rgba(0,0,0,1)] transition-transform hover:translate-y-1 cursor-pointer self-center mt-4;
+    }
+    .mymaps-modal-btn-cancel {
+        @apply bg-gray-500 hover:bg-gray-400 text-white font-extrabold py-2 px-6 rounded border-2 border-gray-900 shadow-[3px_3px_0px_rgba(0,0,0,1)] transition-transform hover:translate-y-1 cursor-pointer;
+    }
+    .mymaps-modal-btn-confirm {
+        @apply bg-red-600 hover:bg-red-500 text-white font-extrabold py-2 px-6 rounded border-2 border-red-900 shadow-[3px_3px_0px_rgba(0,0,0,1)] transition-transform hover:translate-y-1 cursor-pointer;
+    }
+    .mymaps-modal-btn-save {
+        @apply bg-blue-600 hover:bg-blue-500 text-white font-extrabold py-2 px-6 rounded border-2 border-blue-950 shadow-[3px_3px_0px_rgba(0,0,0,1)] transition-transform hover:translate-y-1 cursor-pointer;
+    }
+
+    .mymaps-rename-title {
+        @apply text-lg font-bold text-orange-950 mb-3;
+    }
+    .mymaps-rename-current {
+        @apply text-sm text-orange-900 mb-2;
+    }
+    .mymaps-rename-old-name {
+        @apply font-bold;
+    }
+    .mymaps-rename-input {
+        @apply w-full border border-orange-950 rounded p-2 mb-3;
+    }
+    .mymaps-rename-actions {
+        @apply flex justify-end gap-3 mt-1;
     }
 }

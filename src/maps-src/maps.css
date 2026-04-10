@@ -9,6 +9,14 @@
         @apply h-[80vh] w-[90%] max-w-6xl mx-auto bg-orange-50 rounded-xl shadow-[8px_8px_0px_rgba(0,0,0,1)] border-4 border-orange-950 flex flex-col overflow-hidden min-h-0;
     }
 
+    .maps-main-wrap {
+        @apply flex-1 min-h-0 flex flex-col;
+    }
+
+    .maps-wrapper-section {
+        @apply flex-1 min-h-0 flex flex-col;
+    }
+
     .maps-header {
         @apply relative flex flex-col md:flex-row items-center justify-between p-4 md:p-6 bg-orange-900 border-b-4 border-orange-950 shadow-md gap-4 z-20;
     }
@@ -21,12 +29,20 @@
         @apply bg-yellow-500 hover:bg-yellow-400 text-orange-950 text-2xl font-black w-11 h-11 rounded-sm border-2 border-orange-950 shadow-[3px_3px_0px_rgba(0,0,0,1)] transition-all hover:translate-y-[1px] hover:shadow-[1px_1px_0px_rgba(0,0,0,1)] cursor-pointer;
     }
 
+    .maps-ham-btn-mobile {
+        @apply md:hidden;
+    }
+
     #maps-title {
         @apply text-4xl md:text-5xl font-extrabold text-yellow-400 tracking-wider uppercase drop-shadow-[2px_2px_0px_#000] m-0;
     }
 
     .maps-controls-row {
         @apply flex flex-col sm:flex-row w-full md:w-auto gap-4 items-center justify-center flex-1 md:ml-8;
+    }
+
+    .maps-controls-row-collapsed {
+        @apply hidden md:flex;
     }
 
     #maps-controls-row.maps-mobile-open {
@@ -54,6 +70,7 @@
     }
 
     .maps-sort-box { @apply relative w-full sm:w-auto; }
+    .maps-sort-icon { @apply w-4 h-4 ml-2 fill-current; }
     .maps-sort-btn {
         @apply sm:w-48 bg-yellow-500 hover:bg-yellow-400 text-orange-950 font-bold py-2.5 px-4 rounded-sm transition-all flex items-center justify-between border-2 border-orange-950 shadow-[3px_3px_0px_rgba(0,0,0,1)] hover:translate-y-[1px] hover:shadow-[1px_1px_0px_rgba(0,0,0,1)] cursor-pointer uppercase tracking-wide;
     }
@@ -62,6 +79,26 @@
     }
     .maps-dropdown-item {
         @apply w-full text-left p-3 hover:bg-yellow-500 hover:text-orange-950 text-orange-900 font-bold transition-colors border-b-2 border-orange-950/20 last:border-0;
+    }
+
+    .maps-hidden {
+        @apply hidden;
+    }
+
+    .maps-flex-overlay {
+        @apply fixed inset-0 items-center justify-center;
+    }
+
+    .maps-modal-visible {
+        @apply flex;
+    }
+
+    .maps-modal-z-alert {
+        @apply z-[9998];
+    }
+
+    .maps-modal-z-confirm {
+        @apply z-[9999];
     }
 
     .maps-help-btn {
@@ -80,6 +117,10 @@
         @apply grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8 justify-items-center auto-rows-max;
     }
 
+    .maps-empty-msg {
+        @apply text-orange-900 font-bold text-xl col-span-full mt-10 text-center w-full;
+    }
+
     .maps-card {
         @apply w-[260px] h-[360px] p-5 flex flex-col items-center justify-between transition-transform duration-300 hover:-translate-y-2;
         background-image: url('./img/map2card-bg.png');
@@ -92,6 +133,23 @@
     .maps-image {
         @apply w-full h-32 border-4 border-orange-950 rounded-sm overflow-hidden mb-2 shadow-[2px_2px_0px_#000];
     }
+
+    .maps-image-default {
+        @apply border-orange-950 shadow-[2px_2px_0px_#000];
+    }
+
+    .maps-image-engineer {
+        @apply border-cyan-900 shadow-cyan-900/50;
+    }
+
+    .maps-image-img {
+        @apply w-full h-full object-cover transition-transform duration-300;
+    }
+
+    .maps-card:hover .maps-image-img {
+        @apply scale-110;
+    }
+
     .maps-image img {
         @apply w-full h-full object-cover;
     }
@@ -102,6 +160,15 @@
     .map-name {
         @apply font-extrabold text-xl text-yellow-400 drop-shadow-[2px_2px_0px_#000] text-center w-full truncate mb-1;
     }
+
+    .maps-map-name-default {
+        @apply text-yellow-400;
+    }
+
+    .maps-map-name-engineer {
+        @apply text-cyan-300;
+    }
+
     .maps-creator-name {
         @apply text-sm font-bold text-white drop-shadow-[1px_1px_0px_#000] text-center w-full mb-auto;
     }
@@ -109,10 +176,211 @@
     .maps-btns-stats {
         @apply flex justify-between items-center w-full mt-4 bg-orange-950/30 p-2 rounded-sm border border-orange-950/50;
     }
+
+    .maps-card-actions {
+        @apply flex gap-2 items-center ml-auto;
+    }
+
+    .maps-add-btn {
+        @apply text-white px-3 py-1 font-extrabold text-xs border-2 rounded-sm shadow-[2px_2px_0px_#000] hover:translate-y-[1px] hover:shadow-[1px_1px_0px_#000] transition-all uppercase tracking-wider cursor-pointer z-10 relative;
+    }
+
+    .maps-add-btn-available {
+        @apply bg-green-600 hover:bg-green-500 border-green-950;
+    }
+
+    .maps-add-btn-added {
+        @apply bg-gray-500 hover:bg-gray-400 border-gray-950;
+    }
+
+    .maps-own-badge {
+        @apply text-[10px] font-bold text-orange-900/50 uppercase border border-orange-900/30 px-2 py-1 rounded-sm bg-orange-900/10;
+    }
+
     .maps-download-count {
         @apply font-bold text-white drop-shadow-[1px_1px_0px_#000] text-sm flex items-center gap-1;
     }
     .maps-delete {
         @apply text-lg hover:scale-110 transition-transform cursor-pointer drop-shadow-md;
+    }
+
+    .maps-delete-btn {
+        @apply text-lg hover:scale-110 transition-transform cursor-pointer drop-shadow-md;
+    }
+
+    .maps-protected-lock {
+        @apply text-xl opacity-50 cursor-not-allowed;
+    }
+
+    .maps-modal-overlay {
+        @apply fixed inset-0 z-50 items-center justify-center;
+    }
+
+    .maps-modal-backdrop {
+        @apply absolute inset-0 bg-black/80;
+    }
+
+    .maps-modal-box {
+        @apply relative bg-orange-50 border-4 border-orange-950 p-6 rounded-xl shadow-2xl z-10 w-[90%];
+    }
+
+    .maps-modal-box-help {
+        @apply max-w-md;
+    }
+
+    .maps-modal-box-trash {
+        @apply max-w-4xl max-h-[80vh] flex flex-col;
+    }
+
+    .maps-modal-box-alert-msg {
+        @apply max-w-sm text-center flex flex-col items-center;
+    }
+
+    .maps-modal-close {
+        @apply absolute top-2 right-4 text-3xl font-bold text-orange-950 hover:text-red-500;
+    }
+
+    .maps-modal-title-help {
+        @apply text-2xl font-bold mb-4 text-orange-950 border-b-2 border-orange-200 pb-2;
+    }
+
+    .maps-help-list {
+        @apply space-y-3 text-lg text-gray-800 font-medium;
+    }
+
+    .maps-trash-head {
+        @apply flex flex-col mb-4 border-b-2 border-orange-200 pb-4 gap-4 mt-4 sm:mt-0;
+    }
+
+    .maps-trash-toprow {
+        @apply flex flex-col sm:flex-row justify-between items-center gap-4;
+    }
+
+    .maps-trash-title {
+        @apply text-3xl font-bold text-orange-950 flex items-center gap-2 m-0;
+    }
+
+    .maps-trash-search-input {
+        @apply w-full sm:w-64 p-2 border-4 border-orange-950 rounded-sm bg-white text-orange-950 font-bold focus:outline-none focus:border-yellow-500 shadow-[inset_0_4px_4px_rgba(0,0,0,0.05)];
+    }
+
+    .maps-trash-filters {
+        @apply flex flex-wrap gap-4 text-orange-950 font-bold bg-orange-200/50 p-2 rounded border-2 border-orange-950/20;
+    }
+
+    .maps-trash-filter-label {
+        @apply flex items-center gap-2 cursor-pointer;
+    }
+
+    .maps-trash-filter-cb {
+        @apply w-4 h-4 accent-orange-600;
+    }
+
+    .maps-trash-scroll {
+        @apply overflow-y-auto flex-1 pr-2;
+    }
+
+    .maps-trash-table {
+        @apply w-full text-left border-collapse;
+    }
+
+    .maps-trash-head-row {
+        @apply bg-orange-900 text-yellow-400 uppercase text-xs;
+    }
+
+    .maps-trash-th {
+        @apply p-3 border-2 border-orange-950 sticky top-0 bg-orange-900 z-10;
+    }
+
+    .maps-trash-row {
+        @apply border-b border-orange-950/20 text-orange-950 font-bold hover:bg-orange-200/50 transition-colors;
+    }
+
+    .maps-trash-row-engineer {
+        @apply bg-cyan-50;
+    }
+
+    .maps-trash-td {
+        @apply p-3;
+    }
+
+    .maps-trash-status-cell {
+        @apply p-3 uppercase text-xs tracking-wider;
+    }
+
+    .maps-trash-action-cell {
+        @apply p-3 flex gap-2;
+    }
+
+    .maps-trash-status {
+        @apply px-2 py-1 border rounded;
+    }
+
+    .maps-trash-status-banned {
+        @apply text-red-600 bg-red-100 border-red-600;
+    }
+
+    .maps-trash-status-deleted {
+        @apply text-orange-600 bg-orange-100 border-orange-600;
+    }
+
+    .maps-trash-status-scrapped {
+        @apply text-gray-600 bg-gray-200 border-gray-600;
+    }
+
+    .maps-trash-status-unknown {
+        @apply text-gray-600;
+    }
+
+    .maps-restore-btn-style {
+        @apply bg-green-700 hover:bg-green-600 text-white px-3 py-1 rounded-sm shadow-[2px_2px_0px_rgba(0,0,0,1)] hover:translate-y-[1px] hover:shadow-[1px_1px_0px_rgba(0,0,0,1)] transition-all uppercase text-xs tracking-wider;
+    }
+
+    .maps-trash-protected {
+        @apply text-xs uppercase font-bold text-cyan-800 px-2 py-1 border border-cyan-800 rounded bg-cyan-100;
+    }
+
+    .maps-trash-empty {
+        @apply text-center text-orange-900/50 font-bold p-8;
+    }
+
+    .maps-modal-alert-head {
+        @apply border-b-4 border-orange-950 w-full pb-2 mb-4;
+    }
+
+    .maps-modal-alert-head-danger {
+        @apply border-red-950;
+    }
+
+    .maps-modal-alert-title {
+        @apply text-xl font-bold text-orange-950;
+    }
+
+    .maps-modal-alert-title-danger {
+        @apply text-red-600;
+    }
+
+    .maps-modal-alert-title-success {
+        @apply text-green-600;
+    }
+
+    .maps-modal-alert-message {
+        @apply text-lg font-bold text-gray-800 my-4;
+    }
+
+    .maps-modal-alert-btn {
+        @apply bg-yellow-500 px-6 py-2 font-bold text-orange-950 border-2 border-orange-950 rounded shadow-[2px_2px_0px_#000] mt-4;
+    }
+
+    .maps-confirm-actions {
+        @apply flex justify-center w-full gap-4 mt-6;
+    }
+
+    .maps-confirm-btn-cancel {
+        @apply bg-gray-400 px-6 py-2 font-bold text-white border-2 border-gray-600 rounded shadow-[2px_2px_0px_#000];
+    }
+
+    .maps-confirm-btn-ok {
+        @apply bg-red-600 px-6 py-2 font-bold text-white border-2 border-red-900 rounded shadow-[2px_2px_0px_#000];
     }
 }

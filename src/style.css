@@ -27,12 +27,56 @@
 }
 
 @layer components {
+    .troxan-body {
+        @apply min-h-screen w-screen bg-gray-100 font-['Pixelify_Sans'] relative;
+    }
+
+    .troxan-header {
+        @apply fixed top-0 left-0 h-[6vh] w-full text-white flex items-center px-6 z-50;
+    }
+
+    .troxan-header-nav {
+        @apply w-full flex items-center justify-between;
+    }
+
+    .troxan-header-left {
+        @apply flex items-center;
+    }
+
+    .troxan-main-content {
+        @apply pt-[5vh] pb-[5vh] min-h-screen flex items-center justify-center;
+    }
+
+    .troxan-hidden {
+        display: none !important;
+    }
+
+    .troxan-no-scroll {
+        @apply overflow-hidden;
+    }
+
     .main-site {
         @apply h-[90vh] w-[90%] bg-white shadow-xl rounded-2xl p-6 overflow-auto flex items-center justify-center;
     }
 
     .main-download-btn {
         @apply bg-yellow-300 text-black px-6 py-3 font-bold shadow-md transition-all duration-300 ease-in-out hover:-translate-y-2 hover:shadow-lg hover:bg-yellow-400 cursor-pointer;
+    }
+
+    .statistics-panel {
+        @apply h-[90vh] w-[90%] bg-white shadow-xl rounded-2xl p-6 overflow-auto flex items-center justify-center;
+    }
+
+    .statistics-content {
+        @apply text-center;
+    }
+
+    .statistics-title {
+        @apply text-2xl font-bold mb-4;
+    }
+
+    .statistics-text {
+        @apply text-gray-600;
     }
 
 .troxan-logo {
@@ -89,6 +133,10 @@
         @apply w-6 h-1 bg-white rounded-full transition-colors;
     }
 
+    .troxan-hamnav-line {
+        @apply w-6 h-0.5 bg-white rounded-full transition-colors;
+    }
+
     /* Hover esetén a vonalak színe */
     .troxan-hamnav-btn:hover span {
         @apply bg-orange-950;
@@ -99,6 +147,50 @@
         /* Visszaraktuk a bg-black/50-et (félig átlátszó sötétszürke), levettük a kereteket és az árnyékot */
         @apply absolute top-[6vh] left-0 w-full flex flex-col items-center gap-4 py-6 md:hidden
                bg-black/50 backdrop-blur-sm z-40;
+    }
+
+    .user-profile-nav {
+        @apply cursor-pointer flex items-center;
+    }
+
+    .nav-avatar {
+        @apply w-[35px] h-[35px] rounded-full border-2 border-white transition-transform;
+    }
+
+    .user-profile-nav:hover .nav-avatar {
+        @apply scale-110;
+    }
+
+    .troxan-error-message {
+        @apply text-red-600 font-bold text-center;
+    }
+
+    .guest-site {
+        @apply flex flex-col items-center justify-center h-[60vh] text-center text-white;
+    }
+
+    .guest-icon {
+        @apply text-[5rem] mb-5;
+    }
+
+    .guest-title {
+        @apply font-['Press_Start_2P',_monospace,sans-serif] text-[#ffcc00] drop-shadow-[2px_2px_0px_#000];
+    }
+
+    .guest-description {
+        @apply text-[1.2rem] my-5 max-w-[600px] bg-black/50 p-5 rounded-[10px] border-2 border-[#555];
+    }
+
+    .guest-brand-highlight {
+        @apply text-[#ffcc00] font-bold;
+    }
+
+    .guest-actions {
+        @apply flex gap-5 mt-5;
+    }
+
+    .guest-action-btn {
+        @apply py-[15px] px-[30px] text-[1.1rem] cursor-pointer;
     }
     
 }

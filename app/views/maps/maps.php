@@ -1,24 +1,24 @@
 <div class="maps-site">
-  <div id="maps-main" class="flex-1 min-h-0 flex flex-col">
-    <section id="maps-wrapper" class="content-box flex-1 min-h-0 flex flex-col">
+  <div id="maps-main" class="maps-main-wrap">
+    <section id="maps-wrapper" class="content-box maps-wrapper-section">
       <header class="maps-header">
         <div class="maps-header-top">
           <h2 id="maps-title">MAPS</h2>
-          <button id="maps-mobile-menu-btn" class="maps-ham-btn md:hidden" type="button" aria-label="Open maps menu">☰</button>
+          <button id="maps-mobile-menu-btn" class="maps-ham-btn maps-ham-btn-mobile" type="button" aria-label="Open maps menu">☰</button>
         </div>
 
-        <div id="maps-controls-row" class="maps-controls-row hidden md:flex">
+        <div id="maps-controls-row" class="maps-controls-row maps-controls-row-collapsed">
           <input type="text" id="maps-search" placeholder="Search...">
           
-          <div class="maps-sort-box relative">
+          <div class="maps-sort-box">
             <button id="maps-sort-trigger" class="maps-sort-btn">
               <span id="maps-selected-sort">Downloads</span>
-              <svg class="w-4 h-4 ml-2 fill-current" viewBox="0 0 24 24"><path d="M7 10l5 5 5-5z" /></svg>
+              <svg class="maps-sort-icon" viewBox="0 0 24 24"><path d="M7 10l5 5 5-5z" /></svg>
             </button>
-            <ul id="maps-sort-dropdown" class="maps-sort-dropdown hidden absolute top-full left-0 mt-1 bg-white border-2 border-orange-950 rounded shadow-lg z-50 w-full">
-              <li><button class="maps-dropdown-item w-full text-left px-4 py-2 hover:bg-orange-200" type="button">Downloads</button></li>
-              <li><button class="maps-dropdown-item w-full text-left px-4 py-2 hover:bg-orange-200" type="button">Alphabetical</button></li>
-              <li><button class="maps-dropdown-item w-full text-left px-4 py-2 hover:bg-orange-200" type="button">Most recent</button></li>
+            <ul id="maps-sort-dropdown" class="maps-sort-dropdown maps-hidden">
+              <li><button class="maps-dropdown-item" type="button">Downloads</button></li>
+              <li><button class="maps-dropdown-item" type="button">Alphabetical</button></li>
+              <li><button class="maps-dropdown-item" type="button">Most recent</button></li>
             </ul>
           </div>
 
@@ -41,7 +41,7 @@
       <div class="maps-scroll-area">
         <div class="maps-grid">
          <?php if (empty($active_maps)): ?>
-             <p id="live-maps-empty-msg" class="text-orange-900 font-bold text-xl col-span-full mt-10 text-center w-full">No maps found. 🏝️</p>
+             <p id="live-maps-empty-msg" class="maps-empty-msg">No maps found. 🏝️</p>
           <?php else: ?>
             <?php foreach ($active_maps as $map): ?>
               <?php 
@@ -59,8 +59,8 @@
                     }
                 }
 
-                $cardBorderClass = $isCreatorEngineer ? 'border-cyan-900 shadow-cyan-900/50' : 'border-orange-950 shadow-[2px_2px_0px_#000]';
-                $nameClass = $isCreatorEngineer ? 'text-cyan-950' : 'text-orange-950';
+                $cardBorderClass = $isCreatorEngineer ? 'maps-image-engineer' : 'maps-image-default';
+                $nameClass = $isCreatorEngineer ? 'maps-map-name-engineer' : 'maps-map-name-default';
                 $isInLibrary = !empty($map['is_in_library']);
               ?>
               
@@ -71,33 +71,33 @@
                        data-downloads="<?= (int)$map['downloads'] ?>"
                        data-date="<?= !empty($map['created_at']) ? strtotime($map['created_at']) : 0 ?>">
                        
-                <div class="maps-image relative group overflow-hidden border-4 <?= $cardBorderClass ?> rounded-sm mb-2">
-                  <img src="<?= htmlspecialchars($map['map_picture']) ?>" class="w-full h-full object-cover transition-transform duration-300 group-hover:scale-110">
+                <div class="maps-image <?= $cardBorderClass ?>">
+                  <img src="<?= htmlspecialchars($map['map_picture']) ?>" class="maps-image-img">
                   
 
                 </div>
 
                 <div class="maps-info">
-                  <p class="map-name font-bold <?= $nameClass ?>"><?= htmlspecialchars($map['map_name']) ?></p>
-                  <p class="maps-creator-name text-sm">
+                  <p class="map-name <?= $nameClass ?>"><?= htmlspecialchars($map['map_name']) ?></p>
+                  <p class="maps-creator-name">
                     <?php if ($isCreatorEngineer): ?>🛠️<?php endif; ?> By: <?= htmlspecialchars($map['creator_name']) ?>
                   </p>
                   
-                  <div class="maps-btns-stats mt-2 flex justify-between items-center w-full">
+                  <div class="maps-btns-stats">
                     
                     <?php if (!$isMyMap): ?>
-                      <button class="maps-add-btn <?= $isInLibrary ? 'bg-gray-500 hover:bg-gray-400 border-gray-950' : 'bg-green-600 hover:bg-green-500 border-green-950' ?> text-white px-3 py-1 font-extrabold text-xs border-2 rounded-sm shadow-[2px_2px_0px_#000] hover:translate-y-[1px] hover:shadow-[1px_1px_0px_#000] transition-all uppercase tracking-wider cursor-pointer z-10 relative" data-mapid="<?= $map['id'] ?>" data-added="<?= $isInLibrary ? 'true' : 'false' ?>"><?= $isInLibrary ? 'Added ✔️' : '+ Add' ?></button>
+                      <button class="maps-add-btn <?= $isInLibrary ? 'maps-add-btn-added' : 'maps-add-btn-available' ?>" data-mapid="<?= $map['id'] ?>" data-added="<?= $isInLibrary ? 'true' : 'false' ?>"><?= $isInLibrary ? 'Added ✔️' : '+ Add' ?></button>
                     <?php else: ?>
-                        <span class="text-[10px] font-bold text-orange-900/50 uppercase border border-orange-900/30 px-2 py-1 rounded-sm bg-orange-900/10">Own</span>
+                        <span class="maps-own-badge">Own</span>
                     <?php endif; ?>
                     
-                    <div class="flex gap-2 items-center ml-auto">
+                    <div class="maps-card-actions">
                         <?php if ($canEditOrDelete): ?>
-                          <button class="maps-delete text-xl hover:scale-110 transition-transform cursor-pointer" data-mapid="<?= $map['id'] ?>" title="Delete">❌</button>
+                          <button class="maps-delete maps-delete-btn" data-mapid="<?= $map['id'] ?>" title="Delete">❌</button>
                         <?php elseif ($isCreatorEngineer && $isStaff): ?>
-                          <span class="text-xl opacity-50 cursor-not-allowed" title="Engineer által védett!">🔒</span>
+                          <span class="maps-protected-lock" title="Engineer által védett!">🔒</span>
                         <?php endif; ?>
-                        <span class="maps-download-count font-bold text-gray-700 ml-2">⬇ <span class="dl-number"><?= number_format($map['downloads']) ?></span></span>
+                        <span class="maps-download-count">⬇ <span class="dl-number"><?= number_format($map['downloads']) ?></span></span>
                     </div>
                   </div>
                 </div>
@@ -110,46 +110,46 @@
   </div>
 </div>
 
-<div id="maps-help-modal" class="hidden fixed inset-0 z-50 flex items-center justify-center">
-  <div class="maps-modal-backdrop absolute inset-0 bg-black/80"></div>
-  <div class="relative bg-orange-50 border-4 border-orange-950 p-6 rounded-xl shadow-2xl z-10 w-[90%] max-w-md">
-    <button class="maps-close-modal absolute top-2 right-4 text-3xl font-bold text-orange-950 hover:text-red-500">×</button>
-    <h2 class="text-2xl font-bold mb-4 text-orange-950 border-b-2 border-orange-200 pb-2">Help</h2>
-    <ul class="space-y-3 text-lg text-gray-800 font-medium">
-      <li>⚔️ WASD: Move</li>
-      <li>🛡️ Q: Defend</li>
-      <li>📥 + Add: Add map to your library</li>
+<div id="maps-help-modal" class="maps-modal-overlay maps-hidden maps-flex-overlay">
+  <div class="maps-modal-backdrop"></div>
+  <div class="maps-modal-box maps-modal-box-help">
+    <button class="maps-close-modal maps-modal-close">×</button>
+    <h2 class="maps-modal-title-help">Help 🧭</h2>
+    <ul class="maps-help-list">
+      <li>🗺️ Add custom maps to your library!</li>
+      <li>🔎 Use the sort buttons to see the most recent maps in the community library.</li>
+      <li>🚧 Important: The editor is currently being developed! To create custom maps please contact us at: troxangame@gmail.com</li>
     </ul>
   </div>
 </div>
 
 <?php if ($isStaff): ?>
-<div id="maps-trash-modal" class="hidden fixed inset-0 z-50 flex items-center justify-center">
-  <div class="maps-modal-backdrop absolute inset-0 bg-black/80"></div>
-  <div class="relative bg-orange-50 border-4 border-orange-950 p-6 rounded-xl shadow-2xl z-10 w-[90%] max-w-4xl max-h-[80vh] flex flex-col">
-    <button class="maps-close-modal absolute top-2 right-4 text-3xl font-bold text-orange-950 hover:text-red-500">×</button>
+<div id="maps-trash-modal" class="maps-modal-overlay maps-hidden maps-flex-overlay">
+  <div class="maps-modal-backdrop"></div>
+  <div class="maps-modal-box maps-modal-box-trash">
+    <button class="maps-close-modal maps-modal-close">×</button>
     
-    <div class="flex flex-col mb-4 border-b-2 border-orange-200 pb-4 gap-4 mt-4 sm:mt-0">
-        <div class="flex flex-col sm:flex-row justify-between items-center gap-4">
-            <h2 class="text-3xl font-bold text-orange-950 flex items-center gap-2 m-0">🗑️ Admin Trash</h2>
-            <input type="text" id="trash-search-input" placeholder="Search creator..." class="w-full sm:w-64 p-2 border-4 border-orange-950 rounded-sm bg-white text-orange-950 font-bold focus:outline-none focus:border-yellow-500 shadow-[inset_0_4px_4px_rgba(0,0,0,0.05)]">
+    <div class="maps-trash-head">
+        <div class="maps-trash-toprow">
+            <h2 class="maps-trash-title">🗑️ Admin Trash</h2>
+            <input type="text" id="trash-search-input" placeholder="Search creator..." class="maps-trash-search-input">
         </div>
         
-        <div class="flex flex-wrap gap-4 text-orange-950 font-bold bg-orange-200/50 p-2 rounded border-2 border-orange-950/20">
-            <label class="flex items-center gap-2 cursor-pointer"><input type="checkbox" class="trash-filter-cb w-4 h-4 accent-orange-600" value="5" checked> Scrapped (User Draft)</label>
-            <label class="flex items-center gap-2 cursor-pointer"><input type="checkbox" class="trash-filter-cb w-4 h-4 accent-orange-600" value="3" checked> Deleted (User Pub)</label>
-            <label class="flex items-center gap-2 cursor-pointer"><input type="checkbox" class="trash-filter-cb w-4 h-4 accent-orange-600" value="4" checked> Banned (Admin)</label>
+        <div class="maps-trash-filters">
+            <label class="maps-trash-filter-label"><input type="checkbox" class="trash-filter-cb maps-trash-filter-cb" value="5" checked> Scrapped (User Draft)</label>
+            <label class="maps-trash-filter-label"><input type="checkbox" class="trash-filter-cb maps-trash-filter-cb" value="3" checked> Deleted (User Pub)</label>
+            <label class="maps-trash-filter-label"><input type="checkbox" class="trash-filter-cb maps-trash-filter-cb" value="4" checked> Banned (Admin)</label>
         </div>
     </div>
     
-    <div class="overflow-y-auto flex-1 pr-2">
-      <table class="w-full text-left border-collapse" id="trash-table">
+    <div class="maps-trash-scroll">
+      <table class="maps-trash-table" id="trash-table">
         <thead>
-          <tr class="bg-orange-900 text-yellow-400 uppercase text-xs">
-            <th class="p-3 border-2 border-orange-950 sticky top-0 bg-orange-900 z-10">Map Name</th>
-            <th class="p-3 border-2 border-orange-950 sticky top-0 bg-orange-900 z-10">Creator</th>
-            <th class="p-3 border-2 border-orange-950 sticky top-0 bg-orange-900 z-10">Status</th>
-            <th class="p-3 border-2 border-orange-950 sticky top-0 bg-orange-900 z-10">Action</th>
+          <tr class="maps-trash-head-row">
+            <th class="maps-trash-th">Map Name</th>
+            <th class="maps-trash-th">Creator</th>
+            <th class="maps-trash-th">Status</th>
+            <th class="maps-trash-th">Action</th>
           </tr>
         </thead>
         <tbody>
@@ -161,24 +161,24 @@
                     $canRestore = false;
                 }
             ?>
-            <tr class="border-b border-orange-950/20 text-orange-950 font-bold hover:bg-orange-200/50 trash-row transition-colors <?= $isTrashCreatorEngineer ? 'bg-cyan-50' : '' ?>" data-status="<?= $tmap['status'] ?>">
-              <td class="p-3"><?= htmlspecialchars($tmap['map_name']) ?></td>
-              <td class="p-3 trash-creator">
+            <tr class="maps-trash-row <?= $isTrashCreatorEngineer ? 'maps-trash-row-engineer' : '' ?>" data-status="<?= $tmap['status'] ?>">
+              <td class="maps-trash-td"><?= htmlspecialchars($tmap['map_name']) ?></td>
+              <td class="maps-trash-td trash-creator">
                 <?php if ($isTrashCreatorEngineer): ?>🛠️<?php endif; ?> <?= htmlspecialchars($tmap['creator_name']) ?>
               </td>
-              <td class="p-3 uppercase text-xs tracking-wider">
+              <td class="maps-trash-status-cell">
                 <?php 
-                  if ($tmap['status'] == 4) echo '<span class="text-red-600 bg-red-100 px-2 py-1 border border-red-600 rounded">Banned</span>';
-                  elseif ($tmap['status'] == 3) echo '<span class="text-orange-600 bg-orange-100 px-2 py-1 border border-orange-600 rounded">Deleted</span>';
-                  elseif ($tmap['status'] == 5) echo '<span class="text-gray-600 bg-gray-200 px-2 py-1 border border-gray-600 rounded">Scrapped</span>';
-                  else echo '<span class="text-gray-600">Unknown</span>';
+                  if ($tmap['status'] == 4) echo '<span class="maps-trash-status maps-trash-status-banned">Banned</span>';
+                  elseif ($tmap['status'] == 3) echo '<span class="maps-trash-status maps-trash-status-deleted">Deleted</span>';
+                  elseif ($tmap['status'] == 5) echo '<span class="maps-trash-status maps-trash-status-scrapped">Scrapped</span>';
+                  else echo '<span class="maps-trash-status-unknown">Unknown</span>';
                 ?>
               </td>
-              <td class="p-3 flex gap-2">
+              <td class="maps-trash-action-cell">
                 <?php if ($canRestore): ?>
-                  <button class="maps-restore-btn bg-green-700 hover:bg-green-600 text-white px-3 py-1 rounded-sm shadow-[2px_2px_0px_rgba(0,0,0,1)] hover:translate-y-[1px] hover:shadow-[1px_1px_0px_rgba(0,0,0,1)] transition-all uppercase text-xs tracking-wider" data-mapid="<?= $tmap['id'] ?>">Restore</button>
+                  <button class="maps-restore-btn maps-restore-btn-style" data-mapid="<?= $tmap['id'] ?>">Restore</button>
                 <?php else: ?>
-                  <span class="text-xs uppercase font-bold text-cyan-800 px-2 py-1 border border-cyan-800 rounded bg-cyan-100">🔒 Védett</span>
+                  <span class="maps-trash-protected">🔒 Protected</span>
                 <?php endif; ?>
               </td>
             </tr>
@@ -186,34 +186,34 @@
         </tbody>
       </table>
       <?php if (empty($trash_maps)): ?>
-        <p class="text-center text-orange-900/50 font-bold p-8">A kuka jelenleg üres.</p>
+        <p class="maps-trash-empty">The trash is currently empty.</p>
       <?php endif; ?>
     </div>
   </div>
 </div>
 <?php endif; ?>
 
-<div id="basesite-alert-modal" class="hidden fixed inset-0 z-[9998] flex items-center justify-center">
-  <div class="maps-modal-backdrop absolute inset-0 bg-black/80"></div>
-  <div class="relative bg-orange-50 border-4 border-orange-950 p-6 rounded-xl shadow-2xl z-10 w-[90%] max-w-sm text-center flex flex-col items-center">
-    <div id="basesite-alert-header" class="border-b-4 border-orange-950 w-full pb-2 mb-4">
-      <h2 id="basesite-alert-title" class="text-xl font-bold text-orange-950">Notice</h2>
+<div id="basesite-alert-modal" class="maps-modal-overlay maps-hidden maps-flex-overlay maps-modal-z-alert">
+  <div class="maps-modal-backdrop"></div>
+  <div class="maps-modal-box maps-modal-box-alert-msg">
+    <div id="basesite-alert-header" class="maps-modal-alert-head">
+      <h2 id="basesite-alert-title" class="maps-modal-alert-title">Notice</h2>
     </div>
-    <p id="basesite-alert-message" class="text-lg font-bold text-gray-800 my-4">Message goes here</p>
-    <button id="basesite-alert-ok-btn" class="bg-yellow-500 px-6 py-2 font-bold text-orange-950 border-2 border-orange-950 rounded shadow-[2px_2px_0px_#000] mt-4">OK</button>
+    <p id="basesite-alert-message" class="maps-modal-alert-message">Message goes here</p>
+    <button id="basesite-alert-ok-btn" class="maps-modal-alert-btn">OK</button>
   </div>
 </div>
 
-<div id="basesite-confirm-modal" class="hidden fixed inset-0 z-[9999] flex items-center justify-center">
-  <div class="maps-modal-backdrop absolute inset-0 bg-black/80"></div>
-  <div class="relative bg-orange-50 border-4 border-orange-950 p-6 rounded-xl shadow-2xl z-10 w-[90%] max-w-sm text-center flex flex-col items-center">
-    <div id="basesite-confirm-header" class="border-b-4 border-red-950 w-full pb-2 mb-4">
-      <h2 id="basesite-confirm-title" class="text-xl font-bold text-red-600">Megerősítés</h2>
+<div id="basesite-confirm-modal" class="maps-modal-overlay maps-hidden maps-flex-overlay maps-modal-z-confirm">
+  <div class="maps-modal-backdrop"></div>
+  <div class="maps-modal-box maps-modal-box-alert-msg">
+    <div id="basesite-confirm-header" class="maps-modal-alert-head maps-modal-alert-head-danger">
+      <h2 id="basesite-confirm-title" class="maps-modal-alert-title maps-modal-alert-title-danger">Confirmation</h2>
     </div>
-    <p id="basesite-confirm-message" class="text-lg font-bold text-gray-800 my-4">Biztos vagy benne?</p>
-    <div class="flex justify-center w-full gap-4 mt-6">
-      <button id="basesite-confirm-cancel-btn" class="bg-gray-400 px-6 py-2 font-bold text-white border-2 border-gray-600 rounded shadow-[2px_2px_0px_#000]">Mégse</button>
-      <button id="basesite-confirm-ok-btn" class="bg-red-600 px-6 py-2 font-bold text-white border-2 border-red-900 rounded shadow-[2px_2px_0px_#000]">Igen</button>
+    <p id="basesite-confirm-message" class="maps-modal-alert-message">Are you sure?</p>
+    <div class="maps-confirm-actions">
+      <button id="basesite-confirm-cancel-btn" class="maps-confirm-btn-cancel">Cancel</button>
+      <button id="basesite-confirm-ok-btn" class="maps-confirm-btn-ok">Yes</button>
     </div>
   </div>
 </div>

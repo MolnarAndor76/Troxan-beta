@@ -35,7 +35,7 @@ $hasAdminAccess = in_array($user['role_name'], ['Admin', 'Engineer']);
                     </tbody>
                 </table>
 
-                <button id="profile-avatar-button" class="group">
+                <button id="profile-avatar-button" class="profile-avatar-trigger">
                     <?php if (!empty($user['avatar_picture'])): ?>
                         <img id="profile-avatar" src="data:image/jpeg;base64,<?= base64_encode($user['avatar_picture']) ?>" alt="Avatar">
                     <?php else: ?>
@@ -59,94 +59,94 @@ $hasAdminAccess = in_array($user['role_name'], ['Admin', 'Engineer']);
                 <button class="profile-button btn-red" id="profile-log-out">🚪 Logout</button>
             </div>
 
-<p class="text-sm text-gray-600 font-bold mt-2 text-center">
+<p class="profile-last-updated-text">
     Last updated: 
-    <span class="text-orange-950" id="profile-last-updated-time"></span>
+    <span class="profile-last-updated-value" id="profile-last-updated-time"></span>
 </p>
 
-            <div id="profile-settings-modal-id" class="hidden fixed inset-0 z-50 items-center justify-center">
-                <div id="profile-settings-modal-backdrop" class="absolute inset-0 bg-black/80 opacity-0 transition-opacity"></div>
-                <div id="profile-settings-modal-box-id" class="profile-modal-box opacity-0 scale-95 translate-y-4">
+            <div id="profile-settings-modal-id" class="profile-modal-overlay profile-hidden">
+                <div id="profile-settings-modal-backdrop" class="profile-modal-backdrop profile-backdrop-hidden"></div>
+                <div id="profile-settings-modal-box-id" class="profile-modal-box profile-modal-box-hidden">
                     <button class="profile-close-btn" id="settings-close-btn">×</button>
                     <h2 class="profile-modal-title">Settings</h2>
                     <ul class="profile-settings-list">
                         <li><button id="btn-change-username" class="profile-list-btn">Change your username</button></li>
                         <li><button id="btn-change-password" class="profile-list-btn">Change your password</button></li>
-                        <li class="hidden"><button id="btn-change-email" class="profile-list-btn">Change your email</button></li>
+                        <li class="profile-hidden"><button id="btn-change-email" class="profile-list-btn">Change your email</button></li>
                     </ul>
                 </div>
             </div>
 
-            <div id="profile-logout-modal-id" class="hidden fixed inset-0 z-50 items-center justify-center">
-                <div id="logout-modal-backdrop-id" class="absolute inset-0 bg-black/80 opacity-0 transition-opacity"></div>
-                <div id="profile-logout-modal-box-id" class="profile-modal-box opacity-0 scale-95 translate-y-4">
+            <div id="profile-logout-modal-id" class="profile-modal-overlay profile-hidden">
+                <div id="logout-modal-backdrop-id" class="profile-modal-backdrop profile-backdrop-hidden"></div>
+                <div id="profile-logout-modal-box-id" class="profile-modal-box profile-modal-box-hidden">
                     <button class="profile-close-btn" id="logout-close-btn">×</button>
-                    <h2 class="profile-modal-title text-red-600 border-red-200">Logout Alert</h2>
-                    <h3 class="text-lg font-bold text-gray-800 text-center mt-4">You have been logged out!<br>The site will refresh in 3 seconds.</h3>
+                    <h2 class="profile-modal-title profile-modal-title-danger">Logout Alert</h2>
+                    <h3 class="profile-logout-message">You have been logged out!<br>The site will refresh in 3 seconds.</h3>
                 </div>
             </div>
 
-            <div id="profile-avatar-modal" class="hidden fixed inset-0 z-50 items-center justify-center">
-                <div id="avatar-modal-backdrop" class="absolute inset-0 bg-black/80 opacity-0 transition-opacity duration-300"></div>
-                <div id="profile-avatar-box" class="profile-modal-box opacity-0 scale-95 translate-y-4 transition-all duration-300">
+            <div id="profile-avatar-modal" class="profile-modal-overlay profile-hidden">
+                <div id="avatar-modal-backdrop" class="profile-modal-backdrop profile-backdrop-hidden profile-transition-all"></div>
+                <div id="profile-avatar-box" class="profile-modal-box profile-modal-box-hidden profile-transition-all">
                     <button class="profile-close-btn" id="avatar-close-btn">×</button>
                     <h2 class="profile-modal-title">Choose your Hero!</h2>
-                    <div class="grid grid-cols-3 gap-4 mt-6 max-h-[40vh] overflow-y-auto p-2">
+                    <div class="profile-avatar-grid">
                         <?php if (!empty($all_avatars)): ?>
                             <?php foreach ($all_avatars as $ava): ?>
-                                <img data-avatar-id="<?= $ava['id'] ?>" src="data:image/jpeg;base64,<?= base64_encode($ava['avatar_picture']) ?>" class="profile-avatar-option w-full aspect-square object-cover border-4 border-transparent hover:border-yellow-400 cursor-pointer rounded-sm shadow-md hover:scale-105 transition-all" alt="<?= htmlspecialchars($ava['avatar_name']) ?>" title="<?= htmlspecialchars($ava['avatar_name']) ?>">
+                                <img data-avatar-id="<?= $ava['id'] ?>" src="data:image/jpeg;base64,<?= base64_encode($ava['avatar_picture']) ?>" class="profile-avatar-option profile-avatar-option-style" alt="<?= htmlspecialchars($ava['avatar_name']) ?>" title="<?= htmlspecialchars($ava['avatar_name']) ?>">
                             <?php endforeach; ?>
                         <?php else: ?>
-                            <p style="color: white; grid-column: span 3; text-align: center;">No avatars found in the database!</p>
+                            <p class="profile-avatar-empty">No avatars found in the database!</p>
                         <?php endif; ?>
                     </div>
                 </div>
             </div>
 
-            <div id="basesite-alert-modal" class="hidden fixed inset-0 z-[9999] flex items-center justify-center">
-                <div class="absolute inset-0 bg-black/80"></div>
-                <div class="relative bg-orange-50 border-4 border-orange-950 p-6 rounded-xl shadow-2xl z-10 w-[90%] max-w-sm text-center flex flex-col items-center">
-                    <div id="basesite-alert-header" class="border-b-4 border-orange-950 w-full pb-2 mb-4">
-                    <h2 id="basesite-alert-title" class="text-xl font-bold text-orange-950">Notice</h2>
+            <div id="basesite-alert-modal" class="profile-popup-overlay profile-hidden">
+                <div class="profile-popup-backdrop"></div>
+                <div class="profile-popup-box">
+                    <div id="basesite-alert-header" class="profile-popup-head">
+                    <h2 id="basesite-alert-title" class="profile-popup-title">Notice</h2>
                     </div>
-                    <p id="basesite-alert-message" class="text-lg font-bold text-gray-800 my-4">Message goes here</p>
-                    <button id="basesite-alert-ok-btn" class="bg-yellow-500 px-6 py-2 font-bold text-orange-950 border-2 border-orange-950 rounded shadow-[2px_2px_0px_#000] mt-4 hover:translate-y-[1px] hover:shadow-[1px_1px_0px_#000] transition-all">OK</button>
+                    <p id="basesite-alert-message" class="profile-popup-message">Message goes here</p>
+                    <button id="basesite-alert-ok-btn" class="profile-popup-btn">OK</button>
                 </div>
             </div>
 
-            <div id="basesite-prompt-modal" class="hidden fixed inset-0 z-[9999] flex items-center justify-center">
-                <div class="absolute inset-0 bg-black/80"></div>
-                <div class="relative bg-orange-50 border-4 border-orange-950 p-6 rounded-xl shadow-2xl z-10 w-[90%] max-w-sm text-center flex flex-col items-center">
-                    <div id="basesite-prompt-header" class="border-b-4 border-orange-950 w-full pb-2 mb-4">
-                        <h2 id="basesite-prompt-title" class="text-xl font-bold text-orange-950">Change Username</h2>
+            <div id="basesite-prompt-modal" class="profile-popup-overlay profile-hidden">
+                <div class="profile-popup-backdrop"></div>
+                <div class="profile-popup-box">
+                    <div id="basesite-prompt-header" class="profile-popup-head">
+                        <h2 id="basesite-prompt-title" class="profile-popup-title">Change Username</h2>
                     </div>
-                    <input type="text" id="basesite-prompt-input" class="w-full mt-4 p-3 border-4 border-orange-950 rounded bg-white text-gray-800 font-bold text-center focus:outline-none focus:border-yellow-500 focus:ring-4 focus:ring-yellow-500/30 transition-all shadow-inner" placeholder="4-12 characters">
+                    <input type="text" id="basesite-prompt-input" class="profile-popup-input profile-popup-input-spaced" placeholder="4-12 characters">
                     
-                    <div class="flex justify-center gap-4 mt-6 w-full">
-                        <button id="basesite-prompt-cancel-btn" class="flex-1 bg-gray-300 px-4 py-2 font-bold text-orange-950 border-2 border-orange-950 rounded shadow-[2px_2px_0px_#000] hover:translate-y-[1px] hover:shadow-[1px_1px_0px_#000] transition-all">Cancel</button>
-                        <button id="basesite-prompt-ok-btn" class="flex-1 bg-yellow-500 px-4 py-2 font-bold text-orange-950 border-2 border-orange-950 rounded shadow-[2px_2px_0px_#000] hover:translate-y-[1px] hover:shadow-[1px_1px_0px_#000] transition-all">Save</button>
+                    <div class="profile-popup-actions">
+                        <button id="basesite-prompt-cancel-btn" class="profile-popup-btn-cancel">Cancel</button>
+                        <button id="basesite-prompt-ok-btn" class="profile-popup-btn-save">Save</button>
                     </div>
                 </div>
             </div>
 
-<div id="basesite-password-modal" class="hidden fixed inset-0 z-[9999] flex items-center justify-center">
-                <div id="basesite-password-backdrop" class="absolute inset-0 bg-black/80"></div>
-                <div class="relative bg-orange-50 border-4 border-orange-950 p-6 rounded-xl shadow-2xl z-10 w-[90%] max-w-sm flex flex-col items-center">
-                    <div class="border-b-4 border-orange-950 w-full pb-2 mb-4 text-center">
-                        <h2 class="text-xl font-bold text-orange-950">Change Password</h2>
+<div id="basesite-password-modal" class="profile-popup-overlay profile-hidden">
+                <div id="basesite-password-backdrop" class="profile-popup-backdrop"></div>
+                <div class="profile-popup-box profile-popup-box-left">
+                    <div class="profile-popup-head profile-popup-head-center">
+                        <h2 class="profile-popup-title">Change Password</h2>
                     </div>
                     
-                    <p id="password-error-msg" class="text-red-600 font-bold text-sm mb-2 text-center hidden"></p>
+                    <p id="password-error-msg" class="profile-password-error profile-hidden"></p>
                     
-                    <div class="w-full flex flex-col gap-3 mt-2">
-                        <input type="password" id="pass-old" class="w-full p-3 border-4 border-orange-950 rounded bg-white text-gray-800 font-bold text-center focus:outline-none focus:border-yellow-500 focus:ring-4 focus:ring-yellow-500/30 transition-all shadow-inner" placeholder="Current Password">
-                        <input type="password" id="pass-new" class="w-full p-3 border-4 border-orange-950 rounded bg-white text-gray-800 font-bold text-center focus:outline-none focus:border-yellow-500 focus:ring-4 focus:ring-yellow-500/30 transition-all shadow-inner" placeholder="New Password (min. 8 chars)">
-                        <input type="password" id="pass-confirm" class="w-full p-3 border-4 border-orange-950 rounded bg-white text-gray-800 font-bold text-center focus:outline-none focus:border-yellow-500 focus:ring-4 focus:ring-yellow-500/30 transition-all shadow-inner" placeholder="Confirm New Password">
+                    <div class="profile-password-inputs">
+                        <input type="password" id="pass-old" class="profile-popup-input" placeholder="Current Password">
+                        <input type="password" id="pass-new" class="profile-popup-input" placeholder="New Password (min. 8 chars)">
+                        <input type="password" id="pass-confirm" class="profile-popup-input" placeholder="Confirm New Password">
                     </div>
                     
-                    <div class="flex justify-center gap-4 mt-6 w-full">
-                        <button id="basesite-password-cancel-btn" class="flex-1 bg-gray-300 px-4 py-2 font-bold text-orange-950 border-2 border-orange-950 rounded shadow-[2px_2px_0px_#000] hover:translate-y-[1px] hover:shadow-[1px_1px_0px_#000] transition-all">Cancel</button>
-                        <button id="basesite-password-save-btn" class="flex-1 bg-yellow-500 px-4 py-2 font-bold text-orange-950 border-2 border-orange-950 rounded shadow-[2px_2px_0px_#000] hover:translate-y-[1px] hover:shadow-[1px_1px_0px_#000] transition-all">Save</button>
+                    <div class="profile-popup-actions">
+                        <button id="basesite-password-cancel-btn" class="profile-popup-btn-cancel">Cancel</button>
+                        <button id="basesite-password-save-btn" class="profile-popup-btn-save">Save</button>
                     </div>
                 </div>
             </div>

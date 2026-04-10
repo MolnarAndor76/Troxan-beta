@@ -5,151 +5,128 @@
 @tailwind utilities;
 
 @layer components {
-    /* --- FŐ KONTÉNER --- */
-    .admin-site-wrapper {
-        @apply w-[95%] max-w-[1200px] min-h-[80vh] mx-auto bg-white border-4 border-orange-950 shadow-[8px_8px_0px_rgba(0,0,0,1)] rounded-xl p-4 md:p-8 my-8 text-gray-800 overflow-x-hidden;
-    }
-
-    /* --- HEADER ÉS KERESŐ --- */
-    .admin-header {
-        @apply flex flex-col md:flex-row justify-between items-center mb-8 pb-4 border-b-4 border-yellow-400 gap-4;
-    }
-
-    .admin-title {
-        @apply text-xl md:text-2xl text-orange-950 font-['Press_Start_2P',_monospace] text-center md:text-left;
-    }
-
-    .admin-search-wrapper {
-        @apply flex w-full md:w-auto gap-2;
-    }
-
-    .admin-search-input {
-        @apply flex-1 md:flex-none p-3 rounded-md bg-gray-50 border-4 border-orange-950 text-gray-800 font-medium focus:outline-none focus:border-yellow-500 focus:ring-4 focus:ring-yellow-500/30 transition-all shadow-[inset_0_4px_4px_rgba(0,0,0,0.05)];
-    }
-
-    .admin-search-btn {
-        @apply bg-yellow-500 hover:bg-yellow-400 text-orange-950 font-bold px-6 py-3 rounded-md border-4 border-orange-950 shadow-[4px_4px_0px_rgba(0,0,0,1)] transition-transform hover:translate-y-1 hover:shadow-[2px_2px_0px_rgba(0,0,0,1)] cursor-pointer;
-    }
-
-    /* --- JÁTÉKOSOK LISTÁJA --- */
-    .admin-list {
-        @apply flex flex-col gap-5;
-    }
-
-    .admin-empty-msg {
-        @apply text-center text-gray-500 font-bold text-lg mt-10;
-    }
-
-    /* --- EGY JÁTÉKOS KÁRTYÁJA --- */
-    .admin-user-card {
-        @apply relative bg-orange-50 border-4 border-orange-950 rounded-xl p-4 flex flex-col md:flex-row justify-between items-start md:items-center shadow-[4px_4px_0px_rgba(0,0,0,1)] transition-all duration-200 hover:-translate-y-1 hover:shadow-[6px_6px_0px_rgba(0,0,0,1)] gap-4;
-    }
-
-    /* 1. Avatar + Név (Most már több helye van) */
-    .admin-card-profile {
-        @apply flex items-center gap-4 w-full md:w-1/2;
-    }
-
-    .admin-avatar {
-        @apply w-14 h-14 rounded-full object-cover border-4;
-    }
-
-    .admin-avatar-admin {
-        @apply border-yellow-500;
-    }
-
-    .admin-avatar-player {
-        @apply border-orange-950;
-    }
-
-    .admin-profile-details {
-        @apply flex flex-col items-start gap-1;
-    }
-
-    .admin-profile-role {
-        @apply text-[0.7rem] bg-orange-200 text-orange-900 border-2 border-orange-950 px-2 py-0.5 rounded-md w-max font-bold uppercase;
-    }
-
-    /* --- ÚJ: FELHASZNÁLÓNÉV GOMB --- */
-    .admin-username-btn {
-        @apply text-lg font-extrabold tracking-wide cursor-pointer text-left px-3 py-1 rounded-md border-2 shadow-[2px_2px_0px_rgba(0,0,0,1)] hover:translate-y-[1px] hover:shadow-[1px_1px_0px_rgba(0,0,0,1)] transition-all;
-    }
-    
-    .admin-username-admin {
-        @apply bg-yellow-400 text-orange-950 border-orange-950;
-    }
-    
-    .admin-username-player {
-        @apply bg-white text-orange-950 border-orange-950;
-    }
-
-    /* --- ÚJ: RÉSZLETEK MODÁL (POP-UP) --- */
-    .admin-details-modal {
-        @apply fixed top-0 left-0 w-[100vw] h-[100vh] z-[200] flex items-center justify-center;
-    }
-
-    .admin-details-modal::before {
-        content: '';
-        @apply absolute top-0 left-0 w-full h-full bg-black/80 cursor-pointer;
-    }
-
-    .admin-details-content {
-        @apply relative z-10 w-[90%] max-w-[400px] bg-orange-50 border-4 border-orange-950 p-6 rounded-xl shadow-[8px_8px_0px_rgba(0,0,0,1)] flex flex-col;
-    }
-
-    .admin-close-details-btn {
-        @apply absolute top-3 right-4 text-3xl text-orange-950 font-black cursor-pointer hover:text-red-600 transition-colors z-20;
-    }
-
-    /* --- MOBIL HAMBURGER GOMB --- */
-    .admin-hamburger-btn {
-        @apply md:hidden absolute top-6 right-4 text-3xl text-orange-950 cursor-pointer transition-transform hover:scale-110;
-    }
-
-    /* --- AKCIÓGOMBOK KONTÉNERE --- */
-    .admin-card-actions {
-        @apply hidden md:flex md:static md:bg-transparent md:border-none md:p-0 md:shadow-none md:flex-row md:w-auto md:translate-x-0 md:translate-y-0 justify-end items-center gap-2;
-    }
-
-    .admin-card-actions.menu-open {
-        @apply fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-[300] flex flex-col w-[88vw] max-w-[340px] bg-orange-50 border-4 border-orange-950 p-5 pt-12 rounded-xl shadow-[8px_8px_0px_rgba(0,0,0,1)] gap-3 items-stretch max-h-[80vh] overflow-y-auto;
-    }
-
-    .admin-close-menu-btn {
-        @apply md:hidden absolute top-2 right-4 text-3xl text-orange-950 font-black cursor-pointer hover:text-red-600 transition-colors z-10;
-    }
-
-    .admin-action-btn {
-        @apply px-4 py-2 rounded-md font-bold text-sm border-2 border-orange-950 shadow-[2px_2px_0px_rgba(0,0,0,1)] transition-transform hover:-translate-y-0.5 hover:shadow-[4px_4px_0px_rgba(0,0,0,1)] cursor-pointer w-full md:w-auto text-center;
-    }
-
+    .admin-page-shell { @apply p-2 md:p-6 overflow-x-hidden; }
+    .admin-site-wrapper { @apply w-[95%] max-w-[1200px] min-h-[80vh] mx-auto bg-white border-4 border-orange-950 shadow-[8px_8px_0px_rgba(0,0,0,1)] rounded-xl p-4 md:p-8 my-8 text-gray-800 overflow-x-hidden; }
+    .admin-header { @apply flex flex-col md:flex-row justify-between items-center mb-8 pb-4 border-b-4 border-yellow-400 gap-4; }
+    .admin-title { @apply text-xl md:text-2xl text-orange-950 font-['Press_Start_2P',_monospace] text-center md:text-left; }
+    .admin-search-wrapper { @apply flex w-full md:w-auto gap-2; }
+    .admin-search-input { @apply flex-1 md:flex-none p-3 rounded-md bg-gray-50 border-4 border-orange-950 text-gray-800 font-medium focus:outline-none focus:border-yellow-500 focus:ring-4 focus:ring-yellow-500/30 transition-all shadow-[inset_0_4px_4px_rgba(0,0,0,0.05)]; }
+    .admin-search-btn { @apply bg-yellow-500 hover:bg-yellow-400 text-orange-950 font-bold px-6 py-3 rounded-md border-4 border-orange-950 shadow-[4px_4px_0px_rgba(0,0,0,1)] transition-transform hover:translate-y-1 hover:shadow-[2px_2px_0px_rgba(0,0,0,1)] cursor-pointer; }
+    .admin-list { @apply flex flex-col gap-5; }
+    .admin-empty-msg { @apply text-center text-gray-500 font-bold text-lg mt-10; }
+    .admin-user-card { @apply relative bg-orange-50 border-4 border-orange-950 rounded-xl p-4 flex flex-col md:flex-row justify-between items-start md:items-center shadow-[4px_4px_0px_rgba(0,0,0,1)] transition-all duration-200 hover:-translate-y-1 hover:shadow-[6px_6px_0px_rgba(0,0,0,1)] gap-4; }
+    .admin-user-card-banned { @apply opacity-50 grayscale; }
+    .admin-card-profile { @apply flex items-center gap-4 w-full md:w-1/2; }
+    .admin-avatar { @apply w-14 h-14 rounded-full object-cover border-4; }
+    .admin-avatar-engineer { @apply border-cyan-400; }
+    .admin-avatar-admin { @apply border-yellow-500; }
+    .admin-avatar-moderator { @apply border-purple-500; }
+    .admin-avatar-player { @apply border-orange-950; }
+    .admin-profile-details { @apply flex flex-col items-start gap-1; }
+    .admin-profile-role { @apply text-[0.7rem] border-2 px-2 py-0.5 rounded-md w-max font-bold uppercase; }
+    .admin-role-badge-player { @apply bg-orange-200 text-orange-900 border-orange-950; }
+    .admin-role-badge-engineer { @apply bg-cyan-100 text-cyan-900 border-cyan-950; }
+    .admin-username-btn { @apply text-lg font-extrabold tracking-wide cursor-pointer text-left px-3 py-1 rounded-md border-2 shadow-[2px_2px_0px_rgba(0,0,0,1)] hover:translate-y-[1px] hover:shadow-[1px_1px_0px_rgba(0,0,0,1)] transition-all; }
+    .admin-username-engineer { @apply bg-cyan-200 text-cyan-950 border-cyan-950; }
+    .admin-username-admin { @apply bg-yellow-400 text-orange-950 border-orange-950; }
+    .admin-username-moderator { @apply bg-purple-200 text-purple-900 border-purple-900; }
+    .admin-username-player { @apply bg-white text-orange-950 border-orange-950; }
+    .admin-username-protected { @apply text-lg font-extrabold tracking-wide text-left px-3 py-1 rounded-md border-2 opacity-80 cursor-not-allowed; }
+    .admin-banned-badge { @apply text-xs font-bold text-red-600 mt-1 uppercase tracking-widest; }
+    .admin-details-modal { @apply fixed top-0 left-0 w-[100vw] h-[100vh] z-[200] flex items-center justify-center; }
+    .admin-hidden { @apply hidden; }
+    .admin-modal-z-maps { @apply z-[9995]; }
+    .admin-modal-z-ban { @apply z-[9996]; }
+    .admin-modal-z-rename { @apply z-[9997]; }
+    .admin-modal-z-hard-delete { @apply z-[9998]; }
+    .admin-modal-z-alert { @apply z-[9998]; }
+    .admin-modal-z-confirm { @apply z-[9999]; }
+    .admin-details-modal::before { content: ''; @apply absolute top-0 left-0 w-full h-full bg-black/80 cursor-pointer; }
+    .admin-details-content { @apply relative z-10 w-[90%] max-w-[400px] bg-orange-50 border-4 border-orange-950 p-6 rounded-xl shadow-[8px_8px_0px_rgba(0,0,0,1)] flex flex-col; }
+    .admin-details-content-sm { @apply max-w-md; }
+    .admin-details-content-alert { @apply max-w-sm text-center; }
+    .admin-logs-content { @apply w-[95%] max-w-[600px] max-h-[90vh] flex flex-col; }
+    .admin-maps-content { @apply w-[95%] max-w-[1000px] h-[85vh] flex flex-col p-4 md:p-6 bg-orange-50 border-4 border-orange-950 rounded-xl shadow-[8px_8px_0px_rgba(0,0,0,1)]; }
+    .admin-close-details-btn { @apply absolute top-3 right-4 text-3xl text-orange-950 font-black cursor-pointer hover:text-red-600 transition-colors z-20; }
+    .admin-close-details-btn-fixed { @apply absolute top-3 right-4; }
+    .admin-close-logs-btn, .admin-close-maps-btn { @apply absolute top-3 right-4 text-3xl text-orange-950 font-black cursor-pointer hover:text-red-600 transition-colors z-20; }
+    .admin-details-title { @apply text-xl md:text-2xl font-['Press_Start_2P',_monospace] text-center border-b-4 border-orange-950 pb-4 mb-4 text-orange-950; }
+    .admin-details-title-shrink { @apply shrink-0; }
+    .admin-details-info-list { @apply flex flex-col gap-3 text-orange-950 font-bold text-base md:text-lg; }
+    .admin-details-info-value { @apply font-normal; }
+    .admin-section-top-divider { @apply mt-4 border-t border-orange-950/50 pt-4; }
+    .admin-modal-subtitle { @apply text-lg font-bold text-orange-950 mb-3; }
+    .admin-modal-subtitle-danger { @apply text-red-700; }
+    .admin-modal-target { @apply text-sm text-orange-900 mb-2; }
+    .admin-modal-warning { @apply text-sm font-bold text-red-700 mb-2; }
+    .admin-form-input { @apply w-full border border-orange-950 rounded p-2 mb-3; }
+    .admin-form-input-danger { @apply border-red-900; }
+    .admin-form-textarea { @apply min-h-24; }
+    .admin-hamburger-btn { @apply md:hidden absolute top-6 right-4 text-3xl text-orange-950 cursor-pointer transition-transform hover:scale-110; }
+    .admin-card-actions { @apply hidden md:flex md:static md:bg-transparent md:border-none md:p-0 md:shadow-none md:flex-row md:w-auto md:translate-x-0 md:translate-y-0 justify-end items-center gap-2; }
+    .admin-card-actions.menu-open { @apply fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-[300] flex flex-col w-[88vw] max-w-[340px] bg-orange-50 border-4 border-orange-950 p-5 pt-12 rounded-xl shadow-[8px_8px_0px_rgba(0,0,0,1)] gap-3 items-stretch max-h-[80vh] overflow-y-auto; }
+    .admin-close-menu-btn { @apply md:hidden absolute top-2 right-4 text-3xl text-orange-950 font-black cursor-pointer hover:text-red-600 transition-colors z-10; }
+    .admin-action-btn { @apply px-4 py-2 rounded-md font-bold text-sm border-2 border-orange-950 shadow-[2px_2px_0px_rgba(0,0,0,1)] transition-transform hover:-translate-y-0.5 hover:shadow-[4px_4px_0px_rgba(0,0,0,1)] cursor-pointer w-full md:w-auto text-center; }
+    .admin-back-btn { @apply text-sm px-3 py-2 mr-3; }
+    .admin-action-full { @apply w-full; }
+    .admin-action-medium { @apply py-2; }
+    .admin-action-large { @apply py-3; }
+    .admin-action-tight { @apply py-1 px-3; }
+    .admin-alert-btn { @apply mt-4 py-2 px-8; }
+    .admin-confirm-btn { @apply py-2 px-6; }
+    .admin-mt-3 { @apply mt-3; }
+    .admin-mt-8 { @apply mt-8; }
     .admin-btn-yellow { @apply bg-yellow-400 text-orange-950; }
-    .admin-btn-gray   { @apply bg-gray-300 text-orange-950; }
-    .admin-btn-blue   { @apply bg-blue-400 text-orange-950; }
-    .admin-btn-red    { @apply bg-red-500 text-white; }
-
-    /* Ezeket tedd be az admin-avatar osztályokhoz: */
-    .admin-avatar-engineer {
-        @apply border-cyan-400;
-    }
-
-    /* Ezeket tedd be az admin-username osztályokhoz: */
-    .admin-username-engineer {
-        @apply bg-cyan-200 text-cyan-950 border-cyan-950;
-    }
-    /* ========================================= */
-    /* --- ÚJ: ADMIN MAPS KÁRTYA STÍLUSOK --- */
-    /* ========================================= */
-    
-    .admin-map-card {
-        background-image: url('../maps-src/img/map2card-bg.png');
-        background-size: 100% 100%;
-        background-repeat: no-repeat;
-        background-color: transparent;
-        image-rendering: pixelated;
-    }
-
-    /* Görgetősáv a Maps Gridhez, hogy szép retro maradjon */
+    .admin-btn-gray { @apply bg-gray-300 text-orange-950; }
+    .admin-btn-blue { @apply bg-blue-400 text-orange-950; }
+    .admin-btn-red { @apply bg-red-500 text-white; }
+    .admin-btn-green { @apply bg-green-500 text-white; }
+    .admin-logs-filters { @apply mb-3 flex flex-wrap gap-2 items-end; }
+    .admin-logs-filter-label { @apply text-orange-950 font-bold text-sm; }
+    .admin-logs-date-input { @apply border border-orange-950 rounded p-1; }
+    .admin-logs-container { @apply flex flex-col gap-3 overflow-y-auto pr-2 pb-4; }
+    .admin-modal-alert-header { @apply border-b-4 border-orange-950 pb-2 mb-4; }
+    .admin-modal-alert-header-danger { @apply border-red-950; }
+    .admin-modal-alert-title { @apply text-xl font-bold text-orange-950; }
+    .admin-modal-alert-title-danger { @apply text-red-600; }
+    .admin-modal-alert-title-success { @apply text-green-600; }
+    .admin-modal-alert-message { @apply text-lg font-bold text-gray-800 my-4; }
+    .admin-confirm-actions { @apply flex justify-center gap-4 mt-6; }
+    .admin-maps-head { @apply flex flex-col md:flex-row justify-between items-center border-b-4 border-orange-950 pb-4 mb-4 shrink-0 gap-4 mt-6 md:mt-0; }
+    .admin-maps-title { @apply text-xl md:text-3xl font-['Press_Start_2P',_monospace] text-orange-950 truncate max-w-full; }
+    .admin-maps-filter-box { @apply flex items-center gap-2 bg-orange-200/50 p-2 rounded border-2 border-orange-950/20 font-bold text-orange-950 shadow-inner; }
+    .admin-maps-own-filter-input { @apply w-5 h-5 accent-orange-600 cursor-pointer; }
+    .admin-maps-own-filter-label { @apply cursor-pointer tracking-wide uppercase text-xs md:text-sm; }
+    .admin-maps-grid { @apply flex-1 overflow-y-auto pr-2 pb-4 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 justify-items-center auto-rows-max; }
+    .admin-map-card { @apply relative w-[240px] h-[340px] p-4 flex flex-col items-center justify-between transition-transform duration-300 hover:-translate-y-1; background-image: url('../maps-src/img/map2card-bg.png'); background-size: 100% 100%; background-repeat: no-repeat; background-color: transparent; image-rendering: pixelated; }
+    .admin-map-image { @apply w-full h-28 border-4 rounded-sm overflow-hidden mb-2 relative shadow-[2px_2px_0px_#000]; }
+    .admin-map-image-default { @apply border-orange-950 shadow-[2px_2px_0px_#000]; }
+    .admin-map-image-engineer { @apply border-cyan-900 shadow-cyan-900/50; }
+    .admin-map-image-img { @apply w-full h-full object-cover; }
+    .admin-map-info { @apply w-full flex flex-col items-center flex-1 justify-center; }
+    .admin-map-name-text { @apply font-extrabold text-lg text-yellow-400 drop-shadow-[2px_2px_0px_#000] text-center w-full truncate mb-1; }
+    .admin-map-creator { @apply text-xs font-bold text-white drop-shadow-[1px_1px_0px_#000] text-center w-full mb-auto truncate; }
+    .admin-map-actions { @apply mt-2 flex justify-between items-center w-full gap-2 p-2 bg-orange-950/30 rounded-sm border border-orange-950/50; }
+    .admin-map-edit-btn { @apply bg-blue-600 hover:bg-blue-500 text-white font-extrabold py-1.5 px-3 border-2 border-blue-950 rounded-sm shadow-[2px_2px_0px_#000] text-[10px] uppercase; }
+    .admin-remove-map-btn { @apply text-xl hover:scale-110 transition-transform cursor-pointer drop-shadow-md ml-auto; }
+    .admin-map-status-badge { @apply text-white text-[10px] px-1.5 py-0.5 rounded-sm border absolute top-1 right-1 font-bold shadow-md z-10 uppercase; }
+    .admin-map-status-pub { @apply bg-green-600 border-green-900; }
+    .admin-map-status-draft { @apply bg-gray-500 border-gray-900; }
+    .admin-map-status-unpub { @apply bg-orange-500 border-orange-900; }
+    .admin-map-status-banned { @apply bg-red-600 border-red-900; }
+    .admin-map-status-scrap { @apply bg-gray-700 border-black; }
+    .admin-grid-message { @apply col-span-full text-center font-bold text-orange-900 text-xl mt-10; }
+    .admin-grid-message-loading { @apply animate-pulse; }
+    .admin-grid-message-error { @apply text-red-600; }
+    .admin-log-card { @apply border-2 border-orange-950 rounded-md bg-orange-100 p-3 mb-2 shadow-sm transition-all; }
+    .admin-log-header { @apply flex justify-between items-center cursor-pointer hover:bg-orange-200 p-1 rounded; }
+    .admin-log-meta { @apply font-bold text-orange-950 text-xs md:text-sm; }
+    .admin-log-view-btn { @apply bg-blue-400 text-white px-3 py-1 rounded border-2 border-orange-950 font-bold text-xs hover:bg-blue-500 shadow-[2px_2px_0px_rgba(0,0,0,1)] hover:translate-y-[1px] hover:shadow-[1px_1px_0px_rgba(0,0,0,1)]; }
+    .admin-log-details { @apply mt-3 pt-3 border-t-2 border-orange-950/30 text-sm font-bold text-orange-900 flex flex-col gap-1; }
+    .admin-log-details-value { @apply font-normal; }
+    .admin-log-message { @apply text-center font-bold text-orange-900; }
+    .admin-log-message-loading { @apply animate-pulse; }
+    .admin-log-message-error { @apply text-red-600; }
     #admin-maps-grid::-webkit-scrollbar { width: 14px; }
     #admin-maps-grid::-webkit-scrollbar-track { @apply bg-orange-200 border-l-4 border-orange-950; }
     #admin-maps-grid::-webkit-scrollbar-thumb { @apply bg-orange-900 border-2 border-orange-950; }

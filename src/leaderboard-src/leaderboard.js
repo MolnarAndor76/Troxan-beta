@@ -12,8 +12,7 @@ document.addEventListener('DOMContentLoaded', () => {
         // Megakadályozzuk, hogy a kattintás azonnal eljusson a document-ig
         e.stopPropagation(); 
         
-        // Sima, atomstabil 'hidden' osztály kapcsolgatás, nulla animáció
-        dropdown.classList.toggle('hidden');
+        dropdown.classList.toggle('leaderboard-hidden');
     });
 
     // --- Elem kiválasztása a menüből ---
@@ -24,14 +23,14 @@ document.addEventListener('DOMContentLoaded', () => {
                 selectedSortSpan.textContent = item.textContent;
             }
             // Bezárja a menüt
-            dropdown.classList.add('hidden');
+            dropdown.classList.add('leaderboard-hidden');
         });
     });
 
     // --- Bezárás, ha a menün kívülre kattintanak ---
     document.addEventListener('click', () => {
-        if (!dropdown.classList.contains('hidden')) {
-            dropdown.classList.add('hidden');
+        if (!dropdown.classList.contains('leaderboard-hidden')) {
+            dropdown.classList.add('leaderboard-hidden');
         }
     });
 });

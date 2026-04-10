@@ -33,18 +33,18 @@
     </section>
 
     <section id="basesite-tab-patchnotes" class="basesite-tab-content basesite-hidden">
-      <div class="flex justify-between items-center mb-6 border-b-2 border-orange-900 pb-2">
-        <h2 class="text-3xl font-bold text-orange-950 m-0 border-0 pb-0">What's new?</h2>
+      <div class="basesite-patchnotes-head">
+        <h2 class="basesite-patchnotes-title">What's new?</h2>
         <?php if ($canEditPatchNotes): ?>
-          <div class="flex gap-2">
-            <button id="patch-recycle-btn" class="bg-gray-300 hover:bg-gray-400 text-gray-800 font-bold py-1 px-3 rounded border border-gray-500 shadow-sm transition-colors text-sm flex items-center gap-1 cursor-pointer">🗑️ Recycle Bin</button>
-            <button id="patch-new-btn" class="bg-green-600 hover:bg-green-500 text-white font-bold py-1 px-3 rounded border border-green-800 shadow-sm transition-colors text-sm flex items-center gap-1 cursor-pointer">➕ New Patch</button>
+          <div class="basesite-patchnotes-actions">
+            <button id="patch-recycle-btn" class="basesite-patchnotes-btn basesite-patchnotes-btn-recycle">🗑️ Recycle Bin</button>
+            <button id="patch-new-btn" class="basesite-patchnotes-btn basesite-patchnotes-btn-new">➕ New Patch</button>
           </div>
         <?php endif; ?>
       </div>
 
       <?php if (!empty($patchNotes)): ?>
-        <div class="flex flex-col gap-6">
+        <div class="basesite-patchnotes-list">
           <?php foreach ($patchNotes as $index => $patch): 
               
               $isEngineerPatch = ($patch['author_role'] === 'Engineer');
@@ -67,51 +67,51 @@
                   }
               }
 
-              $bgClass = $isEngineerPatch ? 'bg-cyan-100 border-cyan-900 shadow-cyan-900/50' : 'bg-orange-100 border-orange-900 shadow-orange-900/50';
-              $titleClass = $isEngineerPatch ? 'text-cyan-950' : 'text-orange-950';
-              $timeClass = $isEngineerPatch ? 'text-cyan-800' : 'text-orange-800';
-              $borderClass = $isEngineerPatch ? 'border-cyan-950/30' : 'border-orange-950/30';
+              $cardClass = $isEngineerPatch ? 'basesite-patch-card-engineer' : 'basesite-patch-card-admin';
+              $titleClass = $isEngineerPatch ? 'basesite-patch-title-engineer' : 'basesite-patch-title-admin';
+              $timeClass = $isEngineerPatch ? 'basesite-patch-meta-engineer' : 'basesite-patch-meta-admin';
+              $borderClass = $isEngineerPatch ? 'basesite-patch-head-engineer' : 'basesite-patch-head-admin';
           ?>
 
-            <div class="<?= $bgClass ?> border-2 rounded p-4 md:p-6 shadow-md relative group" data-id="<?= $patch['id'] ?>">
+            <div class="basesite-patch-card <?= $cardClass ?>" data-id="<?= $patch['id'] ?>">
 
-              <div class="flex justify-between items-end border-b-2 <?= $borderClass ?> pb-2 mb-4">
+              <div class="basesite-patch-card-head <?= $borderClass ?>">
                 <div>
-                    <h3 class="text-2xl font-bold <?= $titleClass ?> patch-title"><?= htmlspecialchars($patch['name']) ?></h3>
+                    <h3 class="basesite-patch-card-title <?= $titleClass ?> patch-title"><?= htmlspecialchars($patch['name']) ?></h3>
                     <?php if ($patch['author_name']): ?>
-                        <div class="text-sm font-bold mt-1 <?= $timeClass ?>">
+                        <div class="basesite-patch-author <?= $timeClass ?>">
                             <?= $isEngineerPatch ? '🛠️ Engineer:' : '👤 Admin:' ?> <?= htmlspecialchars($patch['author_name']) ?>
                         </div>
                     <?php endif; ?>
                 </div>
-                <time class="text-sm md:text-base font-bold <?= $timeClass ?>" datetime="<?= $patch['created_at'] ?>">
+                <time class="basesite-patch-time <?= $timeClass ?>" datetime="<?= $patch['created_at'] ?>">
                   <?= date('Y.m.d H:i', strtotime($patch['created_at'])) ?>
                 </time>
               </div>
 
-              <div class="text-lg text-gray-800 leading-relaxed patch-desc">
+              <div class="basesite-patch-desc patch-desc">
                 <?= nl2br(htmlspecialchars($patch['description'])) ?>
               </div>
 
               <?php if (!empty($patch['updated_by']) && !empty($patch['updater_name'])): ?>
-                  <div class="text-sm font-medium italic mt-6 text-right opacity-70 <?= $timeClass ?>">
+                  <div class="basesite-patch-updated <?= $timeClass ?>">
                       Utoljára frissítve: <?= htmlspecialchars($patch['updater_name']) ?> által (<?= date('Y.m.d H:i', strtotime($patch['updated_at'])) ?>)
                   </div>
               <?php endif; ?>
 
-              <div class="absolute bottom-2 right-2 flex gap-2 opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity">
+              <div class="basesite-patch-actions">
                 
                 <?php if ($iAmEngineer): ?>
-                    <button class="patch-lock-btn text-xl hover:scale-110 transition-transform cursor-pointer" title="<?= $isLocked ? 'Unlock patch' : 'Lock patch' ?>">
+                    <button class="patch-lock-btn basesite-icon-action-btn" title="<?= $isLocked ? 'Unlock patch' : 'Lock patch' ?>">
                         <?= $isLocked ? '🔒' : '🔓' ?>
                     </button>
                 <?php elseif ($isLocked && $canEditPatchNotes): ?>
-                    <span class="text-xl opacity-50 cursor-not-allowed" title="Engineer által lezárva!">🔒</span>
+                    <span class="basesite-icon-locked" title="Engineer által lezárva!">🔒</span>
                 <?php endif; ?>
 
                 <?php if ($canEditThisPatch): ?>
-                  <button class="patch-edit-btn text-xl hover:scale-110 transition-transform cursor-pointer" title="Edit Patch">✏️</button>
-                  <button class="patch-delete-btn text-xl hover:scale-110 transition-transform cursor-pointer" title="Move to Recycle Bin">🗑️</button>
+                  <button class="patch-edit-btn basesite-icon-action-btn" title="Edit Patch">✏️</button>
+                  <button class="patch-delete-btn basesite-icon-action-btn" title="Move to Recycle Bin">🗑️</button>
                 <?php endif; ?>
 
               </div>
@@ -121,7 +121,7 @@
           <?php endforeach; ?>
         </div>
       <?php else: ?>
-        <div class="basesite-placeholder-box text-orange-950 font-bold text-xl bg-orange-200 border-orange-900">
+        <div class="basesite-placeholder-box basesite-patch-empty">
           There are no patch notes available yet. Check back later!
         </div>
       <?php endif; ?>
@@ -130,14 +130,14 @@
     <section id="basesite-tab-lore" class="basesite-tab-content basesite-hidden">
       <h2 class="basesite-title-sub">The fate of troxan</h2>
       <p class="basesite-text" id="basesite-lore-text"><?= nl2br(htmlspecialchars($siteSettings['lore_text'])) ?></p>
-      <textarea id="site-settings-lore-source" class="hidden"><?= htmlspecialchars($siteSettings['lore_text']) ?></textarea>
+      <textarea id="site-settings-lore-source" class="basesite-hidden"><?= htmlspecialchars($siteSettings['lore_text']) ?></textarea>
     </section>
 
     <section id="basesite-tab-about" class="basesite-tab-content basesite-hidden">
-      <div class="flex items-center justify-between gap-3">
+      <div class="basesite-about-head">
         <h2 class="basesite-title-sub">About Troxan and us</h2>
         <?php if ($canEditSiteSettings): ?>
-          <button id="site-settings-edit-btn" class="text-xl hover:scale-110 transition-transform cursor-pointer" title="Edit Main Page Settings">✏️</button>
+          <button id="site-settings-edit-btn" class="basesite-icon-action-btn" title="Edit Main Page Settings">✏️</button>
         <?php endif; ?>
       </div>
       <p class="basesite-text" id="basesite-about-us-text"><?= nl2br(htmlspecialchars($siteSettings['about_us_text'])) ?></p>
@@ -150,7 +150,7 @@
           <?php endforeach; ?>
         </ul>
       </div>
-      <textarea id="site-settings-system-req-source" class="hidden"><?= htmlspecialchars($siteSettings['system_requirements_text']) ?></textarea>
+      <textarea id="site-settings-system-req-source" class="basesite-hidden"><?= htmlspecialchars($siteSettings['system_requirements_text']) ?></textarea>
     </section>
 
     <div id="basesite-req-modal" class="basesite-modal-overlay basesite-hidden">
@@ -187,58 +187,58 @@
     </div>
 
     <div id="patch-new-modal" class="basesite-modal-overlay basesite-hidden">
-      <div class="basesite-modal-window max-w-2xl">
-        <div class="basesite-modal-header bg-green-800 border-b-4 border-green-950">
-          <h2 class="basesite-modal-title text-green-300">➕ Create New Patch</h2>
+      <div class="basesite-modal-window basesite-modal-window-new-patch">
+        <div class="basesite-modal-header basesite-modal-header-new-patch">
+          <h2 class="basesite-modal-title basesite-modal-title-new-patch">➕ Create New Patch</h2>
           <button class="basesite-modal-close patch-close-btn">&times;</button>
         </div>
-        <div class="basesite-modal-body bg-orange-50">
-          <input type="text" id="new-patch-title" class="w-full bg-white border-4 border-orange-950 p-3 rounded-md text-lg text-gray-800 font-bold mb-4 focus:outline-none focus:border-green-600" placeholder="Patch Name (e.g. Patch 1.2 - The Awakening)">
-          <textarea id="new-patch-desc" class="w-full h-48 bg-white border-4 border-orange-950 p-3 rounded-md text-lg text-gray-800 font-medium mb-4 focus:outline-none focus:border-green-600" placeholder="Write the patch notes here..."></textarea>
-          <div class="flex justify-end gap-4 mt-4">
-            <button id="patch-discard-btn" class="bg-red-600 hover:bg-red-500 text-white font-bold py-2 px-6 rounded border-2 border-red-900 shadow-[2px_2px_0px_rgba(0,0,0,1)] transition-transform hover:translate-y-1 cursor-pointer">Discard</button>
-            <button id="patch-publish-btn" class="bg-green-600 hover:bg-green-500 text-white font-bold py-2 px-6 rounded border-2 border-green-900 shadow-[2px_2px_0px_rgba(0,0,0,1)] transition-transform hover:translate-y-1 cursor-pointer">Publish</button>
+        <div class="basesite-modal-body basesite-modal-body-orange">
+          <input type="text" id="new-patch-title" class="basesite-form-input-patch" placeholder="Patch Name (e.g. Patch 1.2 - The Awakening)">
+          <textarea id="new-patch-desc" class="basesite-form-textarea-patch" placeholder="Write the patch notes here..."></textarea>
+          <div class="basesite-modal-action-row">
+            <button id="patch-discard-btn" class="basesite-btn-danger">Discard</button>
+            <button id="patch-publish-btn" class="basesite-btn-success">Publish</button>
           </div>
         </div>
       </div>
     </div>
 
     <div id="patch-recycle-modal" class="basesite-modal-overlay basesite-hidden">
-      <div class="basesite-modal-window max-w-xl">
-        <div class="basesite-modal-header bg-gray-800 border-b-4 border-gray-950">
-          <h2 class="basesite-modal-title text-gray-300">🗑️ Recycle Bin</h2>
+      <div class="basesite-modal-window basesite-modal-window-recycle">
+        <div class="basesite-modal-header basesite-modal-header-recycle">
+          <h2 class="basesite-modal-title basesite-modal-title-recycle">🗑️ Recycle Bin</h2>
           <button class="basesite-modal-close patch-close-btn">&times;</button>
         </div>
-        <div class="basesite-modal-body bg-gray-200" id="recycle-bin-content">
-          <div class="text-center font-bold text-gray-500 py-10">Loading deleted patches...</div>
+        <div class="basesite-modal-body basesite-modal-body-recycle" id="recycle-bin-content">
+          <div class="basesite-empty-state">Loading deleted patches...</div>
         </div>
       </div>
     </div>
 
-    <div id="basesite-alert-modal" class="basesite-modal-overlay basesite-hidden" style="z-index: 9998;">
-      <div class="basesite-modal-window max-w-sm">
-        <div id="basesite-alert-header" class="basesite-modal-header bg-orange-900 border-b-4 border-orange-950">
-          <h2 id="basesite-alert-title" class="basesite-modal-title text-white">Notice</h2>
+    <div id="basesite-alert-modal" class="basesite-modal-overlay basesite-hidden basesite-modal-z-alert">
+      <div class="basesite-modal-window basesite-modal-window-sm">
+        <div id="basesite-alert-header" class="basesite-modal-header basesite-modal-header-alert">
+          <h2 id="basesite-alert-title" class="basesite-modal-title basesite-modal-title-white">Notice</h2>
           <button id="basesite-alert-close-btn" class="basesite-modal-close">&times;</button>
         </div>
-        <div class="basesite-modal-body bg-orange-50 text-center p-6">
-          <p id="basesite-alert-message" class="text-xl font-bold text-orange-950 my-4 leading-relaxed">Message goes here</p>
-          <button id="basesite-alert-ok-btn" class="bg-yellow-500 hover:bg-yellow-400 text-orange-950 font-extrabold py-2 px-8 rounded border-2 border-orange-950 shadow-[3px_3px_0px_rgba(0,0,0,1)] transition-transform hover:translate-y-1 cursor-pointer mt-4">OK</button>
+        <div class="basesite-modal-body basesite-modal-body-center">
+          <p id="basesite-alert-message" class="basesite-message-alert">Message goes here</p>
+          <button id="basesite-alert-ok-btn" class="basesite-btn-warning">OK</button>
         </div>
       </div>
     </div>
 
-    <div id="basesite-confirm-modal" class="basesite-modal-overlay basesite-hidden" style="z-index: 9999;">
-      <div class="basesite-modal-window max-w-sm">
-        <div id="basesite-confirm-header" class="basesite-modal-header bg-red-800 border-b-4 border-red-950">
-          <h2 id="basesite-confirm-title" class="basesite-modal-title text-white">Megerősítés</h2>
+    <div id="basesite-confirm-modal" class="basesite-modal-overlay basesite-hidden basesite-modal-z-confirm">
+      <div class="basesite-modal-window basesite-modal-window-sm">
+        <div id="basesite-confirm-header" class="basesite-modal-header basesite-modal-header-confirm">
+          <h2 id="basesite-confirm-title" class="basesite-modal-title basesite-modal-title-white">Megerősítés</h2>
           <button id="basesite-confirm-close-btn" class="basesite-modal-close">&times;</button>
         </div>
-        <div class="basesite-modal-body bg-orange-50 text-center p-6">
-          <p id="basesite-confirm-message" class="text-xl font-bold text-orange-950 my-4 leading-relaxed">Biztos vagy benne?</p>
-          <div class="flex justify-center gap-4 mt-6">
-            <button id="basesite-confirm-cancel-btn" class="bg-gray-500 hover:bg-gray-400 text-white font-extrabold py-2 px-6 rounded border-2 border-gray-800 shadow-[3px_3px_0px_rgba(0,0,0,1)] transition-transform hover:translate-y-1 cursor-pointer">Mégse</button>
-            <button id="basesite-confirm-ok-btn" class="bg-red-600 hover:bg-red-500 text-white font-extrabold py-2 px-6 rounded border-2 border-red-900 shadow-[3px_3px_0px_rgba(0,0,0,1)] transition-transform hover:translate-y-1 cursor-pointer">Igen</button>
+        <div class="basesite-modal-body basesite-modal-body-center">
+          <p id="basesite-confirm-message" class="basesite-message-alert">Biztos vagy benne?</p>
+          <div class="basesite-confirm-actions">
+            <button id="basesite-confirm-cancel-btn" class="basesite-btn-neutral">Mégse</button>
+            <button id="basesite-confirm-ok-btn" class="basesite-btn-danger">Igen</button>
           </div>
         </div>
       </div>

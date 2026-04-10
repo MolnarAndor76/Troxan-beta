@@ -9,6 +9,13 @@
 /* --- ÁLTALÁNOS & LAYOUT --- */
   .basesite-main-wrapper { @apply w-full max-w-5xl h-[80vh] mx-auto bg-white rounded-xl shadow-2xl flex flex-col overflow-hidden border-4 border-orange-950; }
   .basesite-content-wrapper { @apply flex-1 overflow-y-auto p-6 md:p-10 bg-orange-50/50; }
+  .basesite-content-wrapper.basesite-hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+  .basesite-content-wrapper.basesite-hide-scrollbar::-webkit-scrollbar { display: none; width: 0; height: 0; }
+  .basesite-content-wrapper.basesite-retro-scrollbar { -ms-overflow-style: auto; scrollbar-width: auto; }
+  .basesite-content-wrapper.basesite-retro-scrollbar::-webkit-scrollbar { width: 14px; }
+  .basesite-content-wrapper.basesite-retro-scrollbar::-webkit-scrollbar-track { @apply bg-orange-200 border-l-4 border-orange-950; }
+  .basesite-content-wrapper.basesite-retro-scrollbar::-webkit-scrollbar-thumb { @apply bg-orange-900 border-2 border-orange-950; }
+  .basesite-content-wrapper.basesite-retro-scrollbar::-webkit-scrollbar-thumb:hover { @apply bg-yellow-600; }
 
   /* --- MENÜ (TABS) --- */
   .basesite-nav { @apply flex-none flex w-full gap-1 md:gap-2 p-2 bg-orange-950 border-b-4 border-yellow-600; }
@@ -43,6 +50,8 @@
 
   /* --- MODAL (POP-UP) --- */
   .basesite-modal-overlay { @apply fixed inset-0 z-50 bg-black/80 flex items-center justify-center p-4; }
+  .basesite-modal-z-alert { @apply z-[9998]; }
+  .basesite-modal-z-confirm { @apply z-[9999]; }
   /* A hiba itt is megvolt: a legvégéről kikerült az animate-fade-in */
   .basesite-modal-window { @apply bg-orange-50 border-4 border-orange-950 rounded-xl shadow-2xl w-full max-w-3xl max-h-[90vh] flex flex-col overflow-hidden; }
   .basesite-modal-header { @apply flex-none flex justify-between items-center p-4 bg-orange-950 text-white border-b-4 border-yellow-600; }
@@ -68,5 +77,82 @@
   .basesite-td { @apply p-3; }
   .basesite-td-gray { @apply p-3 text-gray-400; }
   .basesite-td-label { @apply p-3 font-bold text-orange-950; }
+
+  /* --- PATCH NOTES --- */
+  .basesite-patchnotes-head { @apply flex justify-between items-center mb-6 border-b-2 border-orange-900 pb-2; }
+  .basesite-patchnotes-title { @apply text-3xl font-bold text-orange-950 m-0 border-0 pb-0; }
+  .basesite-patchnotes-actions { @apply flex gap-2; }
+  .basesite-patchnotes-btn { @apply font-bold py-1 px-3 rounded border shadow-sm transition-colors text-sm flex items-center gap-1 cursor-pointer; }
+  .basesite-patchnotes-btn-recycle { @apply bg-gray-300 hover:bg-gray-400 text-gray-800 border-gray-500; }
+  .basesite-patchnotes-btn-new { @apply bg-green-600 hover:bg-green-500 text-white border-green-800; }
+  .basesite-patchnotes-list { @apply flex flex-col gap-6; }
+
+  .basesite-patch-card { @apply border-2 rounded p-4 md:p-6 shadow-md relative; }
+  .basesite-patch-card-admin { @apply bg-orange-100 border-orange-900 shadow-orange-900/50; }
+  .basesite-patch-card-engineer { @apply bg-cyan-100 border-cyan-900 shadow-cyan-900/50; }
+  .basesite-patch-card-head { @apply flex justify-between items-end border-b-2 pb-2 mb-4; }
+  .basesite-patch-head-admin { @apply border-orange-950/30; }
+  .basesite-patch-head-engineer { @apply border-cyan-950/30; }
+  .basesite-patch-card-title { @apply text-2xl font-bold; }
+  .basesite-patch-title-admin { @apply text-orange-950; }
+  .basesite-patch-title-engineer { @apply text-cyan-950; }
+  .basesite-patch-author { @apply text-sm font-bold mt-1; }
+  .basesite-patch-time { @apply text-sm md:text-base font-bold; }
+  .basesite-patch-meta-admin { @apply text-orange-800; }
+  .basesite-patch-meta-engineer { @apply text-cyan-800; }
+  .basesite-patch-desc { @apply text-lg text-gray-800 leading-relaxed; }
+  .basesite-patch-updated { @apply text-sm font-medium italic mt-6 text-right opacity-70; }
+  .basesite-patch-actions { @apply absolute bottom-2 right-2 flex gap-2 opacity-100 transition-opacity; }
+  .basesite-icon-action-btn { @apply text-xl hover:scale-110 transition-transform cursor-pointer; }
+  .basesite-icon-locked { @apply text-xl opacity-50 cursor-not-allowed; }
+  .basesite-patch-empty { @apply text-orange-950 font-bold text-xl bg-orange-200 border-orange-900; }
+  .basesite-about-head { @apply flex items-center justify-between gap-3; }
+
+  /* --- MODAL VARIÁNSOK + GOMBOK --- */
+  .basesite-modal-window-new-patch { @apply max-w-2xl; }
+  .basesite-modal-window-recycle { @apply max-w-xl; }
+  .basesite-modal-window-sm { @apply max-w-sm; }
+  .basesite-modal-header-new-patch { @apply bg-green-800 border-b-4 border-green-950; }
+  .basesite-modal-title-new-patch { @apply text-green-300; }
+  .basesite-modal-body-orange { @apply bg-orange-50; }
+  .basesite-modal-header-recycle { @apply bg-gray-800 border-b-4 border-gray-950; }
+  .basesite-modal-title-recycle { @apply text-gray-300; }
+  .basesite-modal-body-recycle { @apply bg-gray-200; }
+  .basesite-modal-header-alert { @apply bg-orange-900 border-b-4 border-orange-950; }
+  .basesite-modal-header-confirm { @apply bg-red-800 border-b-4 border-red-950; }
+  .basesite-modal-header-error { @apply bg-red-800 border-b-4 border-red-950; }
+  .basesite-modal-header-success { @apply bg-green-800 border-b-4 border-green-950; }
+  .basesite-modal-title-white { @apply text-white; }
+  .basesite-modal-body-center { @apply bg-orange-50 text-center p-6; }
+  .basesite-message-alert { @apply text-xl font-bold text-orange-950 my-4 leading-relaxed; }
+  .basesite-confirm-actions { @apply flex justify-center gap-4 mt-6; }
+  .basesite-modal-action-row { @apply flex justify-end gap-4 mt-4; }
+  .basesite-form-input-patch { @apply w-full bg-white border-4 border-orange-950 p-3 rounded-md text-lg text-gray-800 font-bold mb-4 focus:outline-none focus:border-green-600; }
+  .basesite-form-textarea-patch { @apply w-full h-48 bg-white border-4 border-orange-950 p-3 rounded-md text-lg text-gray-800 font-medium mb-4 focus:outline-none focus:border-green-600; }
+  .basesite-btn-warning { @apply bg-yellow-500 hover:bg-yellow-400 text-orange-950 font-extrabold py-2 px-8 rounded border-2 border-orange-950 shadow-[3px_3px_0px_rgba(0,0,0,1)] transition-transform hover:translate-y-1 cursor-pointer mt-4; }
+  .basesite-btn-danger { @apply bg-red-600 hover:bg-red-500 text-white font-bold py-2 px-6 rounded border-2 border-red-900 shadow-[2px_2px_0px_rgba(0,0,0,1)] transition-transform hover:translate-y-1 cursor-pointer; }
+  .basesite-btn-danger-strong { @apply bg-red-600 hover:bg-red-500 text-white font-extrabold py-2 px-6 rounded border-2 border-red-900 shadow-[3px_3px_0px_rgba(0,0,0,1)] transition-transform hover:translate-y-1 cursor-pointer; }
+  .basesite-btn-warning-strong { @apply bg-yellow-500 hover:bg-yellow-400 text-orange-950 font-extrabold py-2 px-6 rounded border-2 border-orange-950 shadow-[3px_3px_0px_rgba(0,0,0,1)] transition-transform hover:translate-y-1 cursor-pointer; }
+  .basesite-btn-success { @apply bg-green-600 hover:bg-green-500 text-white font-bold py-2 px-6 rounded border-2 border-green-900 shadow-[2px_2px_0px_rgba(0,0,0,1)] transition-transform hover:translate-y-1 cursor-pointer; }
+  .basesite-btn-neutral { @apply bg-gray-500 hover:bg-gray-400 text-white font-extrabold py-2 px-6 rounded border-2 border-gray-800 shadow-[3px_3px_0px_rgba(0,0,0,1)] transition-transform hover:translate-y-1 cursor-pointer; }
+  .basesite-empty-state { @apply text-center font-bold text-gray-500 py-10; }
+
+  /* --- SITE SETTINGS EDITOR --- */
+  .basesite-settings-editor { @apply bg-orange-100 border-2 border-orange-900 rounded p-4 mb-4; }
+  .basesite-settings-label { @apply block text-sm font-bold text-orange-950 mb-1; }
+  .basesite-settings-input { @apply w-full bg-white border-2 border-orange-950 p-2 rounded text-gray-900 mb-3; }
+  .basesite-settings-textarea-sm { @apply w-full h-24 bg-white border-2 border-orange-950 p-2 rounded text-gray-900 mb-3; }
+  .basesite-settings-textarea-md { @apply w-full h-28 bg-white border-2 border-orange-950 p-2 rounded text-gray-900 mb-3; }
+  .basesite-settings-textarea-lg { @apply w-full h-40 bg-white border-2 border-orange-950 p-2 rounded text-gray-900; }
+
+  /* --- PATCH JS DINAMIKUS ELEMEK --- */
+  .basesite-patch-edit-title { @apply w-full bg-white border-2 border-orange-950 p-1 text-orange-950 rounded; }
+  .basesite-patch-edit-desc { @apply w-full h-32 bg-white border-2 border-orange-950 p-2 text-gray-800 rounded mt-2; }
+  .basesite-recycle-list { @apply flex flex-col gap-3; }
+  .basesite-recycle-item { @apply bg-white p-3 border-2 border-gray-400 rounded flex justify-between items-center shadow-sm; }
+  .basesite-recycle-item-title { @apply font-bold text-gray-800; }
+  .basesite-recycle-item-date { @apply text-xs text-gray-500; }
+  .basesite-btn-restore { @apply bg-blue-600 hover:bg-blue-500 text-white px-3 py-1 rounded font-bold cursor-pointer; }
+  .basesite-error-state { @apply text-center text-red-600 py-10; }
 
 }

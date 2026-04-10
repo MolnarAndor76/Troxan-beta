@@ -27,12 +27,13 @@ export function updateHeader() {
     if (!existingProfile && loginLink) {
       const profileNav = document.createElement('div');
       profileNav.className = 'user-profile-nav troxan-nav-link';
-      profileNav.style.cssText = 'cursor:pointer; display:flex; align-items:center;';
       profileNav.id = 'go-to-profile';
 
-      profileNav.innerHTML = `
-              <img src="${userAvatar}" class="nav-avatar" style="width:35px; height:35px; border-radius:50%; border:2px solid white; transition: transform 0.2s;" onmouseover="this.style.transform='scale(1.1)'" onmouseout="this.style.transform='scale(1)'" title="${username} profilja">
-          `;
+      const avatarImg = document.createElement('img');
+      avatarImg.src = userAvatar;
+      avatarImg.className = 'nav-avatar';
+      avatarImg.title = `${username} profilja`;
+      profileNav.appendChild(avatarImg);
 
       loginLink.replaceWith(profileNav);
 
@@ -159,6 +160,10 @@ async function loadContent(path) {
       appDiv.innerHTML = result.html;
       fillClientLastUpdatedFields();
 
+      if (path === 'main' && typeof window.initBasesiteView === 'function') {
+        window.initBasesiteView();
+      }
+
       // Update avatar in myMaps navbar if loaded
       if (typeof setMyMapsProfileAvatar === 'function') {
         setMyMapsProfileAvatar();
@@ -173,7 +178,7 @@ async function loadContent(path) {
       }
     }
   } catch (error) {
-    appDiv.innerHTML = `<p style="color:red; font-weight:bold; text-align:center;">Error: ${error.message}</p>`;
+    appDiv.innerHTML = `<p class="troxan-error-message">Error: ${error.message}</p>`;
   }
 }
 
@@ -253,8 +258,8 @@ document.addEventListener('click', function (event) {
       event.preventDefault();      
       // Close mobile menu if open
       const mobileMenu = document.getElementById('mobile-menu');
-      if (mobileMenu && !mobileMenu.classList.contains('hidden')) {
-        mobileMenu.classList.add('hidden');
+      if (mobileMenu && !mobileMenu.classList.contains('troxan-hidden')) {
+        mobileMenu.classList.add('troxan-hidden');
       }
             const routeName = routePathToRouteName(href);
       navigateTo(routeName);
@@ -296,6 +301,14 @@ async function periodicSessionCheck() {
 
 // --- INDÍTÁS ---
 document.addEventListener('DOMContentLoaded', async () => {
+  const menuBtn = document.getElementById('menu-btn');
+  const mobileMenu = document.getElementById('mobile-menu');
+  if (menuBtn && mobileMenu) {
+    menuBtn.addEventListener('click', () => {
+      mobileMenu.classList.toggle('troxan-hidden');
+    });
+  }
+
   await syncAuthStateWithServer();
   updateHeader();
   loadRoute(getRoute());

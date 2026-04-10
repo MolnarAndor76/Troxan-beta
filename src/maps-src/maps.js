@@ -17,12 +17,13 @@ function showCustomAlert(title, message, type = 'info', callback = null) {
     document.getElementById('basesite-alert-message').innerHTML = message;
 
     const titleEl = document.getElementById('basesite-alert-title');
-    if (type === 'error') titleEl.className = 'text-xl font-bold text-red-600';
-    else if (type === 'success') titleEl.className = 'text-xl font-bold text-green-600';
-    else titleEl.className = 'text-xl font-bold text-orange-950';
+    titleEl.className = 'maps-modal-alert-title';
+    if (type === 'error') titleEl.classList.add('maps-modal-alert-title-danger');
+    else if (type === 'success') titleEl.classList.add('maps-modal-alert-title-success');
 
     window.alertCallback = callback;
-    modal.classList.remove('hidden', 'basesite-hidden');
+    modal.classList.remove('maps-hidden');
+    modal.classList.add('maps-modal-visible');
 }
 
 function showCustomConfirm(title, message, type = 'danger', onConfirm = null) {
@@ -35,20 +36,23 @@ function showCustomConfirm(title, message, type = 'danger', onConfirm = null) {
     document.getElementById('basesite-confirm-message').innerHTML = message;
 
     const headerEl = document.getElementById('basesite-confirm-header');
+    const titleEl = document.getElementById('basesite-confirm-title');
     const okBtn = document.getElementById('basesite-confirm-ok-btn');
 
+    headerEl.className = 'maps-modal-alert-head';
+    titleEl.className = 'maps-modal-alert-title';
+    okBtn.className = 'maps-confirm-btn-ok';
+
     if (type === 'danger') {
-        headerEl.className = 'border-b-4 border-red-950 w-full pb-2 mb-4';
-        document.getElementById('basesite-confirm-title').className = 'text-xl font-bold text-red-600';
-        okBtn.className = 'bg-red-600 px-6 py-2 font-bold text-white border-2 border-red-900 rounded shadow-[2px_2px_0px_#000]';
+        headerEl.classList.add('maps-modal-alert-head-danger');
+        titleEl.classList.add('maps-modal-alert-title-danger');
     } else {
-        headerEl.className = 'border-b-4 border-orange-950 w-full pb-2 mb-4';
-        document.getElementById('basesite-confirm-title').className = 'text-xl font-bold text-orange-950';
-        okBtn.className = 'bg-yellow-500 px-6 py-2 font-bold text-orange-950 border-2 border-orange-950 rounded shadow-[2px_2px_0px_#000]';
+        okBtn.className = 'maps-modal-alert-btn';
     }
 
     window.confirmCallback = onConfirm;
-    modal.classList.remove('hidden', 'basesite-hidden');
+    modal.classList.remove('maps-hidden');
+    modal.classList.add('maps-modal-visible');
 }
 
 function filterAndSortMaps() {
@@ -103,7 +107,7 @@ function filterAndSortMaps() {
         if (!emptyMsg) {
             emptyMsg = document.createElement('p');
             emptyMsg.id = 'live-maps-empty-msg';
-            emptyMsg.className = 'text-orange-900 font-bold text-xl col-span-full mt-10 text-center w-full';
+            emptyMsg.className = 'maps-empty-msg';
             emptyMsg.innerText = 'No maps found matching your search. 🏝️';
             grid.appendChild(emptyMsg);
         }
@@ -125,7 +129,7 @@ document.addEventListener('click', (event) => {
     const mobileMenuBtn = event.target.closest('#maps-mobile-menu-btn');
     const controlsRow = document.getElementById('maps-controls-row');
     if (mobileMenuBtn && controlsRow) {
-        controlsRow.classList.toggle('hidden');
+        controlsRow.classList.toggle('maps-controls-row-collapsed');
         controlsRow.classList.toggle('maps-mobile-open');
         return;
     }
@@ -134,7 +138,7 @@ document.addEventListener('click', (event) => {
         const clickedInsideMenu = !!event.target.closest('#maps-controls-row');
         const clickedMenuBtn = !!event.target.closest('#maps-mobile-menu-btn');
         if (!clickedInsideMenu && !clickedMenuBtn) {
-            controlsRow.classList.add('hidden');
+            controlsRow.classList.add('maps-controls-row-collapsed');
             controlsRow.classList.remove('maps-mobile-open');
         }
     }
@@ -143,7 +147,7 @@ document.addEventListener('click', (event) => {
     const goMyMapsBtn = event.target.closest('#maps-go-mymaps-btn');
     if (goMyMapsBtn) {
         if (controlsRow && controlsRow.classList.contains('maps-mobile-open')) {
-            controlsRow.classList.add('hidden');
+            controlsRow.classList.add('maps-controls-row-collapsed');
             controlsRow.classList.remove('maps-mobile-open');
         }
         window.location.href = '/my_maps';
@@ -152,17 +156,17 @@ document.addEventListener('click', (event) => {
 
     if (event.target.closest('#basesite-alert-ok-btn') || (event.target.closest('.maps-close-modal') && event.target.closest('#basesite-alert-modal'))) {
         const modal = document.getElementById('basesite-alert-modal');
-        if (modal) { modal.classList.add('hidden', 'basesite-hidden'); if (window.alertCallback) { window.alertCallback(); window.alertCallback = null; } }
+        if (modal) { modal.classList.add('maps-hidden'); modal.classList.remove('maps-modal-visible'); if (window.alertCallback) { window.alertCallback(); window.alertCallback = null; } }
         return;
     }
     if (event.target.closest('#basesite-confirm-cancel-btn') || (event.target.closest('.maps-close-modal') && event.target.closest('#basesite-confirm-modal'))) {
         const modal = document.getElementById('basesite-confirm-modal');
-        if (modal) { modal.classList.add('hidden', 'basesite-hidden'); window.confirmCallback = null; }
+        if (modal) { modal.classList.add('maps-hidden'); modal.classList.remove('maps-modal-visible'); window.confirmCallback = null; }
         return;
     }
     if (event.target.closest('#basesite-confirm-ok-btn')) {
         const modal = document.getElementById('basesite-confirm-modal');
-        if (modal) { modal.classList.add('hidden', 'basesite-hidden'); if (window.confirmCallback) { window.confirmCallback(); window.confirmCallback = null; } }
+        if (modal) { modal.classList.add('maps-hidden'); modal.classList.remove('maps-modal-visible'); if (window.confirmCallback) { window.confirmCallback(); window.confirmCallback = null; } }
         return;
     }
 
@@ -171,19 +175,19 @@ document.addEventListener('click', (event) => {
     const sortItem = event.target.closest('.maps-dropdown-item');
 
     if (sortTrigger && sortDropdown) {
-        sortDropdown.classList.toggle('hidden');
+        sortDropdown.classList.toggle('maps-hidden');
         return;
     }
 
     if (sortItem) {
         const newSort = sortItem.textContent.trim();
         document.getElementById('maps-selected-sort').textContent = newSort;
-        sortDropdown.classList.add('hidden');
+        sortDropdown.classList.add('maps-hidden');
         filterAndSortMaps();
         return;
     }
-    if (sortDropdown && !sortDropdown.classList.contains('hidden') && !event.target.closest('.maps-sort-box')) {
-        sortDropdown.classList.add('hidden');
+    if (sortDropdown && !sortDropdown.classList.contains('maps-hidden') && !event.target.closest('.maps-sort-box')) {
+        sortDropdown.classList.add('maps-hidden');
     }
 
     const helpBtn = event.target.closest('#maps-help-btn');
@@ -191,13 +195,14 @@ document.addEventListener('click', (event) => {
     const closeModalBtn = event.target.closest('.maps-close-modal');
     const backdrop = event.target.closest('.maps-modal-backdrop');
 
-    if (helpBtn) { document.getElementById('maps-help-modal').classList.remove('hidden'); return; }
-    if (trashOpenBtn) { document.getElementById('maps-trash-modal').classList.remove('hidden'); return; }
+    if (helpBtn) { const modal = document.getElementById('maps-help-modal'); modal.classList.remove('maps-hidden'); modal.classList.add('maps-modal-visible'); return; }
+    if (trashOpenBtn) { const modal = document.getElementById('maps-trash-modal'); modal.classList.remove('maps-hidden'); modal.classList.add('maps-modal-visible'); return; }
 
     if (closeModalBtn || backdrop) {
-        const activeModal = event.target.closest('.fixed.inset-0:not(.hidden)');
+        const activeModal = event.target.closest('.maps-modal-overlay:not(.maps-hidden)');
         if (activeModal && (activeModal.id === 'maps-help-modal' || activeModal.id === 'maps-trash-modal')) {
-            activeModal.classList.add('hidden');
+            activeModal.classList.add('maps-hidden');
+            activeModal.classList.remove('maps-modal-visible');
             return;
         }
     }
@@ -225,9 +230,9 @@ document.addEventListener('click', (event) => {
                     }
                     
                     // Set button to "Added" state
-                    addBtn.classList.replace('bg-green-600', 'bg-gray-500');
-                    addBtn.classList.replace('hover:bg-green-500', 'hover:bg-gray-400');
-                    addBtn.classList.replace('border-green-950', 'border-gray-950');
+                    addBtn.classList.remove('maps-add-btn-available');
+                    addBtn.classList.add('maps-add-btn-added');
+                    addBtn.dataset.added = 'true';
                     addBtn.textContent = 'Added ✔️';
 
                     showCustomAlert("Success", data.message, "success");

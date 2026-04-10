@@ -3,6 +3,14 @@ const loginUrl = `/app/api.php?path=login`;
 
 import { updateHeader } from '../main.js';
 
+function lockBodyScroll() {
+    document.body.classList.add('troxan-no-scroll');
+}
+
+function unlockBodyScroll() {
+    document.body.classList.remove('troxan-no-scroll');
+}
+
 // ====== NOTIFICATION MODAL ======
 function showNotification(title, message, callback = null) {
     const modal = document.getElementById('notification-modal');
@@ -14,12 +22,12 @@ function showNotification(title, message, callback = null) {
 
     titleEl.textContent = title;
     msgEl.textContent = message;
-    modal.classList.remove('hidden');
-    document.body.style.overflow = 'hidden';
+    modal.classList.remove('login-hidden');
+    lockBodyScroll();
 
     const closeHandler = () => {
-        modal.classList.add('hidden');
-        document.body.style.overflow = 'auto';
+        modal.classList.add('login-hidden');
+        unlockBodyScroll();
         if (callback) callback();
         btn.removeEventListener('click', closeHandler);
         document.getElementById('close-notification-btn').removeEventListener('click', closeHandler);
@@ -48,13 +56,13 @@ function showCodeInputModal() {
         inputField.value = '';
         errorEl.textContent = '';
 
-        modal.classList.remove('hidden');
-        document.body.style.overflow = 'hidden';
+        modal.classList.remove('login-hidden');
+        lockBodyScroll();
         inputField.focus();
 
         const closeModal = (value = null) => {
-            modal.classList.add('hidden');
-            document.body.style.overflow = 'auto';
+            modal.classList.add('login-hidden');
+            unlockBodyScroll();
             resolve(value);
             // Remove event listeners
             submitBtn.removeEventListener('click', handleSubmit);
@@ -114,13 +122,13 @@ function showForcePasswordChangeModal(userId, username, tempPassword) {
         confirmPasswordField.value = '';
         errorEl.textContent = '';
 
-        modal.classList.remove('hidden');
-        document.body.style.overflow = 'hidden';
+        modal.classList.remove('login-hidden');
+        lockBodyScroll();
         newPasswordField.focus();
 
         const closeModal = (value = null) => {
-            modal.classList.add('hidden');
-            document.body.style.overflow = 'auto';
+            modal.classList.add('login-hidden');
+            unlockBodyScroll();
             resolve(value);
             // Remove event listeners
             submitBtn.removeEventListener('click', handleSubmit);
@@ -147,7 +155,8 @@ function showForcePasswordChangeModal(userId, username, tempPassword) {
             }
 
             errorEl.textContent = 'Updating...';
-            errorEl.classList.add('text-yellow-600');
+            errorEl.classList.remove('login-modal-error-success', 'login-modal-error-danger', 'login-modal-error-muted');
+            errorEl.classList.add('login-modal-error-warning');
 
             try {
                 const response = await fetch(loginUrl, {
@@ -165,17 +174,17 @@ function showForcePasswordChangeModal(userId, username, tempPassword) {
                 const result = await response.json();
 
                 if (response.ok) {
-                    errorEl.classList.remove('text-yellow-600');
+                    errorEl.classList.remove('login-modal-error-warning');
                     closeModal({ success: true });
                 } else {
-                    errorEl.classList.remove('text-yellow-600');
-                    errorEl.classList.add('text-red-600');
+                    errorEl.classList.remove('login-modal-error-warning', 'login-modal-error-success', 'login-modal-error-muted');
+                    errorEl.classList.add('login-modal-error-danger');
                     errorEl.textContent = result.message || 'Failed to update password.';
                 }
             } catch (error) {
                 console.error('Error:', error);
-                errorEl.classList.remove('text-yellow-600');
-                errorEl.classList.add('text-red-600');
+                errorEl.classList.remove('login-modal-error-warning', 'login-modal-error-success', 'login-modal-error-muted');
+                errorEl.classList.add('login-modal-error-danger');
                 errorEl.textContent = 'Server connection error.';
             }
         };
@@ -198,15 +207,15 @@ document.addEventListener('click', (event) => {
     // 1. Open: When the forgot password button is clicked
     if (event.target.closest('[data-target="forgot-pw-view"]')) {
         event.preventDefault();
-        forgotModal.classList.remove('hidden');
-        document.body.style.overflow = 'hidden'; // Disable background scrolling
+        forgotModal.classList.remove('login-hidden');
+        lockBodyScroll();
 
     }
 
     // 2. Close: X button OR click on dark background
     if (event.target.closest('#close-forgot-btn') || event.target === forgotModal) {
-        forgotModal.classList.add('hidden');
-        document.body.style.overflow = 'auto';
+        forgotModal.classList.add('login-hidden');
+        unlockBodyScroll();
         document.getElementById('forgot-pw-error').innerHTML = ''; // Clear error message on close
         document.getElementById('forgot-pw-form').reset(); // Clear input on close
     }
@@ -309,7 +318,8 @@ document.addEventListener('submit', async (event) => {
         
         const errorDiv = document.getElementById('forgot-pw-error');
         errorDiv.innerHTML = 'Loading...';
-        errorDiv.classList.replace('text-red-600', 'text-gray-600');
+        errorDiv.classList.remove('login-modal-error-danger', 'login-modal-error-success');
+        errorDiv.classList.add('login-modal-error-muted');
 
         try {
             const response = await fetch(loginUrl, {
@@ -321,15 +331,18 @@ document.addEventListener('submit', async (event) => {
             const result = await response.json();
 
             if (response.ok) {
-                errorDiv.classList.replace('text-gray-600', 'text-green-600');
+                errorDiv.classList.remove('login-modal-error-muted', 'login-modal-error-danger');
+                errorDiv.classList.add('login-modal-error-success');
                 errorDiv.innerHTML = '✔ ' + result.message;
             } else {
-                errorDiv.classList.replace('text-gray-600', 'text-red-600');
+                errorDiv.classList.remove('login-modal-error-muted', 'login-modal-error-success');
+                errorDiv.classList.add('login-modal-error-danger');
                 errorDiv.innerHTML = result.message; 
             }
         } catch (error) {
             console.error('Error:', error);
-            errorDiv.classList.replace('text-gray-600', 'text-red-600');
+            errorDiv.classList.remove('login-modal-error-muted', 'login-modal-error-success');
+            errorDiv.classList.add('login-modal-error-danger');
             errorDiv.innerHTML = "Server connection error!";
         }
     }

@@ -6,6 +6,36 @@ let activeEditPatchId = null;
 let siteSettingsActionInProgress = false;
 let siteSettingsEditMode = false;
 
+function syncContentWrapperScrollState() {
+    const contentWrapper = document.querySelector('.basesite-content-wrapper');
+    const activeTab = document.querySelector('.basesite-tab-content:not(.basesite-hidden)');
+    if (!contentWrapper || !activeTab) return;
+
+    contentWrapper.classList.remove('basesite-retro-scrollbar');
+    contentWrapper.classList.remove('basesite-hide-scrollbar');
+
+    if (activeTab.id === 'basesite-tab-download') {
+        contentWrapper.classList.add('basesite-hide-scrollbar');
+        return;
+    }
+
+    if (activeTab.id === 'basesite-tab-lore' || activeTab.id === 'basesite-tab-patchnotes') {
+        contentWrapper.classList.add('basesite-retro-scrollbar');
+    }
+}
+
+window.initBasesiteView = function initBasesiteView() {
+    syncContentWrapperScrollState();
+};
+
+function lockBodyScroll() {
+    document.body.classList.add('troxan-no-scroll');
+}
+
+function unlockBodyScroll() {
+    document.body.classList.remove('troxan-no-scroll');
+}
+
 function showCustomAlert(title, message, type = 'info', callback = null) {
     const modal = document.getElementById('basesite-alert-modal');
     if (!modal) return;
@@ -13,12 +43,12 @@ function showCustomAlert(title, message, type = 'info', callback = null) {
     document.getElementById('basesite-alert-message').innerHTML = message;
     const headerEl = document.getElementById('basesite-alert-header');
     
-    if (type === 'error') headerEl.className = 'basesite-modal-header bg-red-800 border-b-4 border-red-950';
-    else if (type === 'success') headerEl.className = 'basesite-modal-header bg-green-800 border-b-4 border-green-950';
-    else headerEl.className = 'basesite-modal-header bg-orange-900 border-b-4 border-orange-950';
+    if (type === 'error') headerEl.className = 'basesite-modal-header basesite-modal-header-error';
+    else if (type === 'success') headerEl.className = 'basesite-modal-header basesite-modal-header-success';
+    else headerEl.className = 'basesite-modal-header basesite-modal-header-alert';
 
     alertCallback = callback;
-    modal.classList.remove('basesite-hidden', 'hidden');
+    modal.classList.remove('basesite-hidden');
 }
 
 function showCustomConfirm(title, message, type = 'danger', onConfirm) {
@@ -30,36 +60,36 @@ function showCustomConfirm(title, message, type = 'danger', onConfirm) {
     const okBtn = document.getElementById('basesite-confirm-ok-btn');
 
     if (type === 'danger') {
-        headerEl.className = 'basesite-modal-header bg-red-800 border-b-4 border-red-950';
-        okBtn.className = 'bg-red-600 hover:bg-red-500 text-white font-extrabold py-2 px-6 rounded border-2 border-red-900 shadow-[3px_3px_0px_rgba(0,0,0,1)] transition-transform hover:translate-y-1 cursor-pointer';
+        headerEl.className = 'basesite-modal-header basesite-modal-header-confirm';
+        okBtn.className = 'basesite-btn-danger-strong';
     } else {
-        headerEl.className = 'basesite-modal-header bg-orange-900 border-b-4 border-orange-950';
-        okBtn.className = 'bg-yellow-500 hover:bg-yellow-400 text-orange-950 font-extrabold py-2 px-6 rounded border-2 border-orange-950 shadow-[3px_3px_0px_rgba(0,0,0,1)] transition-transform hover:translate-y-1 cursor-pointer';
+        headerEl.className = 'basesite-modal-header basesite-modal-header-alert';
+        okBtn.className = 'basesite-btn-warning-strong';
     }
 
     confirmCallback = onConfirm;
-    modal.classList.remove('basesite-hidden', 'hidden');
+    modal.classList.remove('basesite-hidden');
 }
 
 document.addEventListener('click', (event) => {
     if (event.target.closest('#basesite-alert-close-btn') || event.target.closest('#basesite-alert-ok-btn') || event.target.id === 'basesite-alert-modal') {
         const alertModal = document.getElementById('basesite-alert-modal');
         if (alertModal && !alertModal.classList.contains('basesite-hidden')) {
-            alertModal.classList.add('basesite-hidden', 'hidden');
+            alertModal.classList.add('basesite-hidden');
             if (alertCallback) { alertCallback(); alertCallback = null; }
         }
     }
     if (event.target.closest('#basesite-confirm-close-btn') || event.target.closest('#basesite-confirm-cancel-btn') || event.target.id === 'basesite-confirm-modal') {
         const confirmModal = document.getElementById('basesite-confirm-modal');
         if (confirmModal && !confirmModal.classList.contains('basesite-hidden')) {
-            confirmModal.classList.add('basesite-hidden', 'hidden');
+            confirmModal.classList.add('basesite-hidden');
             confirmCallback = null;
         }
     }
     if (event.target.closest('#basesite-confirm-ok-btn')) {
         const confirmModal = document.getElementById('basesite-confirm-modal');
         if (confirmModal && !confirmModal.classList.contains('basesite-hidden')) {
-            confirmModal.classList.add('basesite-hidden', 'hidden');
+            confirmModal.classList.add('basesite-hidden');
             if (confirmCallback) { confirmCallback(); confirmCallback = null; }
         }
     }
@@ -79,6 +109,12 @@ document.addEventListener('click', (event) => {
     targetContent.animate([{ opacity: 0, transform: 'translateY(10px)' }, { opacity: 1, transform: 'translateY(0)' }], { duration: 300, easing: 'ease-in-out' });
   }
   btn.classList.remove('basesite-tab-inactive'); btn.classList.add('basesite-tab-active');
+
+    syncContentWrapperScrollState();
+});
+
+document.addEventListener('DOMContentLoaded', () => {
+    syncContentWrapperScrollState();
 });
 
 // ====== POP-UP LOGIKA ======
@@ -86,7 +122,7 @@ document.addEventListener('click', (event) => {
   const modal = document.getElementById('basesite-req-modal');
   if (!modal) return; 
   if (event.target.closest('#basesite-open-req-btn')) {
-    modal.classList.remove('basesite-hidden'); document.body.style.overflow = 'hidden'; 
+        modal.classList.remove('basesite-hidden'); lockBodyScroll(); 
     const mw = modal.querySelector('.basesite-modal-window');
     if (mw) mw.animate([{ opacity: 0, transform: 'translateY(15px) scale(0.95)' }, { opacity: 1, transform: 'translateY(0) scale(1)' }], { duration: 300, easing: 'ease-out' });
   }
@@ -94,8 +130,8 @@ document.addEventListener('click', (event) => {
     const mw = modal.querySelector('.basesite-modal-window');
     if (mw) {
       const fadeOut = mw.animate([{ opacity: 1, transform: 'translateY(0) scale(1)' }, { opacity: 0, transform: 'translateY(15px) scale(0.95)' }], { duration: 200, easing: 'ease-in' });
-      fadeOut.onfinish = () => { modal.classList.add('basesite-hidden'); document.body.style.overflow = 'auto'; };
-    } else { modal.classList.add('basesite-hidden'); document.body.style.overflow = 'auto'; }
+            fadeOut.onfinish = () => { modal.classList.add('basesite-hidden'); unlockBodyScroll(); };
+        } else { modal.classList.add('basesite-hidden'); unlockBodyScroll(); }
   }
 });
 
@@ -179,24 +215,24 @@ document.addEventListener('click', async (event) => {
         const currentLoreText = loreSource ? loreSource.value : '';
 
         const editorHtml = `
-            <div id="site-settings-editor" class="bg-orange-100 border-2 border-orange-900 rounded p-4 mb-4">
-                <label class="block text-sm font-bold text-orange-950 mb-1" for="site-settings-download-url">Download URL</label>
-                <input id="site-settings-download-url" type="text" class="w-full bg-white border-2 border-orange-950 p-2 rounded text-gray-900 mb-3" value="${currentDownloadUrl.replace(/"/g, '&quot;')}">
+            <div id="site-settings-editor" class="basesite-settings-editor">
+                <label class="basesite-settings-label" for="site-settings-download-url">Download URL</label>
+                <input id="site-settings-download-url" type="text" class="basesite-settings-input" value="${currentDownloadUrl.replace(/"/g, '&quot;')}">
 
-                <label class="block text-sm font-bold text-orange-950 mb-1" for="site-settings-trailer-url">Trailer URL</label>
-                <input id="site-settings-trailer-url" type="text" class="w-full bg-white border-2 border-orange-950 p-2 rounded text-gray-900 mb-3" value="${currentTrailerUrl.replace(/"/g, '&quot;')}">
+                <label class="basesite-settings-label" for="site-settings-trailer-url">Trailer URL</label>
+                <input id="site-settings-trailer-url" type="text" class="basesite-settings-input" value="${currentTrailerUrl.replace(/"/g, '&quot;')}">
 
-                <label class="block text-sm font-bold text-orange-950 mb-1" for="site-settings-about-us">About us text</label>
-                <textarea id="site-settings-about-us" class="w-full h-24 bg-white border-2 border-orange-950 p-2 rounded text-gray-900 mb-3">${currentAboutText}</textarea>
+                <label class="basesite-settings-label" for="site-settings-about-us">About us text</label>
+                <textarea id="site-settings-about-us" class="basesite-settings-textarea-sm">${currentAboutText}</textarea>
 
-                <label class="block text-sm font-bold text-orange-950 mb-1" for="site-settings-special-thanks">Special thanks (one line = one entry)</label>
-                <textarea id="site-settings-special-thanks" class="w-full h-24 bg-white border-2 border-orange-950 p-2 rounded text-gray-900 mb-3">${currentSpecialThanks}</textarea>
+                <label class="basesite-settings-label" for="site-settings-special-thanks">Special thanks (one line = one entry)</label>
+                <textarea id="site-settings-special-thanks" class="basesite-settings-textarea-sm">${currentSpecialThanks}</textarea>
 
-                <label class="block text-sm font-bold text-orange-950 mb-1" for="site-settings-system-req">System requirements (one line: Component|Minimum|Recommended)</label>
-                <textarea id="site-settings-system-req" class="w-full h-28 bg-white border-2 border-orange-950 p-2 rounded text-gray-900 mb-3">${currentSystemRequirements}</textarea>
+                <label class="basesite-settings-label" for="site-settings-system-req">System requirements (one line: Component|Minimum|Recommended)</label>
+                <textarea id="site-settings-system-req" class="basesite-settings-textarea-md">${currentSystemRequirements}</textarea>
 
-                <label class="block text-sm font-bold text-orange-950 mb-1" for="site-settings-lore">Lore text</label>
-                <textarea id="site-settings-lore" class="w-full h-40 bg-white border-2 border-orange-950 p-2 rounded text-gray-900">${currentLoreText}</textarea>
+                <label class="basesite-settings-label" for="site-settings-lore">Lore text</label>
+                <textarea id="site-settings-lore" class="basesite-settings-textarea-lg">${currentLoreText}</textarea>
             </div>
         `;
 
@@ -372,8 +408,8 @@ document.addEventListener('click', async (event) => {
         const currentTitle = titleEl.innerText;
         const currentDesc = descEl.innerHTML.replace(/<br\s*[\/]?>/gi, '\n').trim();
 
-        titleEl.innerHTML = `<input type="text" class="edit-title-input w-full bg-white border-2 border-orange-950 p-1 text-orange-950 rounded" value="${currentTitle}">`;
-        descEl.innerHTML = `<textarea class="edit-desc-input w-full h-32 bg-white border-2 border-orange-950 p-2 text-gray-800 rounded mt-2">${currentDesc}</textarea>`;
+        titleEl.innerHTML = `<input type="text" class="edit-title-input basesite-patch-edit-title" value="${currentTitle}">`;
+        descEl.innerHTML = `<textarea class="edit-desc-input basesite-patch-edit-desc">${currentDesc}</textarea>`;
 
         editBtn.innerHTML = '💾'; editBtn.title = "Save Changes"; editBtn.classList.replace('patch-edit-btn', 'patch-save-btn');
         activeEditPatchId = patchId;
@@ -412,45 +448,45 @@ document.addEventListener('click', async (event) => {
     const newModal = document.getElementById('patch-new-modal');
     const recycleModal = document.getElementById('patch-recycle-modal');
     if (event.target.closest('.patch-close-btn') && !event.target.closest('#basesite-alert-close-btn') && !event.target.closest('#basesite-confirm-close-btn')) {
-        if(newModal) newModal.classList.add('basesite-hidden', 'hidden'); if(recycleModal) recycleModal.classList.add('basesite-hidden', 'hidden');
-        document.body.style.overflow = 'auto';
+        if(newModal) newModal.classList.add('basesite-hidden'); if(recycleModal) recycleModal.classList.add('basesite-hidden');
+        unlockBodyScroll();
     }
     if ((event.target === newModal || event.target === recycleModal) && !event.target.closest('#basesite-alert-modal') && !event.target.closest('#basesite-confirm-modal')) {
-        event.target.classList.add('basesite-hidden', 'hidden'); document.body.style.overflow = 'auto';
+        event.target.classList.add('basesite-hidden'); unlockBodyScroll();
     }
 
     // ÚJ PATCH NYITÁS
     if (event.target.closest('#patch-new-btn')) {
-        newModal.classList.remove('basesite-hidden', 'hidden'); document.body.style.overflow = 'hidden';
+        newModal.classList.remove('basesite-hidden'); lockBodyScroll();
         document.getElementById('new-patch-title').value = ''; document.getElementById('new-patch-desc').value = '';
     }
 
     // LOMTÁR NYITÁS
     if (event.target.closest('#patch-recycle-btn')) {
-        recycleModal.classList.remove('basesite-hidden', 'hidden'); document.body.style.overflow = 'hidden';
+        recycleModal.classList.remove('basesite-hidden'); lockBodyScroll();
         const binContent = document.getElementById('recycle-bin-content');
-        binContent.innerHTML = '<div class="text-center font-bold text-gray-500 py-10">⏳ Loading...</div>';
+        binContent.innerHTML = '<div class="basesite-empty-state">⏳ Loading...</div>';
 
         try {
             const response = await fetch(apiUrl, fetchConfig({ action: 'get_deleted' }));
             const result = await response.json();
             if (response.ok && result.data && result.data.length > 0) {
-                let html = '<div class="flex flex-col gap-3">';
+                let html = '<div class="basesite-recycle-list">';
                 result.data.forEach(patch => {
-                    html += `<div class="bg-white p-3 border-2 border-gray-400 rounded flex justify-between items-center shadow-sm" data-id="${patch.id}">
-                        <div><div class="font-bold text-gray-800">${patch.name}</div><div class="text-xs text-gray-500">${patch.created_at}</div></div>
-                        <button class="patch-restore-btn bg-blue-600 hover:bg-blue-500 text-white px-3 py-1 rounded font-bold cursor-pointer">Restore</button>
+                    html += `<div class="basesite-recycle-item" data-id="${patch.id}">
+                        <div><div class="basesite-recycle-item-title">${patch.name}</div><div class="basesite-recycle-item-date">${patch.created_at}</div></div>
+                        <button class="patch-restore-btn basesite-btn-restore">Restore</button>
                     </div>`;
                 });
                 binContent.innerHTML = html + '</div>';
-            } else binContent.innerHTML = '<div class="text-center font-bold text-gray-500 py-10">Recycle bin is empty! 🍃</div>';
-        } catch (e) { binContent.innerHTML = '<div class="text-center text-red-600 py-10">Error loading content!</div>'; }
+            } else binContent.innerHTML = '<div class="basesite-empty-state">Recycle bin is empty! 🍃</div>';
+        } catch (e) { binContent.innerHTML = '<div class="basesite-error-state">Error loading content!</div>'; }
     }
 
     // DISCARD
     if (event.target.closest('#patch-discard-btn')) {
         showCustomConfirm("Attention", "Are you sure you want to discard this draft?", "danger", () => {
-            newModal.classList.add('basesite-hidden'); document.body.style.overflow = 'auto';
+            newModal.classList.add('basesite-hidden'); unlockBodyScroll();
         }); return;
     }
 
