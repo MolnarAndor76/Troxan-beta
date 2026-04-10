@@ -112,12 +112,12 @@
   .basesite-modal-window-new-patch { @apply max-w-2xl; }
   .basesite-modal-window-recycle { @apply max-w-xl; }
   .basesite-modal-window-sm { @apply max-w-sm; }
-  .basesite-modal-header-new-patch { @apply bg-green-800 border-b-4 border-green-950; }
-  .basesite-modal-title-new-patch { @apply text-green-300; }
+  .basesite-modal-header-new-patch { @apply bg-orange-900 border-b-4 border-orange-950; }
+  .basesite-modal-title-new-patch { @apply text-yellow-400; }
   .basesite-modal-body-orange { @apply bg-orange-50; }
-  .basesite-modal-header-recycle { @apply bg-gray-800 border-b-4 border-gray-950; }
-  .basesite-modal-title-recycle { @apply text-gray-300; }
-  .basesite-modal-body-recycle { @apply bg-gray-200; }
+  .basesite-modal-header-recycle { @apply bg-orange-900 border-b-4 border-orange-950; }
+  .basesite-modal-title-recycle { @apply text-yellow-400; }
+  .basesite-modal-body-recycle { @apply bg-orange-50; }
   .basesite-modal-header-alert { @apply bg-orange-900 border-b-4 border-orange-950; }
   .basesite-modal-header-confirm { @apply bg-red-800 border-b-4 border-red-950; }
   .basesite-modal-header-error { @apply bg-red-800 border-b-4 border-red-950; }

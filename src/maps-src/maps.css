@@ -249,7 +249,7 @@
     }
 
     .maps-trash-head {
-        @apply flex flex-col mb-4 border-b-2 border-orange-200 pb-4 gap-4 mt-4 sm:mt-0;
+        @apply flex flex-col mb-4 border-b-2 border-orange-200 pb-4 gap-4 mt-4 sm:mt-0 pr-12;
     }
 
     .maps-trash-toprow {

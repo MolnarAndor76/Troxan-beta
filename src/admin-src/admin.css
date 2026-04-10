@@ -92,7 +92,7 @@
     .admin-modal-alert-title-success { @apply text-green-600; }
     .admin-modal-alert-message { @apply text-lg font-bold text-gray-800 my-4; }
     .admin-confirm-actions { @apply flex justify-center gap-4 mt-6; }
-    .admin-maps-head { @apply flex flex-col md:flex-row justify-between items-center border-b-4 border-orange-950 pb-4 mb-4 shrink-0 gap-4 mt-6 md:mt-0; }
+    .admin-maps-head { @apply flex flex-col md:flex-row justify-between items-center border-b-4 border-orange-950 pb-4 mb-4 shrink-0 gap-4 mt-6 md:mt-0 pr-12; }
     .admin-maps-title { @apply text-xl md:text-3xl font-['Press_Start_2P',_monospace] text-orange-950 truncate max-w-full; }
     .admin-maps-filter-box { @apply flex items-center gap-2 bg-orange-200/50 p-2 rounded border-2 border-orange-950/20 font-bold text-orange-950 shadow-inner; }
     .admin-maps-own-filter-input { @apply w-5 h-5 accent-orange-600 cursor-pointer; }
