@@ -97,6 +97,7 @@ document.addEventListener('submit', async (event) => {
             }
 
         } catch (error) {
+            console.error('Error during registration:', error);
             showNotification("Error", "Unexpected error occurred while communicating with the server.");
         }
     }

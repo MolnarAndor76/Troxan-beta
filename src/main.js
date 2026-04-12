@@ -200,8 +200,8 @@ const logoutUrl = '/app/api.php?path=logout';
 async function performLogout() {
   try {
     await fetch(logoutUrl, { method: 'POST', credentials: 'include' });
-  } catch {
-    // Logout API failed silently; proceed with local state clear
+  } catch (err) {
+    console.warn('Logout API call failed, continuing anyway.', err);
   }
   localStorage.clear();
   window.location.href = '/login';

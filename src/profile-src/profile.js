@@ -315,8 +315,8 @@ document.addEventListener('click', async (event) => {
                     setTimeout(() => { window.location.href = '/login'; }, 3000);
                 }
             }
-        } catch {
-            // Logout error handled silently
+        } catch (error) {
+            console.error("Error during logout:", error);
         }
         return;
     }
@@ -347,7 +347,8 @@ document.addEventListener('click', async (event) => {
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ action: 'change_avatar', avatar_id: selectedAvatarId })
                 });
-            } catch {
+            } catch (error) {
+                console.error("Network error:", error);
             }
         }
         return;
