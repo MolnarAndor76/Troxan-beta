@@ -128,7 +128,9 @@ document.addEventListener('click', (event) => {
 
     const mobileMenuBtn = event.target.closest('#maps-mobile-menu-btn');
     const controlsRow = document.getElementById('maps-controls-row');
-    if (mobileMenuBtn && controlsRow) {
+        if (!document.querySelector('.maps-site')) return;
+    
+        if (mobileMenuBtn && controlsRow) {
         controlsRow.classList.toggle('maps-controls-row-collapsed');
         controlsRow.classList.toggle('maps-mobile-open');
         return;

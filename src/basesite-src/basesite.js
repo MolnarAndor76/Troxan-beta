@@ -71,6 +71,25 @@ function showCustomConfirm(title, message, type = 'danger', onConfirm) {
     modal.classList.remove('basesite-hidden');
 }
 
+function isModalVisible(modalId) {
+    const modal = document.getElementById(modalId);
+    return !!modal && !modal.classList.contains('basesite-hidden');
+}
+
+function reconcilePatchUiState() {
+    if (activeEditPatchId) {
+        const activeSaveBtn = document.querySelector(`[data-id="${activeEditPatchId}"] .patch-save-btn`);
+        if (!activeSaveBtn) {
+            activeEditPatchId = null;
+        }
+    }
+
+    if (!isModalVisible('basesite-confirm-modal') && !document.querySelector('.patch-save-btn')) {
+        patchActionInProgress = false;
+        confirmCallback = null;
+    }
+}
+
 function resetPatchDeleteConfirmState() {
     patchActionInProgress = false;
     confirmCallback = null;
@@ -81,6 +100,18 @@ function resetPatchDeleteConfirmState() {
     }
 }
 
+// Capture phase guard: guarantee that Cancel/Close/Backdrop always clears stale confirm state,
+// even if another handler stops propagation later in the bubbling phase.
+document.addEventListener('click', (event) => {
+    if (
+        event.target.closest('#basesite-confirm-close-btn') ||
+        event.target.closest('#basesite-confirm-cancel-btn') ||
+        event.target.id === 'basesite-confirm-modal'
+    ) {
+        resetPatchDeleteConfirmState();
+    }
+}, true);
+
 document.addEventListener('click', (event) => {
     if (event.target.closest('#basesite-alert-close-btn') || event.target.closest('#basesite-alert-ok-btn') || event.target.id === 'basesite-alert-modal') {
         const alertModal = document.getElementById('basesite-alert-modal');
@@ -90,12 +121,7 @@ document.addEventListener('click', (event) => {
         }
     }
     if (event.target.closest('#basesite-confirm-close-btn') || event.target.closest('#basesite-confirm-cancel-btn') || event.target.id === 'basesite-confirm-modal') {
-        const confirmModal = document.getElementById('basesite-confirm-modal');
-        if (confirmModal && !confirmModal.classList.contains('basesite-hidden')) {
-            confirmModal.classList.add('basesite-hidden');
-            confirmCallback = null;
-            patchActionInProgress = false;
-        }
+        resetPatchDeleteConfirmState();
     }
     if (event.target.closest('#basesite-confirm-ok-btn')) {
         const confirmModal = document.getElementById('basesite-confirm-modal');
@@ -355,8 +381,11 @@ document.addEventListener('click', async (event) => {
     });
     const apiUrl = '/app/api.php?path=main';
 
+    // Self-heal stale state before any patch action check.
+    reconcilePatchUiState();
+
     const patchActionTarget = event.target.closest('.patch-lock-btn, .patch-delete-btn, .patch-edit-btn, .patch-save-btn, .patch-restore-btn, #patch-publish-btn, #patch-discard-btn');
-    if (patchActionInProgress && patchActionTarget) {
+    if (patchActionInProgress && patchActionTarget && !event.target.closest('.patch-delete-btn')) {
         showCustomAlert('Please wait', 'Another patch action is in progress. Wait for completion or page refresh.', 'info');
         return;
     }
@@ -399,7 +428,7 @@ document.addEventListener('click', async (event) => {
         const card = deleteBtn.closest('[data-id]');
         const patchId = card.getAttribute('data-id');
 
-        // Defensive reset: if a previous confirm was cancelled/aborted, do not keep stale lock/callback state.
+        // Always hard-reset state before opening delete confirm.
         resetPatchDeleteConfirmState();
 
         showCustomConfirm("Confirm deletion", "Are you sure you want to move this patch to recycle bin?", "danger", async () => {

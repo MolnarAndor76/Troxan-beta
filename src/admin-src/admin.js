@@ -259,6 +259,7 @@ grid.innerHTML = '<p class="admin-grid-message admin-grid-message-loading">Loadi
 // ==========================================
 document.addEventListener('click', function(event) {
     if (!event.target) return;
+    if (!document.querySelector('.admin-page-shell')) return;
 
     const backBtn = event.target.closest('#admin-back-btn');
     if (backBtn) {
