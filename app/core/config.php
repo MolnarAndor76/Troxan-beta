@@ -13,7 +13,6 @@
     const DB_PASS = "TroxanServer123"; // XAMPP-ban alapból üres a jelszó
     const DB_NAME = "troxan_db"; // Az új adatbázisod neve!
     const DB_CHARSET = "utf8mb4"; // Hogy a speciális karakterek és emojik is jók legyenek
-    const TROXAN_DEBUG_GAME_STATS = true;
 
     if (!function_exists('troxan_format_db_datetime')) {
         function troxan_format_db_datetime($value, $format = 'Y-m-d H:i', $emptyValue = 'Never')
