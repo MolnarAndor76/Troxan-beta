@@ -17,7 +17,7 @@ try {
     $pdo = new PDO($dsn, DB_USER, DB_PASS, $options);
     
     // Teszteléshez kiveheted a kommentet:
-    // echo "Sikeresen rácsatlakoztunk a Troxan szerverére! 🚀";
+    // echo "Sikeresen rácsatlakoztunk a Troxan szerverére!";
 
 } catch (PDOException $e) {
     // Ha valami gebasz van (nem fut a XAMPP, elírtad a nevet), itt megáll a kód és kiírja a hibát

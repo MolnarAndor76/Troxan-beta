@@ -1,5 +1,4 @@
 
-console.log("🟢 My Maps JS Loaded!");
 const myMapUrl = `/app/api.php?path=my_maps`;
 
 window.alertCallback = null;

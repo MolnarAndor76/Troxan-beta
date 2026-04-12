@@ -19,8 +19,7 @@ document.addEventListener('click', (event) => {
                     alert("Error: " + data.message);
                 }
             })
-            .catch(err => {
-                console.error('Logout error:', err);
+            .catch(() => {
                 // On error, still clear and redirect user
                 localStorage.clear();
                 window.location.href = '/login'; 

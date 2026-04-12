@@ -51,7 +51,7 @@ function sendTroxanMail($toEmail, $subject, $htmlBody) {
         $mail->Body    = $htmlBody;
         $mail->AltBody = strip_tags($htmlBody);               // Sima szöveges verzió, ha a levelező nem támogatja a HTML-t
 
-        // KÜLDÉS! 🚀
+        // KÜLDÉS!
         $mail->send();
         return true;
         

@@ -182,7 +182,6 @@ function showForcePasswordChangeModal(userId, username, tempPassword) {
                     errorEl.textContent = result.message || 'Failed to update password.';
                 }
             } catch (error) {
-                console.error('Error:', error);
                 errorEl.classList.remove('login-modal-error-warning', 'login-modal-error-success', 'login-modal-error-muted');
                 errorEl.classList.add('login-modal-error-danger');
                 errorEl.textContent = 'Server connection error.';
@@ -306,7 +305,6 @@ document.addEventListener('submit', async (event) => {
                 showNotification('Error', result.message || 'Login failed. Please try again.');
             }
         } catch (error) {
-            console.error('Error:', error);
             showNotification('Error', 'Unexpected error occurred. Please try again.');
         }
     }
@@ -345,7 +343,6 @@ document.addEventListener('submit', async (event) => {
                 errorDiv.innerHTML = result.message; 
             }
         } catch (error) {
-            console.error('Error:', error);
             errorDiv.classList.remove('login-modal-error-muted', 'login-modal-error-success');
             errorDiv.classList.add('login-modal-error-danger');
             errorDiv.innerHTML = "Server connection error!";

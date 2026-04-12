@@ -1,6 +1,4 @@
 
-console.log("🟢 Maps JS Loaded!");
-
 window.alertCallback = null;
 window.confirmCallback = null;
 
@@ -214,8 +212,6 @@ document.addEventListener('click', (event) => {
         event.preventDefault(); // Biztos ami tuti, ne ugorjon el az oldal
         const card = addBtn.closest('.maps-card');
         const mapId = addBtn.getAttribute('data-mapid');
-        
-        console.log("🔥 ADD gomb megnyomva! Map ID:", mapId); // DEBUG: Ezt látnod kell F12-ben!
 
         if (mapId) {
             fetch(mapUrl, {
@@ -244,8 +240,7 @@ document.addEventListener('click', (event) => {
                 } else {
                     showCustomAlert("Error", data.message, "error");
                 }
-            }).catch(err => {
-                console.error("Fetch error occurred:", err);
+            }).catch(() => {
             });
         }
         return;
