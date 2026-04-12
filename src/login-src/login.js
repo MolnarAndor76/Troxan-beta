@@ -175,7 +175,7 @@ function showForcePasswordChangeModal(userId, username, tempPassword) {
 
                 if (response.ok) {
                     errorEl.classList.remove('login-modal-error-warning');
-                    closeModal({ success: true });
+                    closeModal({ success: true, newPassword: newPassword });
                 } else {
                     errorEl.classList.remove('login-modal-error-warning', 'login-modal-error-success', 'login-modal-error-muted');
                     errorEl.classList.add('login-modal-error-danger');
@@ -278,7 +278,7 @@ document.addEventListener('submit', async (event) => {
                             form.dispatchEvent(new Event('submit', { cancelable: true }));
                         });
                     } else {
-                        showNotification('Error', 'Invalid verification code: ' + verifyResult.message);
+                        showNotification('Error', verifyResult.message || 'Invalid verification code.');
                     }
                 }
             } else if (result.code === 'force_password_change') {
@@ -289,8 +289,13 @@ document.addEventListener('submit', async (event) => {
                 const changeResult = await showForcePasswordChangeModal(result.user_id, result.username, tempPassword);
 
                 if (changeResult && changeResult.success) {
-                    showNotification('Success', 'Password changed successfully! Logging in...', () => {
+                    showNotification('Success', 'Password changed successfully! You can now log in.', () => {
                         sessionStorage.removeItem('tempUserId');
+                        if (changeResult.newPassword) {
+                            const passwordInput = form.querySelector('input[name="password"]');
+                            if (passwordInput) passwordInput.value = changeResult.newPassword;
+                        }
+
                         // Automatically login with new password
                         form.dispatchEvent(new Event('submit', { cancelable: true }));
                     });

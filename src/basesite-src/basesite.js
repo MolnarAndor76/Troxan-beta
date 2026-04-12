@@ -71,6 +71,16 @@ function showCustomConfirm(title, message, type = 'danger', onConfirm) {
     modal.classList.remove('basesite-hidden');
 }
 
+function resetPatchDeleteConfirmState() {
+    patchActionInProgress = false;
+    confirmCallback = null;
+
+    const confirmModal = document.getElementById('basesite-confirm-modal');
+    if (confirmModal) {
+        confirmModal.classList.add('basesite-hidden');
+    }
+}
+
 document.addEventListener('click', (event) => {
     if (event.target.closest('#basesite-alert-close-btn') || event.target.closest('#basesite-alert-ok-btn') || event.target.id === 'basesite-alert-modal') {
         const alertModal = document.getElementById('basesite-alert-modal');
@@ -84,12 +94,14 @@ document.addEventListener('click', (event) => {
         if (confirmModal && !confirmModal.classList.contains('basesite-hidden')) {
             confirmModal.classList.add('basesite-hidden');
             confirmCallback = null;
+            patchActionInProgress = false;
         }
     }
     if (event.target.closest('#basesite-confirm-ok-btn')) {
         const confirmModal = document.getElementById('basesite-confirm-modal');
         if (confirmModal && !confirmModal.classList.contains('basesite-hidden')) {
             confirmModal.classList.add('basesite-hidden');
+            patchActionInProgress = false;
             if (confirmCallback) { confirmCallback(); confirmCallback = null; }
         }
     }
@@ -168,9 +180,16 @@ function isLikelyValidSiteUrl(value) {
 }
 
 function toEditableAboutText(rawHtml) {
-    return rawHtml
-        .replace(/<br\s*[\/]?>/gi, '\n')
-        .replace(/&nbsp;/g, ' ')
+    const normalizedHtml = String(rawHtml || '')
+        .replace(/<br\s*[\/]?>\s*/gi, '\n')
+        .replace(/&nbsp;/g, ' ');
+
+    const decoder = document.createElement('textarea');
+    decoder.innerHTML = normalizedHtml;
+
+    return decoder.value
+        .replace(/\r\n/g, '\n')
+        .replace(/\r/g, '\n')
         .trim();
 }
 
@@ -379,12 +398,17 @@ document.addEventListener('click', async (event) => {
     if (deleteBtn) {
         const card = deleteBtn.closest('[data-id]');
         const patchId = card.getAttribute('data-id');
+
+        // Defensive reset: if a previous confirm was cancelled/aborted, do not keep stale lock/callback state.
+        resetPatchDeleteConfirmState();
+
         showCustomConfirm("Confirm deletion", "Are you sure you want to move this patch to recycle bin?", "danger", async () => {
             try {
                 patchActionInProgress = true;
                 const response = await fetch(apiUrl, fetchConfig({ action: 'delete', id: patchId }));
                 const result = await response.json();
                 if (response.ok) {
+                    patchActionInProgress = false;
                     showCustomAlert("Success", result.message || "Patch moved to recycle bin.", "success", () => window.location.reload());
                 } else {
                     showCustomAlert("Error", result.message, "error");
@@ -406,7 +430,7 @@ document.addEventListener('click', async (event) => {
         const titleEl = card.querySelector('.patch-title');
         const descEl = card.querySelector('.patch-desc');
         const currentTitle = titleEl.innerText;
-        const currentDesc = descEl.innerHTML.replace(/<br\s*[\/]?>/gi, '\n').trim();
+        const currentDesc = toEditableAboutText(descEl.innerHTML);
 
         titleEl.innerHTML = `<input type="text" class="edit-title-input basesite-patch-edit-title" value="${currentTitle}">`;
         descEl.innerHTML = `<textarea class="edit-desc-input basesite-patch-edit-desc">${currentDesc}</textarea>`;
@@ -512,7 +536,10 @@ document.addEventListener('click', async (event) => {
             btn.innerHTML = '⏳';
             const response = await fetch(apiUrl, fetchConfig({ action: 'restore', id: patchId }));
             const result = await response.json();
-            if (response.ok) showCustomAlert("Success", "Patch restored!", "success", () => window.location.reload());
+            if (response.ok) {
+                patchActionInProgress = false;
+                showCustomAlert("Success", "Patch restored!", "success", () => window.location.reload());
+            }
             else { showCustomAlert("Error", result.message, "error"); btn.innerHTML = 'Restore'; patchActionInProgress = false; }
         } catch (e) { showCustomAlert("Error", "Server error!", "error"); patchActionInProgress = false; }
     }

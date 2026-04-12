@@ -34,7 +34,7 @@
     .admin-username-protected { @apply text-lg font-extrabold tracking-wide text-left px-3 py-1 rounded-md border-2 opacity-80 cursor-not-allowed; }
     .admin-banned-badge { @apply text-xs font-bold text-red-600 mt-1 uppercase tracking-widest; }
     .admin-details-modal { @apply fixed top-0 left-0 w-[100vw] h-[100vh] z-[200] flex items-center justify-center; }
-    .admin-hidden { @apply hidden; }
+    .admin-hidden { display: none !important; }
     .admin-modal-z-maps { @apply z-[9995]; }
     .admin-modal-z-ban { @apply z-[9996]; }
     .admin-modal-z-rename { @apply z-[9997]; }

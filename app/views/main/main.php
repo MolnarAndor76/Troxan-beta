@@ -95,7 +95,7 @@
 
               <?php if (!empty($patch['updated_by']) && !empty($patch['updater_name'])): ?>
                   <div class="basesite-patch-updated <?= $timeClass ?>">
-                      Utoljára frissítve: <?= htmlspecialchars($patch['updater_name']) ?> által (<?= date('Y.m.d H:i', strtotime($patch['updated_at'])) ?>)
+                    Last updated by <?= htmlspecialchars($patch['updater_name']) ?> (<?= date('Y.m.d H:i', strtotime($patch['updated_at'])) ?>)
                   </div>
               <?php endif; ?>
 
@@ -231,14 +231,14 @@
     <div id="basesite-confirm-modal" class="basesite-modal-overlay basesite-hidden basesite-modal-z-confirm">
       <div class="basesite-modal-window basesite-modal-window-sm">
         <div id="basesite-confirm-header" class="basesite-modal-header basesite-modal-header-confirm">
-          <h2 id="basesite-confirm-title" class="basesite-modal-title basesite-modal-title-white">Megerősítés</h2>
+          <h2 id="basesite-confirm-title" class="basesite-modal-title basesite-modal-title-white">Confirmation</h2>
           <button id="basesite-confirm-close-btn" class="basesite-modal-close">&times;</button>
         </div>
         <div class="basesite-modal-body basesite-modal-body-center">
-          <p id="basesite-confirm-message" class="basesite-message-alert">Biztos vagy benne?</p>
+          <p id="basesite-confirm-message" class="basesite-message-alert">Are you sure?</p>
           <div class="basesite-confirm-actions">
-            <button id="basesite-confirm-cancel-btn" class="basesite-btn-neutral">Mégse</button>
-            <button id="basesite-confirm-ok-btn" class="basesite-btn-danger">Igen</button>
+            <button id="basesite-confirm-cancel-btn" class="basesite-btn-neutral">Cancel</button>
+            <button id="basesite-confirm-ok-btn" class="basesite-btn-danger">Confirm</button>
           </div>
         </div>
       </div>

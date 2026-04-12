@@ -227,7 +227,7 @@ function handlePatchAction($input = null) {
             if ($patchData) {
                 // Engineer patch védelme
                 if ($patchData['role_name'] === 'Engineer' && $patchData['created_by'] != $currentUserId) {
-                    json_response(["status" => "error", "message" => "Ehhez a frissítéshez csak maga a Teremtője nyúlhat!"], 403);
+                    json_response(["status" => "error", "message" => "Only the original Engineer author can modify this patch."], 403);
                 }
                 // Lakat védelem (Ha zárva van, Admin nem nyúlhat hozzá!)
                 if ($patchData['is_locked'] == 1 && $myRole !== 'Engineer') {
@@ -255,14 +255,14 @@ function handlePatchAction($input = null) {
         } elseif ($action === 'delete' && $id) {
             $stmt = $pdo->prepare("UPDATE PatchNotes SET is_deleted = 1, deleted_by = ? WHERE id = ?");
             $stmt->execute([$currentUserId, $id]);
-            json_response(["status" => "success", "message" => "Patch áthelyezve a lomtárba!"], 200);
+            json_response(["status" => "success", "message" => "Patch moved to recycle bin."], 200);
             
         } elseif ($action === 'edit' && $id) {
             $name = trim($input['name'] ?? '');
             $desc = trim($input['description'] ?? '');
             $stmt = $pdo->prepare("UPDATE PatchNotes SET name = ?, description = ?, updated_by = ? WHERE id = ?");
             $stmt->execute([$name, $desc, $currentUserId, $id]);
-            json_response(["status" => "success", "message" => "Patch frissítve!"], 200);
+            json_response(["status" => "success", "message" => "Patch updated successfully."], 200);
             
         } elseif ($action === 'create') {
             $name = trim($input['name'] ?? '');
@@ -283,12 +283,12 @@ function handlePatchAction($input = null) {
             $delData = $checkStmt->fetch(PDO::FETCH_ASSOC);
 
             if ($delData && $delData['role_name'] === 'Engineer' && $delData['deleted_by'] != $currentUserId) {
-                json_response(["status" => "error", "message" => "Vigyázz! Ezt a frissítést egy Engineer törölte, csak ő állíthatja vissza!"], 403);
+                json_response(["status" => "error", "message" => "This patch was deleted by an Engineer. Only that Engineer can restore it."], 403);
             }
 
             $stmt = $pdo->prepare("UPDATE PatchNotes SET is_deleted = 0, deleted_by = NULL WHERE id = ?");
             $stmt->execute([$id]);
-            json_response(["status" => "success", "message" => "Patch visszaállítva!"], 200);
+            json_response(["status" => "success", "message" => "Patch restored successfully."], 200);
 
         } elseif ($action === 'get_deleted') {
             $stmt = $pdo->query("SELECT id, name, created_at FROM PatchNotes WHERE is_deleted = 1 ORDER BY created_at DESC");

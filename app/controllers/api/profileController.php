@@ -136,7 +136,7 @@ function handlePostActionsLegacy()
             $newUsername = trim($input['new_username'] ?? '');
             
             if (empty($newUsername)) {
-                json_response(["status" => "error", "message" => "A név nem lehet üres!"], 400);
+                json_response(["status" => "error", "message" => "Username cannot be empty."], 400);
                 return;
             }
 
@@ -167,7 +167,7 @@ function handlePostActionsLegacy()
 
                 if (time() < $nextAvailable) {
                     $daysLeft = ceil(($nextAvailable - time()) / (24 * 60 * 60));
-                    json_response(["status" => "error", "message" => "Még várnod kell {$daysLeft} napot a következő névváltásig!"], 403);
+                    json_response(["status" => "error", "message" => "You must wait {$daysLeft} more day(s) before changing your username again."], 403);
                     return;
                 }
             }
@@ -175,7 +175,7 @@ function handlePostActionsLegacy()
             $checkName = $pdo->prepare("SELECT 1 FROM `User` WHERE username = ? AND user_id != ?");
             $checkName->execute([$newUsername, $userId]);
             if ($checkName->fetchColumn()) {
-                json_response(["status" => "error", "message" => "Ez a név már foglalt!"], 400);
+                json_response(["status" => "error", "message" => "That username is already taken."], 400);
                 return;
             }
 
@@ -221,7 +221,7 @@ function handlePostActionsLegacy()
                 }
             }
 
-            json_response(["status" => "success", "message" => "Username changed successfully to: {$newUsername}!"], 200);
+            json_response(["status" => "success", "message" => "Name successfully changed."], 200);
             
         } 
         // ==========================================

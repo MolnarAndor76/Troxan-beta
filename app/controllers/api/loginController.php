@@ -260,7 +260,7 @@ function forgotPassword($input) {
             }
         }
 
-        json_response(["status" => "success", "message" => "Password reset link sent to your email!"], 200);
+        json_response(["status" => "success", "message" => "Temporary password sent to your email!"], 200);
 
     } catch (Throwable $e) { 
         json_response(["status" => "error", "message" => "Server error"], 500); 

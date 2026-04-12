@@ -185,6 +185,7 @@ function changeUserName() {
 
     if (empty($newUsername)) { json_response(["status" => "error", "message" => "New username cannot be empty."], 400); return; }
     if (strlen($newUsername) < 4 || strlen($newUsername) > 12) { json_response(["status" => "error", "message" => "Username must be between 4 and 12 characters."], 400); return; }
+    if (empty($reason)) { json_response(["status" => "error", "message" => "Reason is required."], 400); return; }
 
     $myRoleStmt = $pdo->prepare("SELECT r.role_name FROM `User` u JOIN Roles r ON u.role_id = r.id WHERE u.user_id = ?");
     $myRoleStmt->execute([$adminUserId]);
@@ -227,7 +228,7 @@ function changeUserName() {
             }
         }
 
-        json_response(["status" => "success", "message" => "Username changed successfully to: {$newUsername}"], 200);
+        json_response(["status" => "success", "message" => "Name successfully changed."], 200);
     } catch (Exception $e) {
         json_response(["status" => "error", "message" => "Database error: " . $e->getMessage()], 500);
     }
@@ -257,8 +258,7 @@ function getLogs() {
                 'details' => [
                     'Enemies killed' => troxan_get_stat_int($stats, ['num_of_enemies_killed', 'Mobs killed'], 0),
                     'Deaths' => troxan_get_stat_int($stats, ['num_of_deaths', 'Deaths'], 0),
-                    'Story finished' => troxan_get_stat_int($stats, ['num_of_story_finished', 'Story finished'], 0),
-                    'Time played' => troxan_get_stat_playtime($stats)
+                    'Story finished' => troxan_get_stat_int($stats, ['num_of_story_finished', 'Story finished'], 0)
                 ]
             ];
         }

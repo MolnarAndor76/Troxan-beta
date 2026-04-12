@@ -75,13 +75,6 @@
         }
     }
 
-    if (!function_exists('troxan_get_stat_playtime')) {
-        function troxan_get_stat_playtime($stats)
-        {
-            return (string) troxan_get_stat_value($stats, ['time_played', 'Total playtime', 'play_time', 'playtime'], '0h 0m');
-        }
-    }
-
     if (!function_exists('troxan_compare_leaderboard_rows')) {
         function troxan_compare_leaderboard_rows(array $a, array $b)
         {

@@ -197,7 +197,6 @@ function renderLogs(logs) {
                     <p>⚔️ Enemies killed: <span class="admin-log-details-value">${log.details['Enemies killed']}</span></p>
                     <p>💀 Deaths: <span class="admin-log-details-value">${log.details['Deaths']}</span></p>
                     <p>📖 Story finishes: <span class="admin-log-details-value">${log.details['Story finished']}</span></p>
-                    <p>⏱️ Time played: <span class="admin-log-details-value">${log.details['Time played']}</span></p>
                 </div>
             </div>`;
     });
@@ -508,6 +507,7 @@ document.addEventListener('click', function(event) {
         const reason = document.getElementById('change-username-reason-input').value.trim();
         if (!newName) { showCustomAlert('Error', 'New name is required.', 'error'); return; }
         if (newName.length < 4 || newName.length > 12) { showCustomAlert('Error', 'Username must be between 4 and 12 characters.', 'error'); return; }
+        if (!reason) { showCustomAlert('Error', 'Reason is required.', 'error'); return; }
 
         fetch(adminUrl, {
             method: 'POST', credentials: 'include', headers: { 'Content-Type': 'application/json' },
@@ -540,6 +540,15 @@ document.addEventListener('click', function(event) {
     }
 
     if (event.target.closest('.admin-close-logs-btn')) { closeModalById('global-logs-modal'); return; }
+    const logViewBtn = event.target.closest('.admin-log-view-btn');
+    if (logViewBtn) {
+        const logHeaderEl = logViewBtn.closest('.admin-log-header');
+        const logId = logHeaderEl ? logHeaderEl.getAttribute('data-logid') : null;
+        const detailsDiv = logId ? document.getElementById(`log-details-${logId}`) : null;
+        if (detailsDiv) detailsDiv.classList.toggle('admin-hidden');
+        return;
+    }
+
     const logHeader = event.target.closest('.admin-log-header');
     if (logHeader) {
         const logId = logHeader.getAttribute('data-logid');

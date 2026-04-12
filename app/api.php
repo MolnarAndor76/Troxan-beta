@@ -24,8 +24,9 @@ if ($_SERVER['REQUEST_METHOD'] == 'OPTIONS') {
 
 // --- 2. SESSION BEÁLLÍTÁSOK ---
 // Fontos: Localhoston a SameSite 'Lax' vagy 'None' (utóbbi csak HTTPS-en)
+ini_set('session.gc_maxlifetime', 3600); // 1 óra - server oldali session élettartam
 session_set_cookie_params([
-    'lifetime' => 0,
+    'lifetime' => 3600, // 1 óra - cookie élettartam
     'path' => '/',
     'domain' => '', 
     'secure' => false, // Fejlesztés alatt (HTTP) false, élesben (HTTPS) true

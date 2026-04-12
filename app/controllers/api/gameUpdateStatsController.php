@@ -3,6 +3,34 @@ function handleGameUpdateStats()
 {
     global $pdo;
 
+    if (!function_exists('troxan_stats_pick_int')) {
+        function troxan_stats_pick_int($stats, array $keys, $default = 0)
+        {
+            if (!is_array($stats)) {
+                return (int)$default;
+            }
+
+            foreach ($keys as $key) {
+                if (!array_key_exists($key, $stats)) {
+                    continue;
+                }
+
+                $value = $stats[$key];
+                if ($value === null) {
+                    continue;
+                }
+
+                if (is_string($value) && trim($value) === '') {
+                    continue;
+                }
+
+                return (int)$value;
+            }
+
+            return (int)$default;
+        }
+    }
+
     if (!function_exists('troxan_debug_game_stats')) {
         function troxan_debug_game_stats($userId, $username, $incomingStats, $rawInput)
         {
@@ -43,7 +71,6 @@ function handleGameUpdateStats()
                 'deaths' => (int)($pick($incomingStats, ['num_of_deaths', 'Deaths'], 0)),
                 'enemies_killed' => (int)($pick($incomingStats, ['num_of_enemies_killed', 'Mobs killed'], 0)),
                 'story_finished' => (int)($pick($incomingStats, ['num_of_story_finished', 'Story finished'], 0)),
-                'time_played' => (string)($pick($incomingStats, ['time_played', 'Total playtime', 'play_time', 'playtime'], '0h 0m')),
             ];
 
             $record = [
@@ -128,7 +155,7 @@ function handleGameUpdateStats()
 
             troxan_debug_game_stats($user['user_id'], $user['username'], $incomingStats, $input);
 
-            $prevStmt = $pdo->prepare("SELECT statistics_file FROM `Statistics` WHERE user_id = ? ORDER BY id DESC LIMIT 1");
+            $prevStmt = $pdo->prepare("SELECT statistics_file, last_updated FROM `Statistics` WHERE user_id = ? ORDER BY id DESC LIMIT 1");
             $prevStmt->execute([$user['user_id']]);
             $prevRow = $prevStmt->fetch(PDO::FETCH_ASSOC);
             $previousStats = [];
@@ -140,25 +167,52 @@ function handleGameUpdateStats()
                 }
             }
 
-            $sumKeys = [
-                'num_of_story_finished',
-                'num_of_enemies_killed',
-                'num_of_deaths',
-                'score',
-                'Story finished',
-                'Mobs killed',
-                'Deaths',
-                'Experience points'
+            $mergedStats = array_merge($previousStats, $incomingStats);
+
+            $counterMap = [
+                'num_of_story_finished' => ['num_of_story_finished', 'Story finished'],
+                'num_of_enemies_killed' => ['num_of_enemies_killed', 'Mobs killed'],
+                'num_of_deaths' => ['num_of_deaths', 'Deaths'],
+                'score' => ['score', 'Experience points']
             ];
 
-            $mergedStats = array_merge($previousStats, $incomingStats);
-            foreach ($sumKeys as $key) {
-                $prevVal = isset($previousStats[$key]) ? (int)$previousStats[$key] : 0;
-                $newVal = isset($incomingStats[$key]) ? (int)$incomingStats[$key] : 0;
-                if (isset($previousStats[$key]) || isset($incomingStats[$key])) {
-                    $mergedStats[$key] = $prevVal + $newVal;
-                }
+            $previousSnapshot = [];
+            if (isset($previousStats['_meta_last_snapshot']) && is_array($previousStats['_meta_last_snapshot'])) {
+                $previousSnapshot = $previousStats['_meta_last_snapshot'];
             }
+
+            $nextSnapshot = [];
+            foreach ($counterMap as $canonicalKey => $aliases) {
+                $incomingValue = troxan_stats_pick_int($incomingStats, $aliases, 0);
+                $previousTotal = troxan_stats_pick_int($previousStats, $aliases, 0);
+                $previousSeen = isset($previousSnapshot[$canonicalKey]) ? (int)$previousSnapshot[$canonicalKey] : null;
+
+                if ($previousSeen === null) {
+                    $delta = $incomingValue;
+                } elseif ($incomingValue >= $previousSeen) {
+                    $delta = $incomingValue - $previousSeen;
+                } else {
+                    // Counter reset between sessions/game launches.
+                    $delta = $incomingValue;
+                }
+
+                if ($delta < 0) {
+                    $delta = 0;
+                }
+
+                $newTotal = $previousTotal + $delta;
+                $nextSnapshot[$canonicalKey] = $incomingValue;
+
+                $mergedStats[$canonicalKey] = $newTotal;
+            }
+
+            // Keep legacy aliases synchronized so all views read consistent values.
+            $mergedStats['Story finished'] = $mergedStats['num_of_story_finished'];
+            $mergedStats['Mobs killed'] = $mergedStats['num_of_enemies_killed'];
+            $mergedStats['Deaths'] = $mergedStats['num_of_deaths'];
+            $mergedStats['Experience points'] = $mergedStats['score'];
+
+            $mergedStats['_meta_last_snapshot'] = $nextSnapshot;
 
             $statsJson = json_encode($mergedStats);
             

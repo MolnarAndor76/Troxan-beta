@@ -257,9 +257,11 @@ document.addEventListener('click', function (event) {
     if (!href.startsWith('/app/') && !href.startsWith('/<?')) {
       event.preventDefault();      
       // Close mobile menu if open
+      const menuBtn = document.getElementById('menu-btn');
       const mobileMenu = document.getElementById('mobile-menu');
       if (mobileMenu && !mobileMenu.classList.contains('troxan-hidden')) {
         mobileMenu.classList.add('troxan-hidden');
+        if (menuBtn) menuBtn.classList.remove('is-open');
       }
             const routeName = routePathToRouteName(href);
       navigateTo(routeName);
@@ -303,9 +305,35 @@ async function periodicSessionCheck() {
 document.addEventListener('DOMContentLoaded', async () => {
   const menuBtn = document.getElementById('menu-btn');
   const mobileMenu = document.getElementById('mobile-menu');
+
+  const setMobileMenuOpen = (open) => {
+    if (!menuBtn || !mobileMenu) return;
+    mobileMenu.classList.toggle('troxan-hidden', !open);
+    menuBtn.classList.toggle('is-open', open);
+  };
+
   if (menuBtn && mobileMenu) {
     menuBtn.addEventListener('click', () => {
-      mobileMenu.classList.toggle('troxan-hidden');
+      const isOpen = !mobileMenu.classList.contains('troxan-hidden');
+      setMobileMenuOpen(!isOpen);
+    });
+
+    // Close the mobile menu like a popup when user clicks outside of it.
+    document.addEventListener('click', (event) => {
+      const isOpen = !mobileMenu.classList.contains('troxan-hidden');
+      if (!isOpen) return;
+
+      const clickedMenuBtn = !!event.target.closest('#menu-btn');
+      const clickedInsideMenu = !!event.target.closest('#mobile-menu');
+      if (!clickedMenuBtn && !clickedInsideMenu) {
+        setMobileMenuOpen(false);
+      }
+    });
+
+    window.addEventListener('resize', () => {
+      if (window.innerWidth >= 768) {
+        setMobileMenuOpen(false);
+      }
     });
   }
 

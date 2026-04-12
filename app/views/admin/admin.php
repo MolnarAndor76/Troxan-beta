@@ -24,9 +24,6 @@
                 
                 <?php foreach ($users as $player): ?>
                     <?php
-                    $stats = !empty($player['statistics_file']) ? json_decode($player['statistics_file'], true) : [];
-                    $playtime = troxan_get_stat_playtime($stats);
-
                     $avatarSrc = 'https://picsum.photos/id/1025/100/100';
                     if (!empty($player['avatar_picture'])) {
                         $avatarSrc = 'data:image/jpeg;base64,' . base64_encode($player['avatar_picture']);
@@ -125,7 +122,6 @@
                                 <p>📧 Email: <span class="admin-details-info-value"><?= htmlspecialchars($player['email']) ?></span></p>
                                 <p>🗓️ Reg: <span class="admin-details-info-value"><?= troxan_format_db_datetime($player['created_at'], 'Y-m-d', '-') ?></span></p>
                                 <p>🟢 Last: <span class="admin-details-info-value"><?= troxan_format_db_datetime($player['last_time_online'], 'Y-m-d H:i', 'Never') ?></span></p>
-                                <p>⏱️ Play: <span class="admin-details-info-value"><?= $playtime ?></span></p>
                                 <p>🔁 Last username change: <span class="admin-details-info-value"><?= troxan_format_db_datetime($player['last_username_change'], 'Y-m-d H:i', 'N/A') ?></span></p>
                                 <p>🔐 Last password change: <span class="admin-details-info-value"><?= troxan_format_db_datetime($player['last_password_change'], 'Y-m-d H:i', 'N/A') ?></span></p>
                             </div>
