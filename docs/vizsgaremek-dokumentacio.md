@@ -13,1008 +13,346 @@ numbersections: true
 
 \newpage
 
-# Fedőlap
-
-**Projekt megnevezése:** Troxan – Játékkísérő webalkalmazás
-
-**Tanuló neve:** [TANULÓ NEVE]
-
-**Iskola neve:** [ISKOLA NEVE]
-
-**Osztály:** [OSZTÁLY]
-
-**Tanév:** 2024/2025
-
-**Konzulens:** [KONZULENS NEVE]
-
-**Leadás dátuma:** [DÁTUM]
-
-\newpage
-
 # Bevezetés
 
-A mai digitális világban szinte minden komolyabb számítógépes játékhoz tartozik valamilyen kísérő webalkalmazás, amelyen a játékosok megtekinthetik a játék legfrissebb hírei, letölthetik a szükséges fájlokat, összehasonlíthatják egymással a teljesítményüket, és közösséget alkothatnak egymás körül. Gondoljunk csak olyan ismert példákra, mint a Blizzard Battle.net portálja vagy a Steam közösségi oldalai – ezek az alkalmazások nem csupán a játék meghosszabbításaként funkcionálnak, hanem önálló, értékes platformokká válnak, amelyek önmagukban is izgalmas fejlesztési kihívásokat rejtenek.
+A Troxan projekt egy játékhoz kapcsolódó, moduláris webalkalmazás, amely egyaránt kiszolgál felhasználói és adminisztrációs igényeket. A rendszer célja, hogy a játékosok számára egy központi felületet adjon a bejelentkezéshez, profilkezeléshez, pályaböngészéshez, ranglisták megtekintéséhez és statisztikák nyomon követéséhez, miközben a jogosultsággal rendelkező üzemeltetők moderációs és tartalomkezelési funkciókat kapnak.
 
-Jelen dokumentáció a **Troxan** nevű webalkalmazás fejlesztési folyamatát, architektúráját, funkcióit és technológiai hátterét mutatja be. A Troxan egy egyedi, Windows platformra fejlesztett, C# programozási nyelven megírt akciójáték kísérőoldala, amely összetett, valós idejű kapcsolatban áll magával a játékkal: a játékosok bejelentkezhetnek a weboldalon, feltölthetik vagy letölthetik a játékhoz készült pályákat, megtekinthetik a ranglistát és a saját statisztikáikat, valamint az adminisztrátori eszközök segítségével kezelhetik a közösséget.
+A fejlesztés során tudatos döntés volt a keretrendszer nélküli, saját architektúra kialakítása. Ez lehetővé tette, hogy a rendszer minden komponense a konkrét igényekhez igazodjon: saját router, saját session-kezelés, role-alapú védelmek, tokenes játék-integráció és részletes frontend állapotkezelés valósult meg.
 
-A fejlesztés során szándékosan kerültem a nagyobb keretrendszerek alkalmazását: sem a backenden (PHP), sem a frontenden (JavaScript) nem használtam olyan könyvtárat, mint a Laravel vagy a React. Ez a döntés elsősorban azért született, mert sokkal mélyebb ismereteket nyújt az alaptechnológiákról, ha az ember saját maga rak össze egy teljes MVC architektúrát, saját routert, saját session-kezelést, és saját DOM-manipulációs logikát. Természetesen ez a megközelítés nehezebb és időigényesebb úton jár, de a végeredmény egyértelműen bizonyítja, hogy az alapok mély ismerete nélkülözhetetlen minden webfejlesztő számára.
-
-A dokumentáció logikus sorrendben halad végig a projekt lényeges aspektusain: a technológiai döntések indoklásától kezdve az architektúra ismertetésén, a főbb funkciók részletes bemutatásán és a biztonsági megfontolások leírásán át egészen a tesztelés tapasztalataiig és a jövőbeli fejlesztési lehetőségekig.
+A dokumentáció célja, hogy átfogó képet adjon a rendszer működéséről felhasználói és fejlesztői szempontból is, valamint visszakövethetően bemutassa a tervezési döntéseket, az adatmodellt, a kritikus kódrészleteket és a tesztelési tapasztalatokat.
 
 \newpage
 
-# A projekt bemutatása
+# Felhasználói dokumentáció - első szintű címsor
 
-## A játékról
+## Modulok kifejtése: Webes modul címsor 2
 
-A **Troxan** egy Windows platformra fejlesztett, C# programozási nyelven készült akciójáték, amelynek cselekménye egy misztikus, középkori fantáziavilágban játszódik. A Troxan nevű királyság évszázadokon át a béke és a jólét szimbóluma volt, ahol az emberek harmóniában éltek a természettel és egymással. Ez az aranykor azonban hirtelen véget ért, amikor egy ismeretlen, gyorsan mutálódó vírus kezdte el terjedni a királyság területén: a járvány elemésztette az erdőket, elnémította az utcákat, és az egykor boldog lakókat agresszív, üres lényekké változtatta.
+A webes felület fő moduljai:
 
-A játékos egyedüli hősként lép be ebbe a sötét világba: a feladat az, hogy behatoljon a fertőzött területekre, felszámolja a vírus forrását, és megmentse a királyságot a teljes pusztulástól. A játékmenet során a felhasználó különféle pályákon halad végig, amelyeket a fejlesztők és maga a közösség is létrehozhat.
+1. főoldal (trailer, letöltés, lore, patch notes),
+2. bejelentkezés és regisztráció,
+3. profil és avatar kezelés,
+4. pályák böngészése és saját pályák,
+5. ranglista és statisztikák,
+6. admin felület (jogosultságtól függően).
 
-## A webalkalmazásról
+A felhasználó tipikus útvonala:
 
-A Troxan webalkalmazás a játék "command centerje": mindazt az infrastruktúrát biztosítja, ami a játékhoz kapcsolódó közösségi és adminisztrációs funkciókhoz szükséges. A weboldal és a játék között közvetlen, token-alapú API kommunikáció zajlik: amikor egy játékos belép a játékba, a kliens a webalkalmazás REST API végpontján hitelesíti magát, majd a játékmenet végén a szerzett statisztikákat szintén az API-n keresztül juttatja el a szerverre, ahol azok tárolásra kerülnek és azonnal megjelennek a ranglistán.
+1. regisztráció + e-mailes verifikáció,
+2. belépés,
+3. profil testreszabás,
+4. pályák mentése a könyvtárba,
+5. ranglistán való előrehaladás követése.
 
-A weboldal tehát nem csupán statikus bemutatkozó oldal, hanem valódi, élő háttérrendszer, amely szervesen összekapcsolódik a játékélménnyel.
+*[KÉP HELYE – Felhasználói fő modulok áttekintése]*
 
-## Célközönség
+## Modulok kifejtése: Másik modul, ha van címsor 2
 
-Az alkalmazás célközönsége kettős:
+A rendszer külön kezeli a vendég, normál felhasználó és admin/engineer szerepkörű felhasználók nézeteit. Így mindenki csak azokat a funkciókat látja, amelyek a jogosultsági szintjének megfelelnek.
 
-- **Játékosok:** akik le szeretnék tölteni a játékot, böngészni szeretnék az elérhető pályákat, nyomon szeretnék követni saját fejlődésüket és összehasonlítani magukat más játékosokkal a ranglistán.
-- **Adminisztrátori csapat:** akik kezelik a felhasználókat, közzéteszik a frissítési közleményeket (patch notes), moderálják a pályák könyvtárát, és szükség esetén kitiltják a szabályszegő játékosokat.
+Kiemelt működések:
 
-\newpage
+1. vendég fallback nézet védett oldalaknál,
+2. kitiltott felhasználó automatikus átirányítása,
+3. admin-only és engineer-only műveletek elrejtése és szerveroldali védelme.
 
-# Felhasznált technológiák
+*[KÉP HELYE – Szerepkörfüggő nézetek]*
 
-## PHP 8
+### címsor 3
 
-A backend réteg PHP 8 programozási nyelven íródott, keretrendszer használata nélkül. A PHP mind a mai napig az egyik legelterjedtebb szerveroldali webes nyelv: megbízható, jól dokumentált, és széles körben elérhető szinte minden tárhelyszolgáltatónál. A keretrendszer nélküli megközelítés lehetővé tette, hogy az alkalmazás struktúrája pontosan azokat az elveket kövesse, amelyek az adott projekthez a leginkább illeszkednek, anélkül hogy egy kész keretrendszer által erőltetett konvenciók korlátoznák a fejlesztési szabadságot.
+Ebben a szintben jelennek meg a finomabb interakciók:
 
-A PHP backend feladata:
+1. modálok nyitása-zárása,
+2. megerősítő párbeszédek,
+3. gombállapotok (pending/success/error),
+4. valós idejű keresések és rendezések.
 
-- REST API végpontok kiszolgálása
-- Session alapú felhasználóhitelesítés kezelése
-- Az adatbázissal való kommunikáció (PDO)
-- HTML nézetek szerver oldali renderelése
-- E-mail küldés (PHPMailer)
-
-## MySQL 8
-
-Az adatbázis réteg MySQL 8.0 relációs adatbázis-kezelő rendszeren alapul. A MySQL robusztus, megbízható és rendkívül jól optimalizálható megoldás, amely messzemenően megfelel a projekt igényeinek. Az adatbázis utasítások kizárólag PDO (PHP Data Objects) rétegen keresztül futnak, amely egységes, biztonságos interfészt biztosít az adatbázis-műveletekhez. A PDO prepared statements használatával az összes felhasználói bemenet automatikusan paraméterként kerül át a lekérdezésbe, ami teljes körű védelmet nyújt az SQL injection típusú támadásokkal szemben.
-
-## JavaScript (Vanilla)
-
-A frontend logika kizárólag natív, "vanilla" JavaScript segítségével valósult meg, React, Vue vagy Angular keretrendszer alkalmazása nélkül. Ez a döntés tudatos: a natív DOM API, az eseménykezelés, a fetch API és a modern JavaScript (ES6+) lehetőségei tökéletesen elegendőek a projekt igényeinek kielégítéséhez. A keretrendszer nélküli fejlesztés sokkal mélyebb megértést igényel és nyújt a böngésző működéséről, ami hosszú távon értékesebb tudás.
-
-A JavaScript felelős:
-
-- Az oldalak közötti navigáció kezeléséért
-- Az API kérések küldéséért és a válaszok feldolgozásáért
-- A dinamikus DOM tartalom frissítéséért
-- A modal ablakok és interaktív komponensek kezeléséért
-- A felhasználói munkamenet állapotának localStorage-ban való tárolásáért
-
-## Vite 7
-
-A frontend build eszköz a **Vite 7**, amely az egyik legmodernebb és leggyorsabb JavaScript bundler és fejlesztői szerver. A Vite lehetővé tette, hogy a JavaScript forráskódot modulárisan, fájlonként megírjuk (külön modul az admin, a profil, a térképek stb. funkciókhoz), majd a build folyamat során ezeket egyetlen optimalizált csomagba fordítsa. Ezáltal a produkciós környezetben az oldal betöltési ideje minimálisra csökken, miközben a fejlesztés során a Hot Module Replacement gyors fejlesztési élményt biztosít.
-
-## Tailwind CSS v4
-
-A stíluslapok Tailwind CSS v4 utility-first CSS keretrendszer segítségével íródtak. A Tailwind megközelítése gyökeresen eltér a hagyományos CSS keretrendszerektől (mint például a Bootstrap): ahelyett, hogy előre megírt komponenseket kínálna, az osztályok szintjén adja meg az összes szükséges stílusutasítást közvetlenül a HTML elemeken. Ez nagyfokú rugalmasságot biztosít, és lehetővé teszi egy teljesen egyedi, a játék vizuális stílusához igazodó design megvalósítását.
-
-## PHPMailer
-
-E-mail küldési funkcióhoz a **PHPMailer** könyvtárat alkalmaztam. A PHPMailer az egyik legelterjedtebb PHP email-könyvtár, amely lehetővé teszi HTML formátumú e-mailek küldését SMTP kapcsolaton keresztül. A projektben az e-mail funkcionalitás két helyen kerül felhasználásra: az e-mail alapú regisztrációs megerősítő kód elküldésekor, valamint az elfelejtett jelszó visszaállítási folyamatban.
+*[KÉP HELYE – UI mikrointerakciók]*
 
 \newpage
 
-# Fejlesztői dokumentáció – Architektúra és működés
+# Fejlesztői dokumentáció – első szintű címsor
 
-## MVC minta
+## Felhasznált technológiák
 
-Az alkalmazás backend oldala a klasszikus **Model-View-Controller (MVC)** tervezési mintán alapul, amelyet saját implementációval valósítottam meg, keretrendszer nélkül. Az MVC minta három jól elkülönülő rétegre osztja az alkalmazás logikáját:
+### VSC
 
-- **Model (modell):** Az adatbázis-struktúrát és az üzleti logikát reprezentálja. Jelen projektben a modellek szerepét nagyrészt a kontrollerek töltik be, közvetlenül a PDO lekérdezések formájában.
-- **View (nézet):** A PHP fájlok, amelyek a HTML struktúrát tartalmazzák. Ezek nem kerülnek közvetlenül a böngészőhöz, hanem a szerver puffereli ezeket, majd JSON válaszként küldi el a frontendnek dinamikus betöltés céljából.
-- **Controller (kontroller):** Az egyes URL végpontokhoz tartozó PHP fájlok, amelyek feldolgozzák a bejövő kéréseket, elvégzik az adatbázis-lekérdezéseket, és összeállítják a választ.
+A fejlesztéshez Visual Studio Code környezetet használtunk, amely biztosította a gyors fájlkezelést, beépített terminált, Git integrációt és moduláris fejlesztési munkafolyamatot.
 
-## Routing (útvonalválasztás)
+### HTML
 
-A router az alkalmazás belépési pontja. Az Apache `.htaccess` konfigurációja minden beérkező HTTP kérést az `app/api.php` fájlra irányít, ahol a megadott URL szegmensek alapján (`/api/maps`, `/api/profile`, stb.) a router betölti a megfelelő PHP kontrollert. Ez az egyszerű, de hatékony rendszer lehetővé teszi, hogy áttekinthető, RESTful URL struktúrát valósítsunk meg anélkül, hogy komplex keretrendszeri routert kelljen alkalmaznunk.
+A nézeti réteg szerveroldali renderelt HTML-ből áll, amelyet a frontend dinamikusan tölt be és frissít. A markup szemantikus elemekre épül, hogy a komponensek karbantarthatók maradjanak.
 
-```
-GET  /maps         → mapsController.php → getContent()
-POST /maps         → mapsController.php → handlePost()
-GET  /profile      → profileController.php → getContent()
-POST /game_login   → gameLoginController.php → handleGameLogin()
-POST /game_update_stats → gameUpdateStatsController.php → handleGameUpdateStats()
-```
+### CSS
 
-## Frontend architektúra és oldalnavigáció
+A stílusozás modulonkénti bontásban történt (pl. `admin.css`, `maps.css`, `profile.css`), ami segítette a nagyobb felület szétválasztását és a stílusütközések csökkentését.
 
-A frontend architektúra egy egyedi, SPA-szerű (Single Page Application) megközelítést alkalmaz. Az oldal egyetlen HTML héjból áll, amelyet a Vite build generál. Amikor a felhasználó navigál (például a "Maps" menüpontra kattint), a JavaScript egy AJAX kérést küld a PHP API megfelelő végpontjára. A PHP kontroller lerendeli a HTML nézetet, puffereli, majd JSON válasz formájában visszaküldi. A JavaScript ezután ezt a HTML tartalmat injektálja a megfelelő DOM elembe, így az oldal újratöltése nélkül frissül a tartalom.
+## Adatbázis - TroxanDB
 
-Ez a megközelítés ötvözi a hagyományos szerver oldali renderelés előnyeit (a HTML a szerveren generálódik, ahol az adatbázis elérhető) a modern SPAs gyors, oldaláltás nélküli navigációjával.
+### Az adatbázis célja
 
-## Session-kezelés
+Az adatbázis a játék és a webes platform közös adatforrása. Tárolja a felhasználókat, szerepköröket, pályákat, statisztikákat, avatárokat, munkameneteket és oldalszintű konfigurációkat.
 
-A felhasználói munkamenetek PHP natív session mechanizmusával kerülnek kezelésre, amelynek élettartama 7200 másodpercre (2 óra) van beállítva. Bejelentkezéskor a szerver egy `web_session_token` értéket generál, amelyet egyrészt a szerveroldali PHP sessionban, másrészt az `Active_Web_Sessions` adatbázistáblában tárol el. Kijelentkezéskor ez a bejegyzés törlésre kerül, így párhuzamos token-alapú érvénytelenítés is lehetséges.
+### Tervezés megkezdése
 
-A frontend oldali munkamenet-adatok (felhasználónév, bejelentkezési állapot, avatar) a böngésző `localStorage`-ában élnek, és minden oldalbetöltéskor szinkronizálódnak a szerveroldali PHP sessionnal.
+Tervezéskor elsődleges szempont volt:
 
-## A játék-weboldal kommunikáció
+1. auth és jogosultság biztonságos kezelése,
+2. pályakezelés és könyvtárkapcsolat támogatása,
+3. statisztikai history visszakereshetőség,
+4. admin műveletek role-alapú leválasztása.
 
-A webalkalmazás és a C# játékkliens között egy kétlépéses tokenel hitelesített API-kommunikáció zajlik. Az első lépésben a játék POST kéréssel küldi el a felhasználónevet és jelszót a `/api/game_login` végpontra, ahol a szerver ellenőrzi az adatokat, generál egy egyedi, 64-karateres hexadecimális tokent, és visszaküldi a kliensnek. A második lépésben, a játékmenet befejezésekor, a játékkliens a megszerzett tokennel hitelesített POST kéréssel elküldi a játékos statisztikáit (szerzett pontszám, elpusztított ellenfelek száma, eltelt játékidő stb.) a `/api/game_update_stats` végpontra, ahol az adatok a szerver által validálva és tárolva kerülnek.
+### Tervezési lépések
 
-\newpage
+1. üzleti entitások listázása,
+2. kapcsolatmodell kialakítása,
+3. kulcsok és integritási szabályok meghatározása,
+4. indexelési és skálázási igények becslése,
+5. bővíthetőségre optimalizált struktúra.
 
-# Felhasználói dokumentáció
+### Egyedek meghatározása
 
-## Főoldal
+Fő egyedek:
 
-A főoldal az alkalmazás első benyomása, ezért különösen nagy hangsúlyt kapott a vizuális megjelenés és az informatív tartalom egyensúlya. Az oldal látogatója – legyen akár regisztrált felhasználó vagy ismeretlen vendég – azonnal megkapja a játékhoz szükséges legfontosabb információkat és élményeket.
+1. `User`
+2. `Maps`
+3. `Statistics`
+4. `Roles`
+5. `Avatars`
+6. `User_Map_Library`
+7. `Active_Web_Sessions`
+8. `SiteSettings`
 
-A főoldal több jól elkülönülő szekciót tartalmaz:
+### Kapcsolatok meghatározása
 
-**Trailer szekció:** Az oldal tetején egy beágyazott YouTube-videó automatikusan lejátszódik, és vizuálisan bevezeti a látogatót a Troxan világába. A trailer URL az adminisztrációs panelen keresztül szerkeszthető, így egy esetleges új előzetes megjelenésekor nincs szükség kódbeli változtatásra.
+1. `Roles (1) -> (N) User`
+2. `Avatars (1) -> (N) User`
+3. `User (1) -> (N) Statistics`
+4. `User (1) -> (N) Maps`
+5. `User (N) <-> (N) Maps` a `User_Map_Library` táblán keresztül
 
-**Letöltés szekció:** Egy jól látható, kiemelkedő gomb vezeti a látogatót a játék telepítőfájljának letöltéséhez. A letöltési link szintén admin panelen kezelhető.
+### N:M kapcsolatok felbontása
 
-**Lore szekció:** A játék narratív világát bemutató, hosszabb szöveges tartalom, amely a Troxan királyságának történetét és a küldetés hátterét részletezi. Ez a tartalom is szerkeszthető az admin panelről, így a fejlesztők folyamatosan bővíthetik, finomíthatik a játék háttértörténetét.
+A felhasználó és pálya N:M viszonyt a `User_Map_Library` táblával bontottuk fel (`user_id`, `map_id`, `added_at`).
 
-**Rendszerkövetelmények szekció:** Táblázatos formában jelenik meg a játék futtatásához szükséges minimális és ajánlott hardveres konfiguráció.
+### Táblák meghatározása
 
-**Patch notes (frissítési közlemények):** A főoldal alján jelennek meg a legutóbbi játékfrissítések közleményei, fordított időrendi sorrendben. Minden patch note tartalmaz egy dátumot, egy tartalomleírást, és az adminok számára szerkesztési és törlési lehetőségeket.
+### Felhasználók (User)
 
-**About Us szekció:** Rövid bemutatkozás a fejlesztőcsapatról, amely szintén az admin panelről szerkeszthető.
+1. `user_id` (PK)
+2. `username`
+3. `email`
+4. `password` (hash)
+5. `user_token`
+6. `role_id`
+7. `avatar_id`
+8. `is_verified`, `verification_code`, `verification_expires`
+9. `is_banned`
+10. `created_at`, `last_time_online`
 
-*[KÉP HELYE – Főoldal általános nézet]*
+### Pályák (Maps)
 
-*[KÉP HELYE – Patch Notes szekció]*
+1. `id` (PK)
+2. `creator_user_id` (FK)
+3. `map_name`, `map_description`
+4. `map_picture`, `map_file`
+5. `status`
+6. `downloads`
+7. `created_at`
 
-## Regisztráció
+### Beállítások (Settings)
 
-A regisztrációs folyamat átgondolt, többlépéses mechanizmust alkalmaz az e-mail cím valódiságának biztosítása érdekében. Az első lépésben a felhasználó megadja a kívánt felhasználónevét, e-mail-címét, jelszavát és jelszavának megerősítését. A rendszer azonnal, még a szerverre való elküldés előtt a JavaScript segítségével ellenőrzi, hogy:
+A rendszerben a weboldal tartalmi beállításait elsődlegesen a `SiteSettings` tábla kezeli (`download_url`, `trailer_url`, `about_us_text`, stb.).
 
-- a felhasználónév legalább 3 és legfeljebb 30 karakter hosszú legyen,
-- az e-mail cím szintaxisa érvényes legyen,
-- a jelszó elérje az elvárt minimális biztonságot (legalább 8 karakter, kisbetű, nagybetű és szám),
-- a jelszó és a megerősítés egyezzen,
-- a felhasználónév ne tartalmazzon tiltott karaktereket.
+### Jogkörök (Roles)
 
-A szerver oldal elvégzi ezeket az ellenőrzéseket szintén, majd a sikeres validáció után a rendszer egy 6 jegyű numerikus megerősítőkódot generál, és azt a megadott e-mail-címre elküldi a PHPMailer segítségével. A fiók addig nem aktiválódik, amíg a felhasználó vissza nem jelzi a kódot a weboldal felé. A megerősítőkód 15 percig érvényes, utána a regisztrációt meg kell ismételni.
+1. `id`
+2. `role_name` (Player/Moderator/Admin/Engineer)
 
-*[KÉP HELYE – Regisztrációs űrlap]*
+### Avatárok (Avatars)
 
-*[KÉP HELYE – E-mail megerősítő kód bekérő képernyő]*
+1. `id`
+2. `avatar_name`
+3. `avatar_picture` (BLOB)
 
-## Bejelentkezés
+### Statisztikák (Statistics)
 
-A bejelentkezési oldal klasszikus e-mail + jelszó kombinációt alkalmaz. A rendszer az ellenőrzés során nemcsak azt vizsgálja, hogy a megadott adatok egyeznek-e az adatbázisban tároltakkal, hanem azt is ellenőrzi, hogy:
+1. `id`
+2. `user_id`
+3. `statistics_file` (JSON)
+4. `last_updated`
 
-- a fiók e-mailként meg van-e erősítve (nem megerősített fiók esetén tájékoztató hibüzenet jelenik meg, és lehetőség van újra elküldeni a megerősítőkódot),
-- a felhasználó nincs-e kitiltva (bannolt felhasználó esetén a weboldal az "isBanned" oldalra irányít),
-- a fiókhoz nincs-e ideiglenes jelszó rendelve (admin által visszaállított jelszó esetén a rendszer kötelező jelszóváltást kér a belépéskor).
+### Minta adatok
 
-Sikeres bejelentkezés után a szerver létrehozza a PHP sessiont, generál egy egyedi web session tokent, és azt az `Active_Web_Sessions` adatbázistáblában rögzíti. A felhasználói információk (felhasználónév, avatar) a böngésző `localStorage`-ába is kerülnek, lehetővé téve a fejléc azonnali frissítését.
-
-**Elfelejtett jelszó folyamat:** Ha a felhasználó elfelejtette jelszavát, megadhatja az e-mail-címét, mire a rendszer ideiglenes jelszót generál, és azt e-mailben elküldi. Az első bejelentkezéskor a rendszer kötelező jelszóváltást kér el.
-
-*[KÉP HELYE – Bejelentkezési oldal]*
-
-*[KÉP HELYE – Elfelejtett jelszó modal]*
-
-## Profil oldal
-
-A profil oldal a bejelentkezett felhasználó személyes "irányítópultja", ahol áttekintheti saját adatait és elvégezheti a fiókjával kapcsolatos módosításokat.
-
-**Megjelenített adatok:**
-
-- Felhasználónév és annak utolsó módosítási dátuma
-- E-mail-cím
-- Regisztráció dátuma
-- Utolsó online idő
-- Ranglistán elfoglalt aktuális helyezés
-- Számlányit jelző szerep (Player, Moderator, Admin, Engineer)
-- Aktuális avatar
-
-**Felhasználónév csere:** A felhasználónév módosítása egy megerősítő modál ablakon keresztül történik, és az arra vonatkozó cooldown mechanizmus megakadályozza a túl sűrű névváltoztatást. A rendszer naplózza az utolsó felhasználónév-csere időpontját.
-
-**Jelszóváltás:** A jelszó módosításához meg kell adni a régi jelszót is, amelyet a szerver ellenőriz, mielőtt az újat elmentené.
-
-**Avatar csere:** Egy modál ablakon belül a felhasználó az elérhető avatarok közül választhat egyet magának. Az avatarok a szerveren, az adatbázisban kerülnek tárolásra BLOB formátumban, és base64 kódolással kerülnek a frontendre.
-
-**Játékstatisztikák:** A profil oldalon megjelennek a felhasználóhoz tartozó, a játékból feltöltött legfrissebb statisztikák: az összesített pontszám, az elpusztított ellenfelek száma és az összes lejátszott idő.
-
-*[KÉP HELYE – Profil oldal]*
-
-*[KÉP HELYE – Avatar csere modal]*
-
-*[KÉP HELYE – Felhasználónév csere modal]*
-
-## Térképek böngészője
-
-A térképek oldal a közösség által feltöltött játékpályák katalógusa. Minden aktív (publikált) pálya elérhető itt, és a felhasználók szabad keresést, rendezést végezhetnek.
-
-**Megjelenített adatok pályánként:**
-
-- Pálya neve
-- Létrehozó neve
-- Letöltések száma
-- Feltöltés dátuma
-- Pálya borítóképe
-- "Hozzáadás a könyvtárhoz" gomb
-
-**Keresés és szűrés:** A keresőmező segítségével a felhasználók a pálya neve vagy a készítő neve szerint szűrhetnek. A rendezési opciók lehetővé teszik a pályák sorba rendezését letöltésszám, ABC sorrend, legfrissebb vagy legrégebbi szerint.
-
-**Könyvtárba mentés:** A bejelentkezett felhasználók egy gombnyomással hozzáadhatják vagy eltávolíthatják a pályákat a saját könyvtárukból. A könyvtárba mentett pályák a "Saját Térképek" oldalon lesznek elérhetők.
-
-**Moderátori nézet:** Az Admin, Moderátor és Engineer szerepkörű felhasználók külön "szemeteskuka" szekciót látnak, ahol a törölt, visszavont vagy kifogásolt pályák jelennek meg moderálási céllal.
-
-*[KÉP HELYE – Térképek oldal – általános nézet]*
-
-*[KÉP HELYE – Keresési és szűrési funkciók]*
-
-## Saját Térképek
-
-A "Saját Térképek" oldal a bejelentkezett felhasználó személyes pályagyűjteményét tartalmazza. Az itt megjelenő pályák két forrásból érkezhetnek:
-
-1. **Saját készítésű pályák:** amelyeket maga a felhasználó töltött fel, és amelyek vázlat (draft), közzétett vagy visszavont állapotban vannak.
-2. **Könyvtárba mentett pályák:** amelyeket a térképek oldalon a felhasználó hozzáadott a saját könyvtárához.
-
-Az oldal lehetővé teszi a pályák eltávolítását a személyes könyvtárból, keresést és rendezést (ABC sorrend, legújabban hozzáadott, vagy legrégebben hozzáadott szerint).
-
-Egy fontos részlet: ha egy pálya készítője törli a pályáját, az még akkor is megmarad azoknak a felhasználóknak a könyvtárában, akik korábban elmentették (státusz 5 = készítő által törölt, de könyvtárban megmarad).
-
-*[KÉP HELYE – Saját Térképek oldal]*
-
-## Ranglista
-
-A ranglista oldal mutatja a játékban legjobban teljesítő felhasználókat. A toplista a nem kitiltott felhasználók statisztikái alapján épül fel, és a játékosok a szerzett pontszámuk alapján kerülnek rangsorolásra.
-
-**Megjelenített tartalom:**
-
-- Top 10 legjobb játékos neve, pontszáma és helyezése
-- A bejelentkezett felhasználó saját helyezése és pontszáma – még akkor is, ha nem kerül be a top 10-be – egy külön, kiemelt sorban az oldal alján jelenik meg
-- A ranglista legutóbb frissítésének időpontja
-
-*[KÉP HELYE – Ranglista oldal]*
-
-## Statisztikák
-
-A statisztikák oldal a játék általános teljesítményadatait jeleníti meg. Az oldal tartalmát a PHP backend szerver oldalon rendeli le, tehát minden adatfrissítés azonnal tükröződik a megjelenítésben.
-
-*[KÉP HELYE – Statisztikák oldal]*
-
-## Adminisztrációs panel
-
-Az adminisztrációs panel az alkalmazás legösszetettebb és funkcionálisan leggazdagabb oldala. Csak Admin és Engineer szerepkörű felhasználók férhetnek hozzá. Ha egy alacsonyabb szerepkörű felhasználó próbálna belépni, 403 Unauthorized hibaüzenetet kap.
-
-### Felhasználókezelés
-
-Az admin panel fő nézete egy kereshető felhasználótáblázatot jelenít meg, amelybe az összes regisztrált felhasználó belekerül. Minden felhasználósornál látható:
-
-- Felhasználónév és profilkép
-- E-mail-cím
-- Regisztráció dátuma
-- Utolsó online idő
-- Jelenlegi szerepkör
-- Kitiltás állapota
-
-**Szerep módosítása:** Az adminok megváltoztathatják a felhasználók szerepkörét (Player, Moderator, Admin közötti szintek közötti módosítás lehetséges). Az Engineer szerepkör kizárólag egyedi, speciális eljárással módosítható.
-
-**Felhasználó kitiltása (ban):** A ban gomb megnyomásakor egy megerősítő modál jelenik meg, amelyben meg kell adni a kitiltás indokát. Kitiltás nélkül nem menthető el a ban. A rendszer automatikusan naplózza a kitiltás okát. Az admin saját magát nem tilthatja ki. Adminokat kizárólag Engineer tud kitiltani.
-
-**Felhasználó tiltásának feloldása (unban):** Bannolt felhasználónál a ban gomb "Unban"-ná változik, és egyetlen kattintással feloldható a tilalom.
-
-**Statisztika megtekintése:** Minden felhasználóhoz megtekinthető annak legfrissebb játékstatisztikája egy kinyíló részletező sávban.
-
-*[KÉP HELYE – Admin panel – felhasználótáblázat]*
-
-*[KÉP HELYE – Admin panel – kitiltás modal]*
-
-### Patch Notes szerkesztő
-
-Az admin panel tartalmaz egy teljes értékű patch notes kezelő felületet is:
-
-- **Új patch note létrehozása:** Egy szövegmező segítségével az admin beküldheti az új frissítési közleményt. Az üzenet azonnal megjelenik a főoldalon.
-- **Patch note szerkesztése:** Meglévő bejegyzés szövege módosítható a helyszínen, egy szerkesztőmező segítségével.
-- **Patch note törlése:** Egy megerősítő modál ablakban a törlési szándék visszaigazolása után kerül törlésre a bejegyzés.
-
-*[KÉP HELYE – Patch Notes szerkesztő]*
-
-### Weboldal beállítások szerkesztője
-
-Az adminisztrátorok az alábbi weboldal-szintű beállításokat módosíthatják közvetlenül a panelről, kódbeli változtatás nélkül:
-
-- **Trailer URL:** a főoldalon beágyazott videó URL-je
-- **Letöltési link:** a játék telepítőjének letöltési URL-je
-- **About Us szöveg:** a fejlesztőcsapat bemutatkozása
-- **Köszönetnyilvánítások (Special Thanks):** külső közreműködők megemlítése
-- **Rendszerkövetelmények:** a minimális és ajánlott hardverkonfiguráció táblázata
-- **Lore szöveg:** a játék háttértörténetének szövege
-
-*[KÉP HELYE – Weboldal beállítások szerkesztője]*
-
-## Kitiltott felhasználók oldala (isBanned)
-
-Ha egy kitiltott felhasználó megkísérli elérni az alkalmazás bármelyik oldalát, a rendszer automatikusan az isBanned nézetbe irányítja, ahol tájékoztató üzenet jelenik meg arról, hogy a fiókja le van tiltva. A kitiltott felhasználó a kijelentkezésen kívül semmilyen más műveletet nem végezhet.
-
-Ez az ellenőrzés nem csupán a frontend oldali navigáció szintjén, hanem a PHP router szintjén is megtörténik: minden egyes API kérés beérkezésekor, ha a felhasználó be van lépve, a rendszer azonnal leellenőrzi a kitiltás állapotát az adatbázisból, és szükség esetén felülírja a kért útvonalat az isBanned végpontra.
-
-*[KÉP HELYE – isBanned oldal]*
-
-## Vendég nézet
-
-Ha egy nem bejelentkezett felhasználó próbál meg olyan oldalra navigálni, amely bejelentkezést igényel (profil, saját térképek stb.), a rendszer egy vendég nézetbe irányítja, ahol tájékoztatja a látogatót, hogy az adott tartalom csak regisztrált és bejelentkezett felhasználók számára érhető el, és lehetőséget kínál a bejelentkezésre vagy regisztrációra.
-
-*[KÉP HELYE – Vendég nézet]*
-
-\newpage
-
-# Részletes működési specifikáció
-
-Ez a fejezet az alkalmazás technikai működését lépésről lépésre, kódszintű részletességgel mutatja be. A cél az, hogy ne csak az derüljön ki, mit tud a rendszer, hanem az is, hogyan valósul meg minden fontos folyamat a forráskódban.
-
-## Moduláris frontend felépítés
-
-A frontend belépési pontja a `src/main.js`, amely modulonként importálja az összes oldalspecifikus JavaScript fájlt. Ez azért fontos, mert Vite build után minden modul egyetlen bundle-be kerülhet, így minden globális eseménykezelésnél figyelni kell arra, hogy csak a megfelelő oldalon fusson a logika.
-
-```js
-import './admin-src/admin.js';
-import './basesite-src/basesite.js';
-import './leaderboard-src/leaderboard.js';
-import './maps-src/maps.js';
-import './myMaps-src/myMaps.js';
-import './login-src/login.js';
-import './register-src/register.js';
-import './profile-src/profile.js';
-import './isBanned-src/isBanned.js';
-```
-
-Ez a struktúra két dolgot ad egyszerre:
-
-1. Fejlesztéskor moduláris, áttekinthető forrásfájlokkal lehet dolgozni.
-2. Éles környezetben optimalizált, összecsomagolt kód fut.
-
-*[KÉP HELYE – main.js modul importok]*
-
-\newpage
-
-## Routing és kérésfeldolgozás teljes útja
-
-Az API működésének központja az útvonal-feldolgozó réteg:
-
-1. A kérés `app/api.php` fájlba érkezik.
-2. A router kiolvassa a `path` paramétert.
-3. A `route['segment1']` alapján kiválasztja a kontrollert.
-4. A kontroller feldolgozza a bemenetet.
-5. A rendszer JSON választ küld vissza.
-
-Rövidített router logika:
-
-```php
-$path = $_GET['path'] ?? '';
-$path = trim($path, '/');
-$segments = ($path === '') ? [] : explode('/', $path);
-
-$route = [
-	'segment1' => $segments[0] ?? null,
-	'segment2' => $segments[1] ?? null,
-	'segment3' => $segments[2] ?? null,
-];
-```
-
-Végpont-választás:
-
-```php
-switch ($route['segment1']) {
-	case 'main': load_controller(... 'mainController.php'); break;
-	case 'maps': load_controller(... 'mapsController.php'); break;
-	case 'profile': load_controller(... 'profileController.php'); break;
-	case 'game_login': require ...; handleGameLogin(); break;
-	case 'game_update_stats': require ...; handleGameUpdateStats(); break;
-	default: json_response(['error' => 'API endpoint not found'], 404);
-}
-```
-
-*[KÉP HELYE – Router működési ábra]*
-
-\newpage
-
-## Játék és weboldal kommunikáció részletesen
-
-Ez a rész különösen kritikus, mert a játékkliens (C#) és a webes backend itt találkozik.
-
-### 1. Bejelentkezés a játékból (`/api/game_login`)
-
-A játék POST kéréssel küldi a `username` és `password` mezőket. A backend:
-
-1. Ellenőrzi a HTTP metódust (csak POST).
-2. Lekéri a felhasználót adatbázisból.
-3. `password_verify` segítségével ellenőriz.
-4. Tiltott felhasználót azonnal elutasít.
-5. Generál egy erős tokent: `bin2hex(random_bytes(32))`.
-6. Elmenti a tokent a `User.user_token` mezőbe.
-7. Visszaküldi a tokent a játéknak.
-
-Példa válasz:
+### Felhasználó (user)
 
 ```json
 {
-	"status": "success",
-	"message": "Login successful!",
-	"data": {
-		"user_id": 12,
-		"username": "player01",
-		"token": "64karaktereshash..."
-	}
+  "user_id": 12,
+  "username": "Player01",
+  "email": "player01@example.com",
+  "role_id": 1,
+  "is_verified": 1,
+  "is_banned": 0
 }
 ```
 
-*[KÉP HELYE – Játék login API kérés/válasz]*
+#### ábra: Felhasználók tábla
 
-### 2. Statisztika lekérés játékból (`/api/game_stats`)
+*[KÉP HELYE – Felhasználók tábla]*
 
-Ha a kliens futás közben adatot kér, `Authorization: Bearer <token>` fejlécet küld. A szerver ellenőrzi a tokent, ellenőrzi a ban állapotot, majd visszaadja a játékoldali adatszerkezethez szükséges mezőket.
-
-*[KÉP HELYE – Bearer token header példa]*
-
-### 3. Statisztika mentés (`/api/game_update_stats`)
-
-Ez a legfontosabb pipeline, mert itt dől el, hogy a ranglista és profil adatok mennyire konzisztensek.
-
-A szerver oldali logika:
-
-1. Csak POST metódus elfogadása.
-2. Token olvasása több forrásból (`HTTP_AUTHORIZATION`, `REDIRECT_HTTP_AUTHORIZATION`, Apache headers).
-3. Felhasználó-token egyezés ellenőrzése.
-4. Opcionális `username` ellenőrzés (anti-cheat).
-5. Bejövő statisztika és előző snapshot összehasonlítása.
-6. Delta számolása reset-biztosan.
-7. Új összesített stat beírása a `Statistics` táblába.
-8. `User` tábla `coins`, `level`, `last_time_online` frissítése.
-
-*[KÉP HELYE – game_update_stats folyamatábra]*
-
-\newpage
-
-## Pontszámítás és statisztika-aggregáció teljes magyarázata
-
-### Miért kell delta alapú logika?
-
-Ha a játék csak abszolút számokat küld (például `Mobs killed = 45`), akkor a szerver nem tudná eldönteni, hogy:
-
-1. ez az összesített érték,
-2. vagy csak az aktuális session száma.
-
-Ezért a backend snapshot-delta elvet használ.
-
-### Kulcsfüggvények
-
-```php
-function troxan_get_stat_score($stats)
-{
-		return troxan_get_stat_int($stats, ['score', 'Experience points'], 0);
-}
-```
-
-```php
-function troxan_compare_leaderboard_rows(array $a, array $b): int
-{
-		$scoreCompare = ($b['score'] ?? 0) <=> ($a['score'] ?? 0);
-		if ($scoreCompare !== 0) {
-				return $scoreCompare;
-		}
-		return strcasecmp((string)($a['username'] ?? ''), (string)($b['username'] ?? ''));
-}
-```
-
-### A delta képlete
-
-Legyen:
-
-- $I$ = bejövő számláló érték,
-- $S$ = előző session snapshot,
-- $T$ = eddigi összesített érték.
-
-Ekkor a növekmény:
-
-$$
-\Delta = \begin{cases}
-I - S, & \text{ha } I \ge S \\
-I, & \text{ha } I < S \text{ (session reset)}
-\end{cases}
-$$
-
-Az új összesített érték:
-
-$$
-T_{new} = T + \max(\Delta, 0)
-$$
-
-Ez garantálja, hogy:
-
-1. új session esetén nincs duplikált beszámítás,
-2. resetnél nem lesz negatív korrekció,
-3. a ranglista mindig monoton értelmes marad.
-
-*[KÉP HELYE – Pontszámítás képlet + példa táblázat]*
-
-\newpage
-
-## Gombszintű funkcióleírás (oldalanként)
-
-Ebben az alfejezetben oldalanként felsorolásra kerülnek a fontos gombok, felhasználói akciók, és a mögöttük futó logikák.
-
-### Login oldal
-
-1. Bejelentkezés gomb
-2. Elfelejtett jelszó akció
-3. Verifikációs kód megerősítése
-4. Kötelező jelszócsere megerősítése
-
-Technikai rész:
-
-- Email + jelszó validáció
-- `is_verified` ellenőrzés
-- temp jelszó-ág (`force_password_change`)
-- session és avatar adatok mentése localStorage-be
-
-*[KÉP HELYE – Login űrlap gombjai számozva]*
-*[KÉP HELYE – Force password change modal]*
-
-### Regisztráció oldal
-
-1. Regisztráció elküldése
-2. E-mail verifikációs kód beküldése
-
-Technikai rész:
-
-- username egyediség és formátum ellenőrzés
-- email validáció
-- jelszó erősség és egyezés
-- verifikációs kód lejárat kezelése
-
-*[KÉP HELYE – Register form mezők + gomb]*
-*[KÉP HELYE – Verification kód modal]*
-
-### Főoldal / Basesite
-
-1. Tab gombok (`basesite-btn-*`)
-2. Download gomb (`basesite-download-game-btn`)
-3. Feature request modal nyitás/zárás
-4. Engineer settings edit/save gomb
-5. Patch notes létrehozás/szerkesztés/törlés
-
-Technikai rész:
-
-- tabváltás animációval
-- login-feltételes letöltés
-- megerősítő modal callback lánc
-- stale állapotok tisztítása (`reconcilePatchUiState`, `resetPatchDeleteConfirmState`)
-
-*[KÉP HELYE – Basesite tabok]*
-*[KÉP HELYE – Download gomb működés]*
-*[KÉP HELYE – Patch note delete confirm modal]*
-
-### Maps oldal
-
-1. Mobil menü gomb
-2. Saját térképekre ugrás gomb
-3. Keresőmező
-4. Rendezés dropdown
-5. Add to library gomb
-6. Törlés/Visszaállítás staff gombok
-7. Help és Trash modal nyitó gombok
-
-Technikai rész:
-
-- kliensoldali szűrés + rendezés
-- `POST /api/maps` add_to_library
-- `POST /api/maps` delete_map
-- role-alapú trash megjelenítés
-
-*[KÉP HELYE – Maps kontrollsor gombjai]*
-*[KÉP HELYE – Map card gombok (Add/Delete)]*
-*[KÉP HELYE – Trash modal]*
-
-### My Maps oldal
-
-1. Keresés
-2. Rendezés
-3. Rename map
-4. Remove from library
-5. Publish / Unpublish
-
-Technikai rész:
-
-- kombinált SQL lekérdezés (saját + library)
-- státusz alapú működés (`0`, `1`, `3`, `5`)
-- letöltésszámláló korrekció eltávolításnál
-
-*[KÉP HELYE – My Maps gombok és státusz badge-ek]*
-
-### Profil oldal
-
-1. Settings modal nyitás
-2. Logout gomb
-3. Avatar váltás
-4. Felhasználónév/Jelszó módosítás
-5. Admin panel navigációs gomb (jogosultságfüggő)
-
-Technikai rész:
-
-- profile modal animációk
-- avatar mentés + header frissítés
-- rank számítás backend oldalon
-
-*[KÉP HELYE – Profil oldal elemei]*
-*[KÉP HELYE – Avatar picker modal]*
-
-### Leaderboard oldal
-
-1. Rendezés trigger (ha jelen van)
-2. Top lista és saját helyezés blokk
-
-Technikai rész:
-
-- legfrissebb stat rekord kiválasztása userenként
-- score desc + username asc tie-break
-- bannolt felhasználók kizárása
-
-*[KÉP HELYE – Leaderboard top10 + current user sor]*
-
-### Admin oldal
-
-1. Kereső input
-2. Ban/Unban gomb
-3. Role change gomb
-4. Hamburger action menü
-5. User details modal
-6. User map kezelő gombok (rename/remove)
-7. Hard delete (Engineer)
-8. Logs dátumszűrő + view gomb
-9. Site settings frissítés (Engineer)
-
-Technikai rész:
-
-- erős jogosultságellenőrzés
-- ban reason kötelező
-- saját maga ban tiltás
-- admin/engineer hierarchia
-
-*[KÉP HELYE – Admin user card gombok számozva]*
-*[KÉP HELYE – Ban reason modal]*
-*[KÉP HELYE – Role change confirm modal]*
-*[KÉP HELYE – Admin logs panel]*
-
-\newpage
-
-## API-k részletes specifikációja
-
-### Auth végpontok
-
-#### `POST /api/login`
-
-Kért mezők:
-
-- `email`
-- `password`
-
-Lehetséges ágak:
-
-1. Hiányzó mező -> 400
-2. Hibás hitelesítő -> 401
-3. Nincs verifikálva -> 403 (`not_verified`)
-4. Temp jelszó kötelező csere -> 403 (`force_password_change`)
-5. Sikeres login -> 200
-
-*[KÉP HELYE – Login endpoint válaszok táblázata]*
-
-#### `POST /api/registration`
-
-Két fő akció:
-
-1. `registerUser`
-2. `verifyRegistrationCode`
-
-Eredmények:
-
-- user létrehozás pending verifikációval
-- kódellenőrzés után `is_verified = 1`
-
-*[KÉP HELYE – Registration API flowchart]*
-
-### Játék API végpontok
-
-#### `POST /api/game_login`
-
-Metóduskényszer, token-generálás, ban-check.
-
-#### `GET /api/game_stats`
-
-Bearer token kötelező, user-token párosítás, tiltásellenőrzés.
-
-#### `POST /api/game_update_stats`
-
-A legfontosabb integrációs pont:
-
-1. Token ellenőrzés
-2. Username anti-cheat check
-3. Snapshot reset detektálás
-4. Delta aggregáció
-5. Új rekord beszúrás
-
-*[KÉP HELYE – Game endpoints request body példák]*
-
-### Tartalmi végpontok
-
-1. `GET /api/main`
-2. `GET /api/maps`
-3. `GET /api/my_maps`
-4. `GET /api/profile`
-5. `GET /api/leaderboard`
-6. `GET /api/statistics`
-7. `GET/POST /api/admin`
-
-Mindegyik végpont JSON választ ad, tipikusan:
+### Pályák (maps)
 
 ```json
 {
-	"status": "success|error|info",
-	"message": "...",
-	"html": "..."
+  "id": 34,
+  "creator_user_id": 12,
+  "map_name": "Frozen Castle",
+  "status": 1,
+  "downloads": 188
 }
 ```
 
-*[KÉP HELYE – API endpoint összefoglaló táblázat]*
+#### ábra: Pályák tábla
 
-\newpage
+*[KÉP HELYE – Pályák tábla]*
 
-## Modal és állapotkezelés részletesen
+### Statisztikák (statistics)
 
-A rendszer több helyen használ központi alert/confirm modalt. Mivel az összes frontend modul egy bundle-be kerülhet, fontos, hogy egy oldal eseménykezelése ne "ragassza be" egy másik oldal modalját.
-
-Kiemelt védelmek:
-
-1. Capture-phase event guard a confirm cancel/close esetekre.
-2. Állapot nullázás callback lefutás után.
-3. Oldalspecifikus DOM guard (`.admin-page-shell`, `.maps-site`).
-
-Korábbi tipikus hiba, amit ez a minta megelőz:
-
-- Modal láthatatlanná válik idegen CSS osztály miatt.
-- `confirmCallback` bent ragad.
-- `patchActionInProgress` true marad, ezért a következő művelet blokkolódik.
-
-*[KÉP HELYE – Modal state diagram]*
-
-\newpage
-
-## Jogosultságkezelés (RBAC) működése
-
-Szerepkörök:
-
-1. Player
-2. Moderator
-3. Admin
-4. Engineer
-
-Fő szabályok:
-
-1. Admin felület csak Admin/Engineer.
-2. Engineer-only műveletek: hard delete, site settings végleges mentés.
-3. Saját magát senki sem banolhatja.
-4. Admin bannolásához Engineer jogosultság kell.
-5. Bannolt user kérésenként route-szinten átirányításra kerül.
-
-*[KÉP HELYE – Role matrix táblázat]*
-
-\newpage
-
-## Részletes teszteset-gyűjtemény
-
-### Auth tesztek
-
-1. Érvényes login
-2. Hibás jelszó
-3. Nem verifikált account
-4. Temp jelszó lejárt
-5. Force password change sikeres
-
-### Game API tesztek
-
-1. game_login siker
-2. game_login banned
-3. game_update_stats valid token
-4. game_update_stats invalid token
-5. game_update_stats username mismatch
-6. session reset delta ellenőrzés
-
-### UI tesztek
-
-1. Modal nyit-zár ismételten frissítés nélkül
-2. Patch note create/edit/delete folyamat
-3. Maps add/remove flow
-4. Admin ban/unban flow
-5. Mobil menü nyitás-zárás
-
-### Jogosultság tesztek
-
-1. Player admin oldal tiltás
-2. Admin hard delete tiltás
-3. Engineer hard delete engedély
-
-*[KÉP HELYE – Teszteredmény táblázat mintakép]*
-
-\newpage
-
-## Ábrajegyzék és képlistázó sablon
-
-Az alábbi listát közvetlenül lehet használni Word-ben a képek beillesztésének ellenőrzésére:
-
-1. Főoldal teljes nézet
-2. Főoldal patch notes blokk
-3. Login oldal
-4. Login hibakezelés
-5. Regisztráció oldal
-6. E-mail verifikáció modal
-7. Profil oldal
-8. Avatar választó modal
-9. Maps oldal desktop
-10. Maps oldal mobil menü
-11. Map card gombok
-12. My Maps oldal
-13. My Maps rename modal
-14. Leaderboard oldal
-15. Admin user lista
-16. Admin ban modal
-17. Admin role change megerősítés
-18. Admin logs panel
-19. Site settings editor
-20. isBanned oldal
-21. Guest oldal
-22. API kérés/válasz minták (Postman)
-23. Game login request
-24. Game update stats request
-25. Score aggregation példa
-
-Ez a lista tetszőlegesen bővíthető oldalszám-cél szerint.
-
-\newpage
-
-# Biztonsági megoldások
-
-A webes alkalmazások fejlesztése során a biztonság nem opcionális kiegészítő, hanem alapvető követelmény. A Troxan webalkalmazás fejlesztése során számos rétegben kerültek beépítésre védelmi megoldások.
-
-## SQL injection elleni védelem
-
-Az alkalmazás kizárólag PDO prepared statements segítségével kommunikál az adatbázissal. Ez azt jelenti, hogy a felhasználói bemeneteket a rendszer soha nem fűzi közvetlenül az SQL lekérdezés szövegébe, hanem mindig paraméterként adja át azokat a PDO réteg számára. Ez teljes körű védelmet nyújt az SQL injection típusú támadásokkal szemben, amelyek az OWASP Top 10 sérülékenységi lista egyik leggyakoribb és legsúlyosabb kategóriáját alkotják.
-
-## Jelszó hashing
-
-A felhasználók jelszavai soha nem kerülnek titkosítatlan szövegként az adatbázisba. A jelszavak tárolása a PHP beépített `password_hash()` függvényével, bcrypt algoritmussal történik. Az ellenőrzéshez a `password_verify()` függvény kerül alkalmazásra, amely időben konstans összehasonlítást végez, nehezítve az időzítéses oldaltámadásokat.
-
-## Session biztonság
-
-- A session élettartama 7200 másodpercre (2 óra) van korlátozva.
-- Session tokenek generálása `bin2hex(random_bytes(32))` segítségével kriptográfiai minőségű véletlenszámokkal történik.
-- Bejelentkezéskor a `Active_Web_Sessions` táblában tárolt token lehetővé teszi a szerver oldali session érvénytelenítést.
-
-## Szerepköralapú hozzáférés-szabályozás
-
-Az alkalmazás négy szerepkört ismer, amelyek hierarchiában helyezkednek el: **Player**, **Moderator**, **Admin** és **Engineer**. Minden adminisztrátori művelet végrehajtásakor a szerver oldali kontroller ellenőrzi a kérelmező felhasználó szerepkörét, és engedélytelnek minősülő kérést 403-as HTTP hibakóddal visszautasít. A szerepkörellenőrzés minden esetben a szerveren és az adatbázisból történik, nem csupán kliens oldali logika alapján.
-
-## Token-alapú játék API hitelesítés
-
-A játékkliens és a webszerver közötti kommunikáció token-alapú hitelesítéssel védett. A token kriptográfiai minőségű véletlen bytes-ból kerül előállításra, és egyhasználatos: az adatbázisban felülírásra kerül minden egyes bejelentkezéskor. A statisztika-feltöltési végpont csak érvényes token bemutatásával fogad el adatot.
-
-## Input validáció és sanitizáció
-
-Minden felhasználói bemenet – legyen szó az URL szegmensekről, a POST adatokról vagy a GET paraméterekről – a szerver oldali kontrollerben validálásra és `trim()`, `filter_var()`, illetve típusos kasztolás segítségével sanitizálásra kerül, mielőtt az adatbázisba vagy a válaszba kerülne. A JSON válaszokban az összes szöveg automatikusan HTML-entitásokká kódolódik (`JSON_HEX_TAG`, `JSON_HEX_APOS`, `JSON_HEX_QUOT` flagek segítségével), ami XSS (Cross-Site Scripting) elleni alapszintű védelmet biztosít.
-
-## Bannolás ellenőrzés minden kérésnél
-
-Minden egyes API kérés beérkezésekor, ha a munkamenetben bejelentkezési adat található, a rendszer azonnal adatbázis-lekérdezéssel ellenőrzi, hogy a felhasználó nincs-e kitiltva. Ez garantálja, hogy egy bannolt felhasználó nem tudja "kijárni" a bannját azzal, hogy egy nemrég kiadott session tokenrel próbál hozzáférni az adatokhoz.
-
-\newpage
-
-# Telepítés és üzembe helyezés
-
-## Rendszerkövetelmények (szerver)
-
-A Troxan webalkalmazás futtatásához az alábbi szerveres komponensek szükségesek:
-
-- **PHP 8.1** vagy újabb verzió (PDO, PDO_MySQL, mbstring, openssl kiterjesztésekkel)
-- **MySQL 8.0** vagy újabb verzió
-- **Apache 2.4** webszerver (mod_rewrite engedélyezve)
-- **Node.js 20+** és **npm** (csak a build folyamathoz szükséges)
-
-## Build folyamat
-
-Az alkalmazás produkciós üzembe helyezése az alábbi lépésekben történik:
-
-```
-1. npm install
-2. npm run build
-3. cp -r app dist/
-4. cp .htaccess dist/
+```json
+{
+  "user_id": 12,
+  "statistics": {
+    "score": 22500,
+    "Mobs killed": 156,
+    "Deaths": 9,
+    "Story finished": 2
+  }
+}
 ```
 
-A `npm run build` parancsa lefuttatja a Vite bundlert, amely a `src/` mappában lévő JavaScript és CSS forrásokat lefordítja, kicsinyíti és egy optimalizált csomagba rendezi a `dist/` mappában. Ezután az `app/` PHP backend mappa és a `.htaccess` Apache konfigurációs fájl másolásra kerül a `dist/` mappába, amely így a teljes, deployra kész állapotot tartalmazza.
+#### ábra: Statisztikák tábla
 
-## Adatbázis konfiguráció
+*[KÉP HELYE – Statisztikák tábla]*
 
-Az adatbázis kapcsolat paraméterei az `app/core/config.php` fájlban kerülnek beállításra:
+### Beállítások (settings)
 
-```php
-const DB_HOST    = "localhost";
-const DB_USER    = "troxan_user";
-const DB_PASS    = "...";
-const DB_NAME    = "troxan_db";
-const DB_CHARSET = "utf8mb4";
-```
+#### ábra: Beállítások tábla
 
-Az adatbázissémát az SQL szkript alkalmazásával kell inicializálni. A rendszer bizonyos táblákat (pl. `SiteSettings`, `Active_Web_Sessions`) automatikusan is létrehozza az első futtatáskor, ha azok még nem léteznek.
+*[KÉP HELYE – Beállítások tábla]*
+
+### Jogkörök (roles)
+
+#### ábra: Jogkörök tábla
+
+*[KÉP HELYE – Jogkörök tábla]*
+
+### Avatárok (avatars)
+
+*[KÉP HELYE – Avatárok tábla]*
+
+### Adatbázis diagram – tervezési fázis
+
+#### ábra: Adatbázis diagram – tervezési fázis (drawdb.app)
+
+*[KÉP HELYE – Tervezési fázis diagram]*
+
+### Adatbázis diagram – megvalósítás
+
+#### ábra: Adatbázis diagram
+
+*[KÉP HELYE – Megvalósítás diagram]*
+
+### Adatbázis továbbfejlesztési lehetőségek
+
+1. index-optimalizálás leaderboard és maps lekérdezésekre,
+2. statisztika-reporting táblák előkészítése,
+3. részletes auditnapló admin műveletekre,
+4. archiválási stratégia nagy history adatállományhoz.
+
+## A tervezés és a fejlesztés folyamata
+
+### a tervezés folyamata (pl. Figma)
+
+A tervezés képernyőfolyamokkal indult, ahol a fő use-case-ek (login, profile, maps, admin) alapján készült az információs architektúra.
+
+### főoldal, bejelentkezés, belépés
+
+A főoldal és auth-réteg párhuzamosan készült, hogy azonnal ellenőrizhető legyen a session- és header-szinkron.
+
+### admin felület
+
+Az admin modul külön rendszerként kezelt: role-check, megerősítő modálok, veszélyes műveletek izolálása.
+
+### többi logika
+
+Ide tartozik a maps lifecycle, stat-aggregáció, game API tokenes kommunikáció, valamint a komplex modal-state kezelés.
+
+### kódrészletek (magyarázatokkal, amit kiemelnél, amire büszkék vagytok)
+
+A részletes kódrészlet-gyűjtemény a dokumentum végén, a Mellékletek között szerepel (A–N mellékletek).
+
+## A tesztekhez végzett kód, valamint a teszteredmények
+
+A tesztelés auth, jogosultság, game API, UI és admin ágakra bontva történt. A kritikus regressziók (modal beragadás, session timeout) reprodukálva és javítva lettek.
+
+## Felmerült akadályok (az egyes részeknél külön is szerepelhet)
+
+1. többmodulos bundle eventütközések,
+2. modal callback/flag bentragadás,
+3. rövid session élettartam,
+4. stat számlálók resetelése miatti delta-korrekció.
 
 \newpage
 
-# Tesztelés
+# Munkamegosztás leírása részletesen
 
-## Manuális tesztelés
+A projekt moduláris felosztásban készült:
 
-Az alkalmazás tesztelése elsősorban manuális módszerrel történt, az összes főbb felhasználói folyamatot végigkövetve mind böngészőben, mind a játékkliens szemszögéből. Az alábbi területeken kerültek tesztek elvégzésre:
+1. backend API és üzleti logika,
+2. frontend interakció és állapotkezelés,
+3. játékintegrációs endpointok,
+4. admin/moderációs eszközök,
+5. dokumentáció, tesztelés és release folyamat.
 
-**Regisztráció és hitelesítés:**
-
-- Érvényes és érvénytelen adatbevitel esetén adott visszajelzések ellenőrzése
-- E-mail küldés és a megerősítőkód validálásának tesztelése
-- Lejárt megerősítőkód kezelésének ellenőrzése
-- Elfelejtett jelszó és a kötelező jelszóváltás folyamatának tesztelése
-
-**Jogosultságkezelés:**
-
-- Különböző szerepkörű felhasználók (Player, Admin, Engineer) hozzáférésének ellenőrzése az adminisztrációs panelen
-- Bannolt felhasználók átirányításának tesztelése
-- Nem bejelentkezett felhasználók vendég nézetbe irányításának ellenőrzése
-
-**Adatintegritás:**
-
-- Térképek könyvtárba adásának és eltávolításának tesztelése
-- Statisztika feltöltés és megjelenítés pontosságának ellenőrzése
-- Ranglista sorrend helyességének ellenőrzése különböző pontszám-kombinációk esetén
-
-**Felhasználói felület:**
-
-- Modál ablakok megnyitásának, bezárásának és újranyitásának tesztelése (különösen a patch notes törlési megerősítő ablak)
-- A navigáció helyes működésének ellenőrzése bejelentkezett és kijelentkezett állapotban
-- Reszponzív megjelenés ellenőrzése különböző képernyőméreteken
-
-**API végpontok:**
-
-- Játék bejelentkezési folyamat tesztelése, érvényes és érvénytelen adatokkal
-- Statisztika feltöltési végpont tesztelése érvényes tokennel és lejárt/érvénytelen tokennel
-- HTTP metódus ellenőrzések (pl. GET helyett POST küldése esetén adott válasz)
-
-## Ismert korlátok és megoldott hibák
-
-A fejlesztés során számos szélsőséges esetben köszöntek be problémák, amelyeket az iteratív tesztelés során sikerült azonosítani és javítani. Ezek közül a legjelentősebbek:
-
-- **Popup akadás probléma:** Az admin és a térképek oldalak globális eseményfigyelői interferáltak a főoldal megerősítő modáljával, esetenként megakadályozva a modal újranyitásának lehetőségét oldal-frissítés nélkül. A hiba javítása DOM-alapú lapőr feltételek bevezetésével történt.
-- **Session timeout:** A PHP default session élettartama (24 perc) túl rövid volt az aktív felhasználói munkamenetekhez, ami váratlan kijelentkezéseket okozott. A javítás: 2 órára növelt session élettartam.
+A munkaszervezésnél a funkcionális egységek mentén történt a feladatkiosztás, majd az integrációs pontokon (auth, stats, role-check) közös összehangolás történt.
 
 \newpage
 
-# Továbbfejlesztési lehetőségek
+# Összefoglalás
 
-*[HELYE – IDE KERÜLNEK A FEJLESZTÉSI LEHETŐSÉGEK]*
+A Troxan webalkalmazás fejlesztése során egy teljes értékű, komplex webes platform valósult meg, amely szervesen összekapcsolódik a C#-ban készült játékklienssel. A rendszer működése moduláris, biztonsági szempontból többrétegű, és valós felhasználói, valamint adminisztrátori forgatókönyvekre optimalizált.
+
+A dokumentáció célja nemcsak a funkciók bemutatása, hanem a döntések indoklása és a műszaki visszakövethetőség biztosítása volt. A részletes mellékletek ennek megfelelően kódrészletekkel, endpoint-forgatókönyvekkel és állapotmodellekkel támasztják alá a rendszer működését.
 
 \newpage
 
-# Melléklet A – Endpoint mátrix (részletes)
+# Források
+
+1. PHP Foundation – *PHP 8 Documentation* – https://www.php.net/docs.php – (2025)
+2. MySQL AB – *MySQL 8.0 Reference Manual* – https://dev.mysql.com/doc/refman/8.0/en/ – (2025)
+3. Vite Contributors – *Vite Documentation* – https://vitejs.dev/guide/ – (2025)
+4. Tailwind CSS Contributors – *Tailwind CSS v4 Documentation* – https://tailwindcss.com/docs – (2025)
+5. PHPMailer Contributors – *PHPMailer Documentation* – https://github.com/PHPMailer/PHPMailer – (2025)
+6. OWASP Foundation – *OWASP Top Ten* – https://owasp.org/www-project-top-ten/ – (2025)
+7. MDN Web Docs – *JavaScript Reference* – https://developer.mozilla.org/en-US/docs/Web/JavaScript – (2025)
+
+\newpage
+
+# Ábrajegyzék
+
+1. Felhasználói modulok áttekintése
+2. Szerepkörfüggő nézetek
+3. UI mikrointerakciók
+4. Adatbázis táblák és ER diagramok
+5. Auth, Maps, Admin folyamatábrák
+6. API request-response minták
+7. Állapotgépek és life-cycle ábrák
+
+\newpage
+
+# Mellékletek
+## Melléklet A – Endpoint mátrix (részletes)
 
 ## A.1 Auth és session
 
@@ -1190,7 +528,7 @@ Admin POST akciók példák:
 
 \newpage
 
-# Melléklet B – Forráskód walkthrough fájlonként
+## Melléklet B – Forráskód walkthrough fájlonként
 
 ## B.1 Backend core
 
@@ -1406,7 +744,7 @@ Fő feladatok:
 
 \newpage
 
-# Melléklet C – Gombkatalógus (ellenőrzőlista)
+## Melléklet C – Gombkatalógus (ellenőrzőlista)
 
 ## C.1 Login és Register
 
@@ -1498,7 +836,7 @@ Fő feladatok:
 
 \newpage
 
-# Melléklet D – Részletes felhasználói folyamatok (lépésenként)
+## Melléklet D – Részletes felhasználói folyamatok (lépésenként)
 
 ## D.1 Vendégből regisztrált felhasználó
 
@@ -1668,7 +1006,7 @@ Bemutatni, hogyan jut el a játékon belül elért teljesítmény a weboldali le
 
 \newpage
 
-# Melléklet E – UI állapotok és eseménytranzíciók
+## Melléklet E – UI állapotok és eseménytranzíciók
 
 ## E.1 Modal állapotgépek
 
@@ -1727,7 +1065,7 @@ Reset szabályok:
 
 \newpage
 
-# Ábrajegyzék – részletes képbeillesztési checklista
+## Melléklet F – Részletes képbeillesztési checklista
 
 ## F.1 Kötelező képek funkciónként
 
@@ -1794,7 +1132,7 @@ Reset szabályok:
 
 \newpage
 
-# Melléklet G – Backend kontrollerek részletes, kódközeli magyarázata
+## Melléklet G – Backend kontrollerek részletes, kódközeli magyarázata
 
 ## G.1 `loginController.php`
 
@@ -2029,7 +1367,7 @@ Ez a legfontosabb integrációs egység. A `troxan_stats_pick_int` helper alias-
 
 \newpage
 
-# Melléklet H – Frontend eseménykezelők teljes bontása
+## Melléklet H – Frontend eseménykezelők teljes bontása
 
 ## H.1 `main.js`
 
@@ -2210,7 +1548,7 @@ Ezek a state-ek teszik lehetővé, hogy a több lépésből álló modalflow-k k
 
 \newpage
 
-# Melléklet I – API hibakód-katalógus és válaszminták
+## Melléklet I – API hibakód-katalógus és válaszminták
 
 ## I.1 `POST /api/login`
 
@@ -2389,7 +1727,7 @@ Ez vizuálisan is nagyon erősíti a dokumentáció szakmai hatását.
 
 \newpage
 
-# Melléklet J – Gombonkénti teljes funkcionális specifikáció
+## Melléklet J – Gombonkénti teljes funkcionális specifikáció
 
 ## J.1 Login oldal – elemenkénti működés
 
@@ -2641,7 +1979,7 @@ Ez vizuálisan is nagyon erősíti a dokumentáció szakmai hatását.
 
 \newpage
 
-# Melléklet K – Endpointonkénti kérés-válasz forgatókönyvek
+## Melléklet K – Endpointonkénti kérés-válasz forgatókönyvek
 
 ## K.1 `POST /api/login` – 6 tipikus forgatókönyv
 
@@ -2815,7 +2153,7 @@ Mindegyik ághoz a dokumentációban érdemes request + response párokat képpe
 
 \newpage
 
-# Melléklet L – UI állapotmátrix és részletes képkövetelmények
+## Melléklet L – UI állapotmátrix és részletes képkövetelmények
 
 ## L.1 Oldalankénti kötelező állapotképek
 
@@ -2956,7 +2294,7 @@ Ez a minta nagyban növeli a beadandó szakmai minőségét és a javító taná
 
 \newpage
 
-# Melléklet M – Kódrészlet-tár és mély technikai kommentár
+## Melléklet M – Kódrészlet-tár és mély technikai kommentár
 
 Ebben a mellékletben célzottan sok kódrészlet szerepel, és mindegyikhez rövid, de pontos technikai magyarázat tartozik. A cél az, hogy a dokumentáció ne csak "felsorolás" legyen, hanem ténylegesen visszakövethető műszaki leírás.
 
@@ -3274,7 +2612,7 @@ Magyarázat:
 
 \newpage
 
-# Melléklet N – Extra részletes, hosszú kifejtések funkciónként
+## Melléklet N – Extra részletes, hosszú kifejtések funkciónként
 
 ## N.1 Mi történik pontosan a login gomb után? (hosszú leírás)
 
@@ -3362,368 +2700,3 @@ Ez a teljes kör mutatja, hogy a Troxan webalkalmazás nem statikus oldal, hanem
 
 \newpage
 
-# Fejlesztői dokumentáció – első szintű címsor (template-kiegészítés)
-
-Ez a fejezet kifejezetten a template vázlatpontjainak teljesítésére készült, ezért az alcímek szövege a sablon logikáját követi.
-
-## Felhasznált technológiák
-
-### VSC
-
-A fejlesztés elsődleges szerkesztője a Visual Studio Code volt, amelyben a PHP, JavaScript, CSS és Git alapú munkafolyamatok egy helyen kezelhetők. A gyors keresés, fájlstruktúra-kezelés és bővítmények nagyban felgyorsították a moduláris fejlesztést.
-
-### HTML
-
-A nézetek szerkezete szerveroldali PHP renderből érkezik, de a kimenet HTML. A markup réteg biztosítja a komponensek (kártyák, modálok, listák, űrlapok) szemantikailag stabil alapját.
-
-### CSS
-
-A projektben Tailwind alapú és egyedi stílusok együtt szerepelnek. A modulonkénti CSS fájlok (pl. admin, maps, profile) segítenek a stílusütközések csökkentésében, különösen a nagy mennyiségű modal és interaktív elem mellett.
-
-## Adatbázis - TroxanDB
-
-### Az adatbázis célja
-
-Az adatbázis célja a játékosok, pályák, statisztikák, szerepkörök, avatárok, webes sessionök és oldalszintű beállítások tartós és konzisztens tárolása. A rendszer támogatja a webes belépést, a játék-klienssel történő tokenes kommunikációt, a ranglistaszámítást, valamint az adminisztrációs műveleteket.
-
-### Tervezés megkezdése
-
-A tervezés első fázisában meghatározásra került, hogy a rendszernek képesnek kell lennie:
-
-1. felhasználók és jogosultságaik tárolására,
-2. pályaadatok és pályafájl-metaadatok kezelésére,
-3. statisztika-história naplózására,
-4. avatar-katalógus kiszolgálására,
-5. session-állapot követésére,
-6. weboldal tartalmi beállításainak tárolására.
-
-### Tervezési lépések
-
-1. üzleti entitások listázása,
-2. kapcsolatfajták meghatározása,
-3. kulcsmezők és indexelési igények felírása,
-4. normalizálási döntések meghozatala,
-5. jogosultsági és audit szempontok beépítése,
-6. migration-kompatibilis bővíthetőség kialakítása.
-
-### Egyedek meghatározása
-
-Fő egyedek:
-
-1. User
-2. Maps
-3. Statistics
-4. Roles
-5. Avatars
-6. User_Map_Library
-7. Active_Web_Sessions
-8. SiteSettings
-
-### Kapcsolatok meghatározása
-
-1. Roles (1) -> (N) User
-2. Avatars (1) -> (N) User
-3. User (1) -> (N) Statistics
-4. User (1) -> (N) Maps
-5. User (N) <-> (N) Maps `User_Map_Library` kapcsolótáblán keresztül
-6. User (1) -> (1) Active_Web_Sessions (aktuális web session)
-
-### N:M kapcsolatok felbontása
-
-A játékosok és pályák könyvtárkapcsolata N:M jellegű, ezt a rendszer `User_Map_Library` táblával bontja fel, amelyben legalább `user_id`, `map_id`, `added_at` mezők szerepelnek.
-
-### Táblák meghatározása
-
-#### Felhasználók (User)
-
-Fő mezők (projektlogika alapján):
-
-1. `user_id` (PK)
-2. `username`
-3. `email`
-4. `password` (hash)
-5. `user_token` (játék token)
-6. `role_id` (FK Roles)
-7. `avatar_id` (FK Avatars)
-8. `created_at`
-9. `last_time_online`
-10. `is_banned`
-11. `is_verified`
-12. `verification_code`
-13. `verification_expires`
-14. `has_temp_password`
-15. `temp_password_expires`
-
-#### Pályák (Maps)
-
-Fő mezők:
-
-1. `id` (PK)
-2. `creator_user_id` (FK User)
-3. `map_name`
-4. `map_description`
-5. `map_picture`
-6. `map_file`
-7. `status`
-8. `downloads`
-9. `created_at`
-
-#### Beállítások (Settings)
-
-A történeti vázlatban szerepel, jelen implementációban több beállítási funkció a `SiteSettings` táblában koncentrálódik.
-
-#### Jogkörök (Roles)
-
-1. `id` (PK)
-2. `role_name` (pl. Player, Moderator, Admin, Engineer)
-
-#### Avatárok (Avatars)
-
-1. `id` (PK)
-2. `avatar_name`
-3. `avatar_picture` (BLOB)
-
-#### Statisztikák (Statistics)
-
-1. `id` (PK)
-2. `user_id` (FK User)
-3. `statistics_file` (JSON)
-4. `last_updated`
-
-### Minta adatok
-
-#### Felhasználó (user)
-
-```json
-{
-	"user_id": 12,
-	"username": "Player01",
-	"email": "player01@example.com",
-	"role_id": 1,
-	"is_verified": 1,
-	"is_banned": 0
-}
-```
-
-#### Pályák (maps)
-
-```json
-{
-	"id": 34,
-	"creator_user_id": 12,
-	"map_name": "Frozen Castle",
-	"status": 1,
-	"downloads": 188,
-	"created_at": "2026-03-28 18:12:00"
-}
-```
-
-#### Statisztikák (statistics)
-
-```json
-{
-	"user_id": 12,
-	"statistics": {
-		"score": 22500,
-		"Mobs killed": 156,
-		"Deaths": 9,
-		"Story finished": 2
-	}
-}
-```
-
-#### Beállítások (settings)
-
-```json
-{
-	"download_url": "/troxan.zip",
-	"trailer_url": "https://www.youtube-nocookie.com/embed/_pMgNJjNodo",
-	"about_us_text": "Troxan started as a school project..."
-}
-```
-
-#### Jogkörök (roles)
-
-```json
-[
-	{"id": 1, "role_name": "Player"},
-	{"id": 2, "role_name": "Moderator"},
-	{"id": 3, "role_name": "Admin"},
-	{"id": 4, "role_name": "Engineer"}
-]
-```
-
-#### Avatárok (avatars)
-
-```json
-{
-	"id": 3,
-	"avatar_name": "Knight",
-	"avatar_picture": "<BLOB>"
-}
-```
-
-#### ábra: Felhasználók tábla
-
-*[KÉP HELYE – User tábla szerkezet]*
-
-#### ábra: Pályák tábla
-
-*[KÉP HELYE – Maps tábla szerkezet]*
-
-#### ábra: Statisztikák tábla
-
-*[KÉP HELYE – Statistics tábla szerkezet]*
-
-#### ábra: Beállítások tábla
-
-*[KÉP HELYE – Settings/SiteSettings tábla szerkezet]*
-
-#### ábra: Jogkörök tábla
-
-*[KÉP HELYE – Roles tábla szerkezet]*
-
-### Adatbázis diagram – tervezési fázis
-
-*[KÉP HELYE – Tervezési fázis ER diagram]*
-
-#### ábra: Adatbázis diagram – tervezési fázis (drawdb.app)
-
-*[KÉP HELYE – drawdb.app tervezési ábra]*
-
-### Adatbázis diagram – megvalósítás
-
-*[KÉP HELYE – Megvalósított ER diagram]*
-
-#### ábra: Adatbázis diagram
-
-*[KÉP HELYE – Végleges adatbázis diagram]*
-
-### Adatbázis továbbfejlesztési lehetőségek
-
-1. indexelés finomítása a gyakori leaderboard és map-lista lekérdezésekre,
-2. statisztika JSON mezők részleges normalizálása reporting célra,
-3. audit táblák explicit bevezetése admin műveletekhez,
-4. soft-delete jelzők egységesítése minden releváns táblán,
-5. archiválási stratégia nagy statisztikai historikus adatmennyiségre.
-
-## A tervezés és a fejlesztés folyamata
-
-### a tervezés folyamata (pl. Figma)
-
-A felület tervezése vázlatokkal indult, majd képernyőnkénti flow-ban lett finomítva. A fókusz a gyors navigáción, az egyértelmű visszajelzéseken és a moduláris oldalstruktúrán volt.
-
-### főoldal, bejelentkezés, belépés
-
-A belépési folyamat és a főoldali komponensek párhuzamosan készültek, hogy az auth-állapot a UI-ban már korán kezelhető legyen (login link <-> profil avatar csere).
-
-### admin felület
-
-Az admin modul külön logikai egységként épült, szerepkör-védett műveletekkel, megerősítő modálokkal és többlépéses veszélyes műveletkezeléssel (ban, role change, hard delete).
-
-### többi logika
-
-Ide tartozik a map lifecycle, profile frissítés, modal state management, leaderboard, game API integráció, valamint a session és token alapú hitelesítési ágak együttműködése.
-
-### kódrészletek (magyarázatokkal, amit kiemelnél, amire büszkék vagytok)
-
-A dokumentáció korábbi mellékletei (M és N) részletes kódrészlet-gyűjteményt adnak a kritikus ágakról:
-
-1. login és session kezelés,
-2. game token auth,
-3. stat delta aggregáció,
-4. modal capture-phase védelem,
-5. oldalspecifikus event guardok.
-
-## A tesztekhez végzett kód, valamint a teszteredmények
-
-A tesztelési fejezetben felsorolt forgatókönyvek a következő területeket fedik le:
-
-1. auth és jogosultság,
-2. game API tokenkezelés,
-3. statisztika aggregáció,
-4. UI modal stabilitás,
-5. admin kritikus műveletek.
-
-A dokumentált eredmény szerint a fő üzleti ágak stabilak, a korábban reprodukált popup-beragadás és session timeout problémák javításra kerültek.
-
-## Felmerült akadályok (az egyes részeknél külön is szerepelhet)
-
-Fő akadályok és megoldási minták:
-
-1. bundle-ből adódó keresztmodul event ütközések -> DOM guardok,
-2. modal state beragadás -> capture-phase reset + callback nullázás,
-3. túl rövid session timeout -> központi session paraméter emelés,
-4. statisztika reset-inverziók -> snapshot-delta aggregáció.
-
-\newpage
-
-# Munkamegosztás leírása részletesen
-
-Mivel a projekt több nagy alrendszerből áll, a munkamegosztás logikája moduláris:
-
-1. backend API és üzleti logika,
-2. frontend UX és interakciós réteg,
-3. játék-integrációs endpointok,
-4. admin és moderációs eszközök,
-5. dokumentáció és tesztforgatókönyv fenntartás.
-
-A fejlesztési ciklusban az egyes alrendszerek párhuzamosan haladtak, de az integrációs pontokon (auth, stats, admin) rendszeres összehangolásra volt szükség.
-
-\newpage
-
-# Ábrajegyzék
-
-1. Főoldal teljes nézet
-2. Login flow állapotok
-3. Register + verification flow
-4. Profile és avatar csere
-5. Maps és My Maps állapotok
-6. Leaderboard és pontszám-rendezés
-7. Admin panel műveleti nézetek
-8. Game API kérés-válasz minták
-9. ER diagram (terv és megvalósítás)
-10. Modal state és request life-cycle ábrák
-
-\newpage
-
-# Mellékletek
-
-Jelen dokumentum mellékletei:
-
-1. Melléklet A – Endpoint mátrix
-2. Melléklet B – Forráskód walkthrough
-3. Melléklet C – Gombkatalógus
-4. Melléklet D – Felhasználói folyamatok
-5. Melléklet E – UI állapottranzíciók
-6. Melléklet F – Képbeillesztési checklista
-7. Melléklet G – Backend mélymagyarázat
-8. Melléklet H – Frontend eseménybontás
-9. Melléklet I – Hibakód-katalógus
-10. Melléklet J – Gombonkénti specifikáció
-11. Melléklet K – Endpoint forgatókönyvek
-12. Melléklet L – UI állapotmátrix
-13. Melléklet M – Kódrészlet-tár
-14. Melléklet N – Extra technikai kifejtések
-
-\newpage
-
-# Összefoglalás
-
-A Troxan webalkalmazás fejlesztése során egy teljes értékű, komplex webes platform valósult meg, amely szervesen összekapcsolódik a hozzá tartozó C# Windows játékklienssel. A projekt nem csupán funkcionálisan teljes, hanem módszertanilag is az önálló gondolkodás és a mélységi tudás megszerzésének jó példája: keretrendszer nélküli PHP MVC backend, natív JavaScript frontend, Vite-alapú build pipeline és Tailwind CSS v4 stílusozás mind azt bizonyítják, hogy a modern webfejlesztés alapjai – a keretrendszerektől függetlenül – is képesek rendkívül hatékonyan alkalmazható megoldások létrehozására.
-
-Az alkalmazás fejlesztése során elsajátított ismeretek és megoldott kihívások – a token-alapú játékkliens integráció, az MVC routing implementálása, a biztonsági rétegek tudatos kialakítása, a dinamikus SPA-szerű oldalnavigáció keretrendszer nélkül – mind olyan tapasztalatok, amelyek a valós munkakörnyezetben is közvetlen értéket képviselnek.
-
-A projekt a pillanatnyi formájában is teljesen működőképes és élesben futó alkalmazás; a fentiekben összefoglalt továbbfejlesztési irányok megvalósítása esetén egy még gazdagabb, még professzionálisabb platformmá válhat.
-
-\newpage
-
-# Források
-
-1. PHP Foundation – *PHP 8 Documentation* – https://www.php.net/docs.php – (2025)
-2. MySQL AB – *MySQL 8.0 Reference Manual* – https://dev.mysql.com/doc/refman/8.0/en/ – (2025)
-3. Vite Contributors – *Vite Documentation* – https://vitejs.dev/guide/ – (2025)
-4. Tailwind CSS Contributors – *Tailwind CSS v4 Documentation* – https://tailwindcss.com/docs – (2025)
-5. PHPMailer Contributors – *PHPMailer Documentation* – https://github.com/PHPMailer/PHPMailer – (2025)
-6. OWASP Foundation – *OWASP Top Ten* – https://owasp.org/www-project-top-ten/ – (2025)
-7. MDN Web Docs – *JavaScript Reference* – https://developer.mozilla.org/en-US/docs/Web/JavaScript – (2025)
