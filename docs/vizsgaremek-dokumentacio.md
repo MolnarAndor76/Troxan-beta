@@ -3362,6 +3362,352 @@ Ez a teljes kör mutatja, hogy a Troxan webalkalmazás nem statikus oldal, hanem
 
 \newpage
 
+# Fejlesztői dokumentáció – első szintű címsor (template-kiegészítés)
+
+Ez a fejezet kifejezetten a template vázlatpontjainak teljesítésére készült, ezért az alcímek szövege a sablon logikáját követi.
+
+## Felhasznált technológiák
+
+### VSC
+
+A fejlesztés elsődleges szerkesztője a Visual Studio Code volt, amelyben a PHP, JavaScript, CSS és Git alapú munkafolyamatok egy helyen kezelhetők. A gyors keresés, fájlstruktúra-kezelés és bővítmények nagyban felgyorsították a moduláris fejlesztést.
+
+### HTML
+
+A nézetek szerkezete szerveroldali PHP renderből érkezik, de a kimenet HTML. A markup réteg biztosítja a komponensek (kártyák, modálok, listák, űrlapok) szemantikailag stabil alapját.
+
+### CSS
+
+A projektben Tailwind alapú és egyedi stílusok együtt szerepelnek. A modulonkénti CSS fájlok (pl. admin, maps, profile) segítenek a stílusütközések csökkentésében, különösen a nagy mennyiségű modal és interaktív elem mellett.
+
+## Adatbázis - TroxanDB
+
+### Az adatbázis célja
+
+Az adatbázis célja a játékosok, pályák, statisztikák, szerepkörök, avatárok, webes sessionök és oldalszintű beállítások tartós és konzisztens tárolása. A rendszer támogatja a webes belépést, a játék-klienssel történő tokenes kommunikációt, a ranglistaszámítást, valamint az adminisztrációs műveleteket.
+
+### Tervezés megkezdése
+
+A tervezés első fázisában meghatározásra került, hogy a rendszernek képesnek kell lennie:
+
+1. felhasználók és jogosultságaik tárolására,
+2. pályaadatok és pályafájl-metaadatok kezelésére,
+3. statisztika-história naplózására,
+4. avatar-katalógus kiszolgálására,
+5. session-állapot követésére,
+6. weboldal tartalmi beállításainak tárolására.
+
+### Tervezési lépések
+
+1. üzleti entitások listázása,
+2. kapcsolatfajták meghatározása,
+3. kulcsmezők és indexelési igények felírása,
+4. normalizálási döntések meghozatala,
+5. jogosultsági és audit szempontok beépítése,
+6. migration-kompatibilis bővíthetőség kialakítása.
+
+### Egyedek meghatározása
+
+Fő egyedek:
+
+1. User
+2. Maps
+3. Statistics
+4. Roles
+5. Avatars
+6. User_Map_Library
+7. Active_Web_Sessions
+8. SiteSettings
+
+### Kapcsolatok meghatározása
+
+1. Roles (1) -> (N) User
+2. Avatars (1) -> (N) User
+3. User (1) -> (N) Statistics
+4. User (1) -> (N) Maps
+5. User (N) <-> (N) Maps `User_Map_Library` kapcsolótáblán keresztül
+6. User (1) -> (1) Active_Web_Sessions (aktuális web session)
+
+### N:M kapcsolatok felbontása
+
+A játékosok és pályák könyvtárkapcsolata N:M jellegű, ezt a rendszer `User_Map_Library` táblával bontja fel, amelyben legalább `user_id`, `map_id`, `added_at` mezők szerepelnek.
+
+### Táblák meghatározása
+
+#### Felhasználók (User)
+
+Fő mezők (projektlogika alapján):
+
+1. `user_id` (PK)
+2. `username`
+3. `email`
+4. `password` (hash)
+5. `user_token` (játék token)
+6. `role_id` (FK Roles)
+7. `avatar_id` (FK Avatars)
+8. `created_at`
+9. `last_time_online`
+10. `is_banned`
+11. `is_verified`
+12. `verification_code`
+13. `verification_expires`
+14. `has_temp_password`
+15. `temp_password_expires`
+
+#### Pályák (Maps)
+
+Fő mezők:
+
+1. `id` (PK)
+2. `creator_user_id` (FK User)
+3. `map_name`
+4. `map_description`
+5. `map_picture`
+6. `map_file`
+7. `status`
+8. `downloads`
+9. `created_at`
+
+#### Beállítások (Settings)
+
+A történeti vázlatban szerepel, jelen implementációban több beállítási funkció a `SiteSettings` táblában koncentrálódik.
+
+#### Jogkörök (Roles)
+
+1. `id` (PK)
+2. `role_name` (pl. Player, Moderator, Admin, Engineer)
+
+#### Avatárok (Avatars)
+
+1. `id` (PK)
+2. `avatar_name`
+3. `avatar_picture` (BLOB)
+
+#### Statisztikák (Statistics)
+
+1. `id` (PK)
+2. `user_id` (FK User)
+3. `statistics_file` (JSON)
+4. `last_updated`
+
+### Minta adatok
+
+#### Felhasználó (user)
+
+```json
+{
+	"user_id": 12,
+	"username": "Player01",
+	"email": "player01@example.com",
+	"role_id": 1,
+	"is_verified": 1,
+	"is_banned": 0
+}
+```
+
+#### Pályák (maps)
+
+```json
+{
+	"id": 34,
+	"creator_user_id": 12,
+	"map_name": "Frozen Castle",
+	"status": 1,
+	"downloads": 188,
+	"created_at": "2026-03-28 18:12:00"
+}
+```
+
+#### Statisztikák (statistics)
+
+```json
+{
+	"user_id": 12,
+	"statistics": {
+		"score": 22500,
+		"Mobs killed": 156,
+		"Deaths": 9,
+		"Story finished": 2
+	}
+}
+```
+
+#### Beállítások (settings)
+
+```json
+{
+	"download_url": "/troxan.zip",
+	"trailer_url": "https://www.youtube-nocookie.com/embed/_pMgNJjNodo",
+	"about_us_text": "Troxan started as a school project..."
+}
+```
+
+#### Jogkörök (roles)
+
+```json
+[
+	{"id": 1, "role_name": "Player"},
+	{"id": 2, "role_name": "Moderator"},
+	{"id": 3, "role_name": "Admin"},
+	{"id": 4, "role_name": "Engineer"}
+]
+```
+
+#### Avatárok (avatars)
+
+```json
+{
+	"id": 3,
+	"avatar_name": "Knight",
+	"avatar_picture": "<BLOB>"
+}
+```
+
+#### ábra: Felhasználók tábla
+
+*[KÉP HELYE – User tábla szerkezet]*
+
+#### ábra: Pályák tábla
+
+*[KÉP HELYE – Maps tábla szerkezet]*
+
+#### ábra: Statisztikák tábla
+
+*[KÉP HELYE – Statistics tábla szerkezet]*
+
+#### ábra: Beállítások tábla
+
+*[KÉP HELYE – Settings/SiteSettings tábla szerkezet]*
+
+#### ábra: Jogkörök tábla
+
+*[KÉP HELYE – Roles tábla szerkezet]*
+
+### Adatbázis diagram – tervezési fázis
+
+*[KÉP HELYE – Tervezési fázis ER diagram]*
+
+#### ábra: Adatbázis diagram – tervezési fázis (drawdb.app)
+
+*[KÉP HELYE – drawdb.app tervezési ábra]*
+
+### Adatbázis diagram – megvalósítás
+
+*[KÉP HELYE – Megvalósított ER diagram]*
+
+#### ábra: Adatbázis diagram
+
+*[KÉP HELYE – Végleges adatbázis diagram]*
+
+### Adatbázis továbbfejlesztési lehetőségek
+
+1. indexelés finomítása a gyakori leaderboard és map-lista lekérdezésekre,
+2. statisztika JSON mezők részleges normalizálása reporting célra,
+3. audit táblák explicit bevezetése admin műveletekhez,
+4. soft-delete jelzők egységesítése minden releváns táblán,
+5. archiválási stratégia nagy statisztikai historikus adatmennyiségre.
+
+## A tervezés és a fejlesztés folyamata
+
+### a tervezés folyamata (pl. Figma)
+
+A felület tervezése vázlatokkal indult, majd képernyőnkénti flow-ban lett finomítva. A fókusz a gyors navigáción, az egyértelmű visszajelzéseken és a moduláris oldalstruktúrán volt.
+
+### főoldal, bejelentkezés, belépés
+
+A belépési folyamat és a főoldali komponensek párhuzamosan készültek, hogy az auth-állapot a UI-ban már korán kezelhető legyen (login link <-> profil avatar csere).
+
+### admin felület
+
+Az admin modul külön logikai egységként épült, szerepkör-védett műveletekkel, megerősítő modálokkal és többlépéses veszélyes műveletkezeléssel (ban, role change, hard delete).
+
+### többi logika
+
+Ide tartozik a map lifecycle, profile frissítés, modal state management, leaderboard, game API integráció, valamint a session és token alapú hitelesítési ágak együttműködése.
+
+### kódrészletek (magyarázatokkal, amit kiemelnél, amire büszkék vagytok)
+
+A dokumentáció korábbi mellékletei (M és N) részletes kódrészlet-gyűjteményt adnak a kritikus ágakról:
+
+1. login és session kezelés,
+2. game token auth,
+3. stat delta aggregáció,
+4. modal capture-phase védelem,
+5. oldalspecifikus event guardok.
+
+## A tesztekhez végzett kód, valamint a teszteredmények
+
+A tesztelési fejezetben felsorolt forgatókönyvek a következő területeket fedik le:
+
+1. auth és jogosultság,
+2. game API tokenkezelés,
+3. statisztika aggregáció,
+4. UI modal stabilitás,
+5. admin kritikus műveletek.
+
+A dokumentált eredmény szerint a fő üzleti ágak stabilak, a korábban reprodukált popup-beragadás és session timeout problémák javításra kerültek.
+
+## Felmerült akadályok (az egyes részeknél külön is szerepelhet)
+
+Fő akadályok és megoldási minták:
+
+1. bundle-ből adódó keresztmodul event ütközések -> DOM guardok,
+2. modal state beragadás -> capture-phase reset + callback nullázás,
+3. túl rövid session timeout -> központi session paraméter emelés,
+4. statisztika reset-inverziók -> snapshot-delta aggregáció.
+
+\newpage
+
+# Munkamegosztás leírása részletesen
+
+Mivel a projekt több nagy alrendszerből áll, a munkamegosztás logikája moduláris:
+
+1. backend API és üzleti logika,
+2. frontend UX és interakciós réteg,
+3. játék-integrációs endpointok,
+4. admin és moderációs eszközök,
+5. dokumentáció és tesztforgatókönyv fenntartás.
+
+A fejlesztési ciklusban az egyes alrendszerek párhuzamosan haladtak, de az integrációs pontokon (auth, stats, admin) rendszeres összehangolásra volt szükség.
+
+\newpage
+
+# Ábrajegyzék
+
+1. Főoldal teljes nézet
+2. Login flow állapotok
+3. Register + verification flow
+4. Profile és avatar csere
+5. Maps és My Maps állapotok
+6. Leaderboard és pontszám-rendezés
+7. Admin panel műveleti nézetek
+8. Game API kérés-válasz minták
+9. ER diagram (terv és megvalósítás)
+10. Modal state és request life-cycle ábrák
+
+\newpage
+
+# Mellékletek
+
+Jelen dokumentum mellékletei:
+
+1. Melléklet A – Endpoint mátrix
+2. Melléklet B – Forráskód walkthrough
+3. Melléklet C – Gombkatalógus
+4. Melléklet D – Felhasználói folyamatok
+5. Melléklet E – UI állapottranzíciók
+6. Melléklet F – Képbeillesztési checklista
+7. Melléklet G – Backend mélymagyarázat
+8. Melléklet H – Frontend eseménybontás
+9. Melléklet I – Hibakód-katalógus
+10. Melléklet J – Gombonkénti specifikáció
+11. Melléklet K – Endpoint forgatókönyvek
+12. Melléklet L – UI állapotmátrix
+13. Melléklet M – Kódrészlet-tár
+14. Melléklet N – Extra technikai kifejtések
+
+\newpage
+
 # Összefoglalás
 
 A Troxan webalkalmazás fejlesztése során egy teljes értékű, komplex webes platform valósult meg, amely szervesen összekapcsolódik a hozzá tartozó C# Windows játékklienssel. A projekt nem csupán funkcionálisan teljes, hanem módszertanilag is az önálló gondolkodás és a mélységi tudás megszerzésének jó példája: keretrendszer nélküli PHP MVC backend, natív JavaScript frontend, Vite-alapú build pipeline és Tailwind CSS v4 stílusozás mind azt bizonyítják, hogy a modern webfejlesztés alapjai – a keretrendszerektől függetlenül – is képesek rendkívül hatékonyan alkalmazható megoldások létrehozására.
