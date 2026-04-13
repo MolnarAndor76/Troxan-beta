@@ -354,6 +354,538 @@ Ha egy nem bejelentkezett felhasználó próbál meg olyan oldalra navigálni, a
 
 \newpage
 
+# Részletes működési specifikáció
+
+Ez a fejezet az alkalmazás technikai működését lépésről lépésre, kódszintű részletességgel mutatja be. A cél az, hogy ne csak az derüljön ki, mit tud a rendszer, hanem az is, hogyan valósul meg minden fontos folyamat a forráskódban.
+
+## Moduláris frontend felépítés
+
+A frontend belépési pontja a `src/main.js`, amely modulonként importálja az összes oldalspecifikus JavaScript fájlt. Ez azért fontos, mert Vite build után minden modul egyetlen bundle-be kerülhet, így minden globális eseménykezelésnél figyelni kell arra, hogy csak a megfelelő oldalon fusson a logika.
+
+```js
+import './admin-src/admin.js';
+import './basesite-src/basesite.js';
+import './leaderboard-src/leaderboard.js';
+import './maps-src/maps.js';
+import './myMaps-src/myMaps.js';
+import './login-src/login.js';
+import './register-src/register.js';
+import './profile-src/profile.js';
+import './isBanned-src/isBanned.js';
+```
+
+Ez a struktúra két dolgot ad egyszerre:
+
+1. Fejlesztéskor moduláris, áttekinthető forrásfájlokkal lehet dolgozni.
+2. Éles környezetben optimalizált, összecsomagolt kód fut.
+
+*[KÉP HELYE – main.js modul importok]*
+
+\newpage
+
+## Routing és kérésfeldolgozás teljes útja
+
+Az API működésének központja az útvonal-feldolgozó réteg:
+
+1. A kérés `app/api.php` fájlba érkezik.
+2. A router kiolvassa a `path` paramétert.
+3. A `route['segment1']` alapján kiválasztja a kontrollert.
+4. A kontroller feldolgozza a bemenetet.
+5. A rendszer JSON választ küld vissza.
+
+Rövidített router logika:
+
+```php
+$path = $_GET['path'] ?? '';
+$path = trim($path, '/');
+$segments = ($path === '') ? [] : explode('/', $path);
+
+$route = [
+	'segment1' => $segments[0] ?? null,
+	'segment2' => $segments[1] ?? null,
+	'segment3' => $segments[2] ?? null,
+];
+```
+
+Végpont-választás:
+
+```php
+switch ($route['segment1']) {
+	case 'main': load_controller(... 'mainController.php'); break;
+	case 'maps': load_controller(... 'mapsController.php'); break;
+	case 'profile': load_controller(... 'profileController.php'); break;
+	case 'game_login': require ...; handleGameLogin(); break;
+	case 'game_update_stats': require ...; handleGameUpdateStats(); break;
+	default: json_response(['error' => 'API endpoint not found'], 404);
+}
+```
+
+*[KÉP HELYE – Router működési ábra]*
+
+\newpage
+
+## Játék és weboldal kommunikáció részletesen
+
+Ez a rész különösen kritikus, mert a játékkliens (C#) és a webes backend itt találkozik.
+
+### 1. Bejelentkezés a játékból (`/api/game_login`)
+
+A játék POST kéréssel küldi a `username` és `password` mezőket. A backend:
+
+1. Ellenőrzi a HTTP metódust (csak POST).
+2. Lekéri a felhasználót adatbázisból.
+3. `password_verify` segítségével ellenőriz.
+4. Tiltott felhasználót azonnal elutasít.
+5. Generál egy erős tokent: `bin2hex(random_bytes(32))`.
+6. Elmenti a tokent a `User.user_token` mezőbe.
+7. Visszaküldi a tokent a játéknak.
+
+Példa válasz:
+
+```json
+{
+	"status": "success",
+	"message": "Login successful!",
+	"data": {
+		"user_id": 12,
+		"username": "player01",
+		"token": "64karaktereshash..."
+	}
+}
+```
+
+*[KÉP HELYE – Játék login API kérés/válasz]*
+
+### 2. Statisztika lekérés játékból (`/api/game_stats`)
+
+Ha a kliens futás közben adatot kér, `Authorization: Bearer <token>` fejlécet küld. A szerver ellenőrzi a tokent, ellenőrzi a ban állapotot, majd visszaadja a játékoldali adatszerkezethez szükséges mezőket.
+
+*[KÉP HELYE – Bearer token header példa]*
+
+### 3. Statisztika mentés (`/api/game_update_stats`)
+
+Ez a legfontosabb pipeline, mert itt dől el, hogy a ranglista és profil adatok mennyire konzisztensek.
+
+A szerver oldali logika:
+
+1. Csak POST metódus elfogadása.
+2. Token olvasása több forrásból (`HTTP_AUTHORIZATION`, `REDIRECT_HTTP_AUTHORIZATION`, Apache headers).
+3. Felhasználó-token egyezés ellenőrzése.
+4. Opcionális `username` ellenőrzés (anti-cheat).
+5. Bejövő statisztika és előző snapshot összehasonlítása.
+6. Delta számolása reset-biztosan.
+7. Új összesített stat beírása a `Statistics` táblába.
+8. `User` tábla `coins`, `level`, `last_time_online` frissítése.
+
+*[KÉP HELYE – game_update_stats folyamatábra]*
+
+\newpage
+
+## Pontszámítás és statisztika-aggregáció teljes magyarázata
+
+### Miért kell delta alapú logika?
+
+Ha a játék csak abszolút számokat küld (például `Mobs killed = 45`), akkor a szerver nem tudná eldönteni, hogy:
+
+1. ez az összesített érték,
+2. vagy csak az aktuális session száma.
+
+Ezért a backend snapshot-delta elvet használ.
+
+### Kulcsfüggvények
+
+```php
+function troxan_get_stat_score($stats)
+{
+		return troxan_get_stat_int($stats, ['score', 'Experience points'], 0);
+}
+```
+
+```php
+function troxan_compare_leaderboard_rows(array $a, array $b): int
+{
+		$scoreCompare = ($b['score'] ?? 0) <=> ($a['score'] ?? 0);
+		if ($scoreCompare !== 0) {
+				return $scoreCompare;
+		}
+		return strcasecmp((string)($a['username'] ?? ''), (string)($b['username'] ?? ''));
+}
+```
+
+### A delta képlete
+
+Legyen:
+
+- $I$ = bejövő számláló érték,
+- $S$ = előző session snapshot,
+- $T$ = eddigi összesített érték.
+
+Ekkor a növekmény:
+
+$$
+\Delta = \begin{cases}
+I - S, & \text{ha } I \ge S \\
+I, & \text{ha } I < S \text{ (session reset)}
+\end{cases}
+$$
+
+Az új összesített érték:
+
+$$
+T_{new} = T + \max(\Delta, 0)
+$$
+
+Ez garantálja, hogy:
+
+1. új session esetén nincs duplikált beszámítás,
+2. resetnél nem lesz negatív korrekció,
+3. a ranglista mindig monoton értelmes marad.
+
+*[KÉP HELYE – Pontszámítás képlet + példa táblázat]*
+
+\newpage
+
+## Gombszintű funkcióleírás (oldalanként)
+
+Ebben az alfejezetben oldalanként felsorolásra kerülnek a fontos gombok, felhasználói akciók, és a mögöttük futó logikák.
+
+### Login oldal
+
+1. Bejelentkezés gomb
+2. Elfelejtett jelszó akció
+3. Verifikációs kód megerősítése
+4. Kötelező jelszócsere megerősítése
+
+Technikai rész:
+
+- Email + jelszó validáció
+- `is_verified` ellenőrzés
+- temp jelszó-ág (`force_password_change`)
+- session és avatar adatok mentése localStorage-be
+
+*[KÉP HELYE – Login űrlap gombjai számozva]*
+*[KÉP HELYE – Force password change modal]*
+
+### Regisztráció oldal
+
+1. Regisztráció elküldése
+2. E-mail verifikációs kód beküldése
+
+Technikai rész:
+
+- username egyediség és formátum ellenőrzés
+- email validáció
+- jelszó erősség és egyezés
+- verifikációs kód lejárat kezelése
+
+*[KÉP HELYE – Register form mezők + gomb]*
+*[KÉP HELYE – Verification kód modal]*
+
+### Főoldal / Basesite
+
+1. Tab gombok (`basesite-btn-*`)
+2. Download gomb (`basesite-download-game-btn`)
+3. Feature request modal nyitás/zárás
+4. Engineer settings edit/save gomb
+5. Patch notes létrehozás/szerkesztés/törlés
+
+Technikai rész:
+
+- tabváltás animációval
+- login-feltételes letöltés
+- megerősítő modal callback lánc
+- stale állapotok tisztítása (`reconcilePatchUiState`, `resetPatchDeleteConfirmState`)
+
+*[KÉP HELYE – Basesite tabok]*
+*[KÉP HELYE – Download gomb működés]*
+*[KÉP HELYE – Patch note delete confirm modal]*
+
+### Maps oldal
+
+1. Mobil menü gomb
+2. Saját térképekre ugrás gomb
+3. Keresőmező
+4. Rendezés dropdown
+5. Add to library gomb
+6. Törlés/Visszaállítás staff gombok
+7. Help és Trash modal nyitó gombok
+
+Technikai rész:
+
+- kliensoldali szűrés + rendezés
+- `POST /api/maps` add_to_library
+- `POST /api/maps` delete_map
+- role-alapú trash megjelenítés
+
+*[KÉP HELYE – Maps kontrollsor gombjai]*
+*[KÉP HELYE – Map card gombok (Add/Delete)]*
+*[KÉP HELYE – Trash modal]*
+
+### My Maps oldal
+
+1. Keresés
+2. Rendezés
+3. Rename map
+4. Remove from library
+5. Publish / Unpublish
+
+Technikai rész:
+
+- kombinált SQL lekérdezés (saját + library)
+- státusz alapú működés (`0`, `1`, `3`, `5`)
+- letöltésszámláló korrekció eltávolításnál
+
+*[KÉP HELYE – My Maps gombok és státusz badge-ek]*
+
+### Profil oldal
+
+1. Settings modal nyitás
+2. Logout gomb
+3. Avatar váltás
+4. Felhasználónév/Jelszó módosítás
+5. Admin panel navigációs gomb (jogosultságfüggő)
+
+Technikai rész:
+
+- profile modal animációk
+- avatar mentés + header frissítés
+- rank számítás backend oldalon
+
+*[KÉP HELYE – Profil oldal elemei]*
+*[KÉP HELYE – Avatar picker modal]*
+
+### Leaderboard oldal
+
+1. Rendezés trigger (ha jelen van)
+2. Top lista és saját helyezés blokk
+
+Technikai rész:
+
+- legfrissebb stat rekord kiválasztása userenként
+- score desc + username asc tie-break
+- bannolt felhasználók kizárása
+
+*[KÉP HELYE – Leaderboard top10 + current user sor]*
+
+### Admin oldal
+
+1. Kereső input
+2. Ban/Unban gomb
+3. Role change gomb
+4. Hamburger action menü
+5. User details modal
+6. User map kezelő gombok (rename/remove)
+7. Hard delete (Engineer)
+8. Logs dátumszűrő + view gomb
+9. Site settings frissítés (Engineer)
+
+Technikai rész:
+
+- erős jogosultságellenőrzés
+- ban reason kötelező
+- saját maga ban tiltás
+- admin/engineer hierarchia
+
+*[KÉP HELYE – Admin user card gombok számozva]*
+*[KÉP HELYE – Ban reason modal]*
+*[KÉP HELYE – Role change confirm modal]*
+*[KÉP HELYE – Admin logs panel]*
+
+\newpage
+
+## API-k részletes specifikációja
+
+### Auth végpontok
+
+#### `POST /api/login`
+
+Kért mezők:
+
+- `email`
+- `password`
+
+Lehetséges ágak:
+
+1. Hiányzó mező -> 400
+2. Hibás hitelesítő -> 401
+3. Nincs verifikálva -> 403 (`not_verified`)
+4. Temp jelszó kötelező csere -> 403 (`force_password_change`)
+5. Sikeres login -> 200
+
+*[KÉP HELYE – Login endpoint válaszok táblázata]*
+
+#### `POST /api/registration`
+
+Két fő akció:
+
+1. `registerUser`
+2. `verifyRegistrationCode`
+
+Eredmények:
+
+- user létrehozás pending verifikációval
+- kódellenőrzés után `is_verified = 1`
+
+*[KÉP HELYE – Registration API flowchart]*
+
+### Játék API végpontok
+
+#### `POST /api/game_login`
+
+Metóduskényszer, token-generálás, ban-check.
+
+#### `GET /api/game_stats`
+
+Bearer token kötelező, user-token párosítás, tiltásellenőrzés.
+
+#### `POST /api/game_update_stats`
+
+A legfontosabb integrációs pont:
+
+1. Token ellenőrzés
+2. Username anti-cheat check
+3. Snapshot reset detektálás
+4. Delta aggregáció
+5. Új rekord beszúrás
+
+*[KÉP HELYE – Game endpoints request body példák]*
+
+### Tartalmi végpontok
+
+1. `GET /api/main`
+2. `GET /api/maps`
+3. `GET /api/my_maps`
+4. `GET /api/profile`
+5. `GET /api/leaderboard`
+6. `GET /api/statistics`
+7. `GET/POST /api/admin`
+
+Mindegyik végpont JSON választ ad, tipikusan:
+
+```json
+{
+	"status": "success|error|info",
+	"message": "...",
+	"html": "..."
+}
+```
+
+*[KÉP HELYE – API endpoint összefoglaló táblázat]*
+
+\newpage
+
+## Modal és állapotkezelés részletesen
+
+A rendszer több helyen használ központi alert/confirm modalt. Mivel az összes frontend modul egy bundle-be kerülhet, fontos, hogy egy oldal eseménykezelése ne "ragassza be" egy másik oldal modalját.
+
+Kiemelt védelmek:
+
+1. Capture-phase event guard a confirm cancel/close esetekre.
+2. Állapot nullázás callback lefutás után.
+3. Oldalspecifikus DOM guard (`.admin-page-shell`, `.maps-site`).
+
+Korábbi tipikus hiba, amit ez a minta megelőz:
+
+- Modal láthatatlanná válik idegen CSS osztály miatt.
+- `confirmCallback` bent ragad.
+- `patchActionInProgress` true marad, ezért a következő művelet blokkolódik.
+
+*[KÉP HELYE – Modal state diagram]*
+
+\newpage
+
+## Jogosultságkezelés (RBAC) működése
+
+Szerepkörök:
+
+1. Player
+2. Moderator
+3. Admin
+4. Engineer
+
+Fő szabályok:
+
+1. Admin felület csak Admin/Engineer.
+2. Engineer-only műveletek: hard delete, site settings végleges mentés.
+3. Saját magát senki sem banolhatja.
+4. Admin bannolásához Engineer jogosultság kell.
+5. Bannolt user kérésenként route-szinten átirányításra kerül.
+
+*[KÉP HELYE – Role matrix táblázat]*
+
+\newpage
+
+## Részletes teszteset-gyűjtemény
+
+### Auth tesztek
+
+1. Érvényes login
+2. Hibás jelszó
+3. Nem verifikált account
+4. Temp jelszó lejárt
+5. Force password change sikeres
+
+### Game API tesztek
+
+1. game_login siker
+2. game_login banned
+3. game_update_stats valid token
+4. game_update_stats invalid token
+5. game_update_stats username mismatch
+6. session reset delta ellenőrzés
+
+### UI tesztek
+
+1. Modal nyit-zár ismételten frissítés nélkül
+2. Patch note create/edit/delete folyamat
+3. Maps add/remove flow
+4. Admin ban/unban flow
+5. Mobil menü nyitás-zárás
+
+### Jogosultság tesztek
+
+1. Player admin oldal tiltás
+2. Admin hard delete tiltás
+3. Engineer hard delete engedély
+
+*[KÉP HELYE – Teszteredmény táblázat mintakép]*
+
+\newpage
+
+## Képlistázó sablon (beszúráshoz)
+
+Az alábbi listát közvetlenül lehet használni Word-ben a képek beillesztésének ellenőrzésére:
+
+1. Főoldal teljes nézet
+2. Főoldal patch notes blokk
+3. Login oldal
+4. Login hibakezelés
+5. Regisztráció oldal
+6. E-mail verifikáció modal
+7. Profil oldal
+8. Avatar választó modal
+9. Maps oldal desktop
+10. Maps oldal mobil menü
+11. Map card gombok
+12. My Maps oldal
+13. My Maps rename modal
+14. Leaderboard oldal
+15. Admin user lista
+16. Admin ban modal
+17. Admin role change megerősítés
+18. Admin logs panel
+19. Site settings editor
+20. isBanned oldal
+21. Guest oldal
+22. API kérés/válasz minták (Postman)
+23. Game login request
+24. Game update stats request
+25. Score aggregation példa
+
+Ez a lista tetszőlegesen bővíthető oldalszám-cél szerint.
+
+\newpage
+
 # Biztonsági megoldások
 
 A webes alkalmazások fejlesztése során a biztonság nem opcionális kiegészítő, hanem alapvető követelmény. A Troxan webalkalmazás fejlesztése során számos rétegben kerültek beépítésre védelmi megoldások.
@@ -479,6 +1011,1381 @@ A fejlesztés során számos szélsőséges esetben köszöntek be problémák, 
 # Továbbfejlesztési lehetőségek
 
 *[HELYE – IDE KERÜLNEK A FEJLESZTÉSI LEHETŐSÉGEK]*
+
+\newpage
+
+# Melléklet A – Endpoint mátrix (részletes)
+
+## A.1 Auth és session
+
+### `POST /api/login`
+
+Feladat: webes hitelesítés és session létrehozás.
+
+Kritikus ellenőrzések:
+
+1. Minden kötelező mező jelenléte.
+2. Jelszó hash ellenőrzés.
+3. Verifikált fiók feltétel.
+4. Temp jelszó branch.
+5. Web session token létrehozás és per-user upsert.
+
+Válaszkódok:
+
+1. 200 success
+2. 400 bad input
+3. 401 invalid credential
+4. 403 business-rule tiltás
+5. 500 váratlan backend hiba
+
+*[KÉP HELYE – Login endpoint státuszkód térkép]*
+
+### `POST /api/logout`
+
+Feladat: session megszüntetése és token rekord törlése az aktív web session táblából.
+
+Műveleti lépések:
+
+1. `$_SESSION` adatok olvasása.
+2. `Active_Web_Sessions` takarítása.
+3. Session cookie és session állapot invalidálás.
+
+*[KÉP HELYE – Logout flow diagram]*
+
+## A.2 Játék integráció
+
+### `POST /api/game_login`
+
+Input:
+
+```json
+{
+	"username": "player01",
+	"password": "..."
+}
+```
+
+Output (siker):
+
+```json
+{
+	"status": "success",
+	"data": {
+		"user_id": 12,
+		"username": "player01",
+		"token": "..."
+	}
+}
+```
+
+*[KÉP HELYE – game_login request/response]*
+
+### `GET /api/game_stats`
+
+Header:
+
+```text
+Authorization: Bearer <token>
+```
+
+Ellenőrzések:
+
+1. Token kinyerhető-e.
+2. Token létezik-e userhez kötötten.
+3. User nem bannolt-e.
+
+*[KÉP HELYE – game_stats auth header példa]*
+
+### `POST /api/game_update_stats`
+
+Input minta:
+
+```json
+{
+	"username": "player01",
+	"coins": 1540,
+	"level": 8,
+	"statistics": {
+		"score": 22500,
+		"Mobs killed": 156,
+		"Deaths": 9,
+		"Story finished": 2
+	}
+}
+```
+
+Kulcspontok:
+
+1. Alias mezők támogatása (`score` / `Experience points`).
+2. Reset detektálás és delta alapú összegzés.
+3. Mindig új stat rekord beszúrás (időbélyeges history).
+
+*[KÉP HELYE – game_update_stats delta példa]*
+
+## A.3 Tartalmi végpontok
+
+### `GET /api/main`
+
+Feladat: főoldali tartalom renderelése (`main.php`) és JSON burkolásban visszaadás.
+
+### `GET /api/maps`
+
+Feladat: aktív pályák lekérése, keresés/rendezés támogatás, role-függő trash lista.
+
+### `POST /api/maps`
+
+Akciók:
+
+1. `add_to_library`
+2. `delete_map`
+3. `restore_map` (staff)
+
+### `GET /api/my_maps`
+
+Feladat: saját pályák és mentett könyvtár egyesített nézetben.
+
+### `POST /api/my_maps`
+
+Akciók:
+
+1. `remove_map`
+2. `rename_map`
+3. `publish_map`
+4. `unpublish_map`
+
+### `GET /api/profile`
+
+Feladat: profiladatok, rank, avatar készlet.
+
+### `POST /api/profile`
+
+Akciók:
+
+1. `change_avatar`
+2. `change_username`
+3. `change_password`
+
+### `GET /api/leaderboard`
+
+Feladat: top lista és saját pozíció meghatározása.
+
+### `GET/POST /api/admin`
+
+Feladat: teljes adminisztrációs műveletkészlet.
+
+Admin POST akciók példák:
+
+1. `ban` / `unban`
+2. `change_role`
+3. `get_user_maps`
+4. `rename_map`
+5. `remove_map`
+6. `hard_delete_user`
+7. `change_username`
+8. `get_user_logs`
+9. `get_site_settings`
+10. `update_site_settings`
+
+*[KÉP HELYE – Admin endpoint action matrix]*
+
+\newpage
+
+# Melléklet B – Forráskód walkthrough fájlonként
+
+## B.1 Backend core
+
+### `app/core/config.php`
+
+Tartalma:
+
+1. DB konfigurációs konstansok
+2. dátum-idő formázó helper
+3. stat kinyerő helper-ek
+4. score normalizáló helper
+5. leaderboard comparator
+
+Ez a fájl funkcionálisan az alkalmazás központi utility rétege.
+
+*[KÉP HELYE – config.php helper függvények]*
+
+### `app/core/router.php`
+
+Tartalma:
+
+1. URL path szeletelés
+2. route tömb építés
+3. JSON válasz helper
+4. controller loader
+
+### `app/core/router/api.php`
+
+Tartalma:
+
+1. globális ban ellenőrzés minden kérés előtt
+2. route-to-controller mapping
+3. unknown endpoint kezelése
+
+*[KÉP HELYE – api router switch-case blokk]*
+
+## B.2 Backend kontrollerek (üzleti logika)
+
+### `registrationController.php`
+
+Legfontosabb ágak:
+
+1. registerUser
+2. verifyRegistrationCode
+3. e-mail kód lejárat
+
+### `loginController.php`
+
+Legfontosabb ágak:
+
+1. loginUser
+2. forcePasswordChange
+3. Active_Web_Sessions token frissítés
+
+### `logoutController.php`
+
+Legfontosabb ág:
+
+1. session törlés és redirect jellegű válasz
+
+### `profileController.php`
+
+Legfontosabb ágak:
+
+1. profil adatok és rank összerakása
+2. avatar csere
+3. username csere
+4. jelszó csere
+
+### `mapsController.php`
+
+Legfontosabb ágak:
+
+1. aktív térképek lekérése
+2. staff trash nézet
+3. add_to_library
+4. delete_map
+5. restore_map
+
+### `myMapsController.php`
+
+Legfontosabb ágak:
+
+1. saját + mentett map egyesített lekérdezés
+2. remove_map
+3. rename_map
+4. publish/unpublish
+
+### `leaderboardController.php`
+
+Legfontosabb ágak:
+
+1. legfrissebb stat rekord userenként
+2. pontszám normalizálás
+3. rendezés és rank kiosztás
+
+### `statisticsController.php`
+
+Feladat:
+
+1. statisztika nézet renderelése
+
+### `adminController.php`
+
+Legösszetettebb controller, fő blokkjai:
+
+1. jogosultságellenőrzés
+2. user list/keresés
+3. ban/unban
+4. role change
+5. map kezelések
+6. logs nézet
+7. site settings kezelése
+8. hard delete
+
+### `gameLoginController.php`
+
+Fő blokk:
+
+1. játék bejelentkeztetés és token kiadás
+
+### `gameStatsController.php`
+
+Fő blokk:
+
+1. tokenes lekérés a játék felé
+
+### `gameUpdateStatsController.php`
+
+Fő blokk:
+
+1. snapshot-alapú aggregáció, anti-cheat, persist
+
+*[KÉP HELYE – Controller kapcsolat ábra]*
+
+\newpage
+
+## B.3 Frontend walkthrough
+
+### `src/main.js`
+
+Fő feladatok:
+
+1. modulok importálása
+2. fejléc állapotfrissítés (`updateHeader`)
+3. login/profil gomb dinamikus cseréje
+
+### `src/basesite-src/basesite.js`
+
+Fő feladatok:
+
+1. tab motor
+2. modal rendszer
+3. patch notes CRUD klienslogika
+4. engineer beállítás-szerkesztő
+5. stale state reset és guardok
+
+### `src/login-src/login.js`
+
+Fő feladatok:
+
+1. login submit flow
+2. verifikációs és force-change modal
+3. localStorage/session szinkron
+
+### `src/register-src/register.js`
+
+Fő feladatok:
+
+1. regisztrációs validáció
+2. verifikációs modal branch
+
+### `src/profile-src/profile.js`
+
+Fő feladatok:
+
+1. profil modal kezelők
+2. avatar választás
+3. jelszó/felhasználónév módosító flow
+
+### `src/maps-src/maps.js`
+
+Fő feladatok:
+
+1. keresés/rendezés
+2. add/delete/restore map akciók
+3. mobil menü és modal kezelések
+
+### `src/myMaps-src/myMaps.js`
+
+Fő feladatok:
+
+1. saját gyűjtemény szűrés
+2. rename/remove/publish/unpublish
+
+### `src/leaderboard-src/leaderboard.js`
+
+Fő feladatok:
+
+1. ranking render
+2. esetleges kliensoldali rendezés
+
+### `src/admin-src/admin.js`
+
+Fő feladatok:
+
+1. élő keresés
+2. ban/role/rename/hard delete akciók
+3. log megtekintés és dátumszűrés
+4. modal-interakciók és callback kezelés
+
+*[KÉP HELYE – Frontend modulkapcsolati ábra]*
+
+\newpage
+
+# Melléklet C – Gombkatalógus (ellenőrzőlista)
+
+## C.1 Login és Register
+
+1. Login submit
+2. Forgot password submit
+3. Verify code submit
+4. Force password change submit
+5. Register submit
+6. Register verify submit
+
+## C.2 Basesite
+
+1. Tab gombok (Download/Lore/Patch notes stb.)
+2. Open request modal
+3. Close request modal
+4. Download game
+5. Patch create
+6. Patch edit
+7. Patch save
+8. Patch delete
+9. Confirm OK
+10. Confirm Cancel
+11. Alert OK
+12. Site settings edit
+13. Site settings save
+
+## C.3 Profile
+
+1. Settings open
+2. Logout open
+3. Logout confirm
+4. Avatar modal open
+5. Avatar select save
+6. Username change confirm
+7. Password change confirm
+8. Navigate My Maps
+9. Navigate Admin (ha jogosult)
+
+## C.4 Maps
+
+1. Mobile menu toggle
+2. Go My Maps
+3. Search input
+4. Sort trigger
+5. Sort option select
+6. Help open
+7. Trash open
+8. Add to library
+9. Delete map
+10. Restore map
+11. Confirm/Alert modal gombok
+
+## C.5 My Maps
+
+1. Search input
+2. Sort trigger
+3. Rename
+4. Remove from library
+5. Publish
+6. Unpublish
+7. Confirm/Alert modal gombok
+
+## C.6 Leaderboard
+
+1. Sort trigger (ha aktív)
+2. Sort option select
+
+## C.7 Admin
+
+1. Search input
+2. Ban toggle
+3. Ban reason confirm
+4. Change role
+5. Username modal open
+6. Username save
+7. Open user details
+8. Open user maps
+9. Rename player map
+10. Remove map from library
+11. Hard delete open
+12. Hard delete confirm
+13. Logs open
+14. Logs view detail
+15. Logs date from/to filter
+16. Back gomb
+17. Confirm/Alert modal gombok
+
+*[KÉP HELYE – Gombkatalógus ellenőrző táblázat screenshotokkal]*
+
+\newpage
+
+# Melléklet D – Részletes felhasználói folyamatok (lépésenként)
+
+## D.1 Vendégből regisztrált felhasználó
+
+### Cél
+
+A folyamat bemutatja, hogyan jut el egy új látogató a sikeres regisztrációtól a működő profilig.
+
+### Lépések
+
+1. A felhasználó megnyitja a főoldalt.
+2. A fejlécben rákattint a Login/Registration opcióra.
+3. A regisztrációs formon kitölti a mezőket.
+4. A frontend kliensoldali validációt futtat.
+5. A backend szerveroldali validációt futtat.
+6. A rendszer verifikációs kódot küld.
+7. A felhasználó megadja a kódot.
+8. A rendszer aktiválja a fiókot.
+9. A felhasználó belép.
+10. A rendszer sessiont nyit és fejlécet frissít.
+
+*[KÉP HELYE – D.1-01 Főoldal nyitóállapot]*
+*[KÉP HELYE – D.1-02 Regisztrációs űrlap kitöltve]*
+*[KÉP HELYE – D.1-03 Verifikációs modal]*
+*[KÉP HELYE – D.1-04 Sikeres login utáni fejléc]*
+
+### Gyakori hibafutások
+
+1. Már létező email.
+2. Már létező username.
+3. Lejárt verifikációs kód.
+4. Rossz formátumú email.
+5. Rövid/gyenge jelszó.
+
+*[KÉP HELYE – D.1-H1 Duplicate email hiba]*
+*[KÉP HELYE – D.1-H2 Verification expired hiba]*
+
+\newpage
+
+## D.2 Bejelentkezés és kötelező jelszócsere
+
+### Cél
+
+Annak bemutatása, hogy a temp jelszavas ágon hogyan kényszeríti a rendszer az azonnali biztonsági jelszócserét.
+
+### Lépések
+
+1. Felhasználó belép ideiglenes jelszóval.
+2. A backend `force_password_change` hibakóddal válaszol.
+3. A frontend megnyitja a force change modalt.
+4. A felhasználó megadja az új jelszót és megerősítést.
+5. A backend validál és ment.
+6. A `has_temp_password` flag visszaáll 0-ra.
+7. A felhasználó normál sessionnel folytatja.
+
+*[KÉP HELYE – D.2-01 Force password change modal megnyitva]*
+*[KÉP HELYE – D.2-02 Sikeres jelszócsere visszajelzés]*
+
+\newpage
+
+## D.3 Játékos statisztikaútvonal a kliensből a ranglistáig
+
+### Cél
+
+Bemutatni, hogyan jut el a játékon belül elért teljesítmény a weboldali leaderboard megjelenésig.
+
+### Lépések
+
+1. Játékkliens hitelesít (`game_login`).
+2. Token mentése kliensoldalon.
+3. Játék során statok gyűjtése memóriában.
+4. Session végén `game_update_stats` hívás.
+5. Backend tokenellenőrzés és anti-cheat check.
+6. Delta aggregáció és `Statistics` insert.
+7. Leaderboard lekérés (`/api/leaderboard`).
+8. Rendezés score DESC szerint.
+9. Top10 + saját helyezés megjelenítése.
+
+*[KÉP HELYE – D.3-01 Game kliens login képernyő]*
+*[KÉP HELYE – D.3-02 game_update_stats request body]*
+*[KÉP HELYE – D.3-03 Leaderboard frissült pontszámmal]*
+
+### Hibatűrési pontok
+
+1. Missing token -> 401.
+2. Invalid token -> 401.
+3. Username mismatch -> 403.
+4. Banned account -> 403.
+5. Method mismatch -> 405.
+
+*[KÉP HELYE – D.3-H1 Invalid token response]*
+
+\newpage
+
+## D.4 Térkép életciklus teljes folyamat
+
+### Állapotok
+
+1. `0` = Draft
+2. `1` = Published
+3. `3` = Unpublished
+4. `4` = Banned/Trash
+5. `5` = Creator deleted but library-kept
+
+### Példafolyamat
+
+1. Creator draft pályát készít.
+2. Publish művelet -> státusz `1`.
+3. Más felhasználó könyvtárba menti.
+4. Creator visszavonja -> státusz `3`.
+5. Staff moderálja a trash nézetből.
+6. Visszaállítás esetén aktív lista.
+
+*[KÉP HELYE – D.4-01 Draft map kártya]*
+*[KÉP HELYE – D.4-02 Published map kártya]*
+*[KÉP HELYE – D.4-03 Trash modal nézet]*
+
+### Letöltésszámláló logika
+
+1. Library add -> counter +1.
+2. Library remove -> counter -1 (ha releváns).
+3. Többszörös mentés tiltása (info válasz).
+
+*[KÉP HELYE – D.4-04 Downloads counter before/after]*
+
+\newpage
+
+## D.5 Admin moderációs folyamatok
+
+### Ban folyamat
+
+1. Admin kiválasztja a felhasználót.
+2. Ban gomb megnyomása.
+3. Ban reason modal kötelező kitöltéssel.
+4. Backend szerepkör-szabály ellenőrzés.
+5. Státusz váltás és visszajelzés.
+
+*[KÉP HELYE – D.5-01 Admin user list]*
+*[KÉP HELYE – D.5-02 Ban reason modal kitöltve]*
+*[KÉP HELYE – D.5-03 Ban success alert]*
+
+### Unban folyamat
+
+1. Bannolt user kiválasztás.
+2. Unban gomb.
+3. Megerősítés.
+4. Backend státusz visszaváltás.
+
+*[KÉP HELYE – D.5-04 Unban megerősítés]*
+
+### Role change folyamat
+
+1. Promote vagy demote gomb.
+2. Confirm modal.
+3. Backend role validáció.
+4. UI reload friss role adatokkal.
+
+*[KÉP HELYE – D.5-05 Role change confirm]*
+
+### Hard delete (Engineer)
+
+1. Engineer kiválaszt célfelhasználót.
+2. Erős megerősítés (szöveg + confirm).
+3. Backend végleges törlés.
+4. Kapcsolódó adatok cascade tisztítása.
+
+*[KÉP HELYE – D.5-06 Hard delete modal]*
+
+\newpage
+
+# Melléklet E – UI állapotok és eseménytranzíciók
+
+## E.1 Modal állapotgépek
+
+Általános állapotok:
+
+1. Hidden
+2. Opening
+3. Visible
+4. Closing
+5. Reset
+
+Tranzíciók:
+
+1. Hidden -> Opening (open click)
+2. Opening -> Visible (anim vége)
+3. Visible -> Closing (cancel/close/backdrop)
+4. Closing -> Hidden (anim vége)
+5. Hidden -> Reset (callback nullázás)
+
+*[KÉP HELYE – E.1 Modal state machine diagram]*
+
+## E.2 Patch notes szerkesztés állapotok
+
+1. Idle
+2. Edit mode
+3. Save pending
+4. Save success
+5. Delete pending
+6. Delete confirmed
+
+Reset szabályok:
+
+1. confirm cancel mindig tisztítja a state-et.
+2. aktív edit id elvesztésekor fallback reset.
+3. párhuzamos mentés tiltása.
+
+*[KÉP HELYE – E.2 Patch notes state diagram]*
+
+## E.3 Maps keresés és rendezés tranzíciók
+
+1. Input változás -> filter fut.
+2. Sort váltás -> újrarendezés.
+3. Add művelet -> lokális kártya frissítés.
+4. Delete művelet -> animált eltávolítás.
+
+*[KÉP HELYE – E.3 Maps filter/sort állapotábra]*
+
+## E.4 Admin menü állapotok
+
+1. Card menu closed
+2. Card menu open
+3. Másik card nyitása -> előző zárása
+4. külső kattintás -> összes zárása
+
+*[KÉP HELYE – E.4 Admin card action menu állapotok]*
+
+\newpage
+
+# Melléklet F – Képbeillesztési checklista (részletes)
+
+## F.1 Kötelező képek funkciónként
+
+1. Login oldal – alap nézet
+2. Login oldal – hibás jelszó
+3. Login oldal – nem verifikált account
+4. Login oldal – force password change
+5. Register oldal – alap nézet
+6. Register oldal – sikeres beküldés
+7. Register oldal – verifikációs modal
+8. Register oldal – lejárt kód hiba
+9. Főoldal – teljes nézet
+10. Főoldal – trailer blokk
+11. Főoldal – letöltés blokk
+12. Főoldal – lore blokk
+13. Főoldal – patch notes lista
+14. Főoldal – patch note edit
+15. Főoldal – patch note delete confirm
+16. Profile oldal – alap nézet
+17. Profile oldal – avatar modal
+18. Profile oldal – username change
+19. Profile oldal – password change
+20. Maps oldal – desktop
+21. Maps oldal – mobile menu
+22. Maps oldal – search/sort használat
+23. Maps oldal – add to library siker
+24. Maps oldal – delete confirm
+25. Maps oldal – trash modal
+26. My Maps oldal – alap nézet
+27. My Maps oldal – rename flow
+28. My Maps oldal – publish flow
+29. My Maps oldal – unpublish flow
+30. Leaderboard oldal – top10
+31. Leaderboard oldal – current user blokk
+32. Admin oldal – user lista
+33. Admin oldal – ban modal
+34. Admin oldal – role change confirm
+35. Admin oldal – user maps modal
+36. Admin oldal – logs panel
+37. Admin oldal – hard delete modal
+38. Admin oldal – site settings editor
+39. isBanned oldal
+40. Guest fallback oldal
+41. API: game_login request
+42. API: game_login response
+43. API: game_update_stats request
+44. API: game_update_stats response
+45. Pontszám aggregáció példa táblázat
+46. Role matrix táblázat
+47. Router működési ábra
+48. Modal state machine
+49. Endpoint mátrix kép
+50. Build/deploy lépés képernyőkép
+
+## F.2 Opcionális képek oldalszám növeléshez
+
+1. Minden fő gomb külön közeli screenshot
+2. Minden modal nyitott és zárt állapota
+3. Mobil nézetek külön oldalra
+4. Hibaüzenetek katalógusa képekkel
+5. Postman endpoint kollekció képei
+
+*[KÉP HELYE – F. Összesített képkatalógus sablon]*
+
+\newpage
+
+# Melléklet G – Backend kontrollerek részletes, kódközeli magyarázata
+
+## G.1 `loginController.php`
+
+Ez a kontroller nem egyszerűen egy "belépés" gomb mögötti backend, hanem több, egymástól jól elkülöníthető hitelesítési forgatókönyvet kezel.
+
+### Fő belépési ág: `loginUser($input)`
+
+A folyamat első lépése a bemenet minimális ellenőrzése. A backend kimenti az `email` és `password` mezőket, majd rögtön kizárja az üres kéréseket. Ez azért fontos, mert a frontend validáció önmagában nem elég: egy kliensoldal könnyen megkerülhető kézi HTTP kérésekkel.
+
+Ezután egy összetett SQL lekérdezés történik, amely nemcsak a felhasználó alapadatait húzza be, hanem a szerepkört és az avatart is. Ennek az a gyakorlati előnye, hogy sikeres login után a frontend már egyetlen válaszból megkaphat minden olyan információt, amely a fejléc és a session állapot felépítéséhez kell.
+
+Az ellenőrzés ágai sorrendben:
+
+1. létezik-e ilyen email,
+2. egyezik-e a jelszó hash,
+3. verifikált-e a fiók,
+4. ideiglenes jelszó alatt áll-e a felhasználó,
+5. ha igen, az ideiglenes jelszó lejárt-e.
+
+Ez a sorrend azért jó, mert üzletileg értelmes hibákat ad vissza, ugyanakkor nem engedi át a jogosulatlan állapotokat a session létrehozásig.
+
+Sikeres belépéskor a rendszer a következő session mezőket írja:
+
+```php
+$_SESSION['user_id']   = $user['user_id'];
+$_SESSION['username']  = $user['username'];
+$_SESSION['role_name'] = $user['role_name'] ?? 'Player';
+$_SESSION['logged_in'] = true;
+```
+
+Ezután létrejön vagy frissül az `Active_Web_Sessions` rekord, valamint generálódik egy külön websaját token is. Ez a token nem a játéktoken helyett van, hanem a webes session élettartamának és állapotának szerveroldali nyomon követésére.
+
+### Kényszerített jelszócsere: `forcePasswordChange($input)`
+
+Ez az ág akkor aktiválódik, amikor a felhasználó temp jelszóval próbál belépni. A backend itt négy dolgot vizsgál:
+
+1. minden mező megvan-e,
+2. az új jelszó és a megerősítés egyezik-e,
+3. az új jelszó elég erős-e,
+4. a régi jelszó tényleg az ideiglenes jelszó-e.
+
+Siker esetén a `User` rekordból törlődik a temp jelszó állapot, nullázódik a lejárat, és normál hash kerül a jelszó mezőbe. Ezután e-mailes megerősítés is kiküldhető, ami felhasználói és audit oldalról is előnyös.
+
+### Elfelejtett jelszó ág
+
+Ez az útvonal generál egy egyszer használható, időkorlátos ideiglenes jelszót. Itt az a fontos, hogy a backend nem tárol plain text jelszót, csak a hash-t, és a temp jelszó is ugyanazon hash-elési elven megy át, mint a normál jelszó.
+
+*[KÉP HELYE – G.1 loginController folyamatábra]*
+*[KÉP HELYE – G.1 force password change branch]*
+
+\newpage
+
+## G.2 `registrationController.php`
+
+Ez a kontroller két nagy folyamatot kezel: a felhasználó létrehozását és a létrehozott felhasználó e-mailes aktiválását.
+
+### Regisztrációs létrehozás
+
+Az input egyszerre támogat JSON és form alapú forrást, ami rugalmasabb frontend integrációt tesz lehetővé. A validáció több szinten történik:
+
+1. kötelező mezők,
+2. felhasználónév hossza és karakterkészlete,
+3. email formátum,
+4. jelszó minimumhossz,
+5. jelszómegerősítés egyezése,
+6. username/email egyediség.
+
+Különösen fontos, hogy a rendszer nemcsak `User` rekordot készít, hanem létrehozza a kapcsolódó kezdeti adatszerkezeteket is, például üres `Statistics` sort és kapcsolódó beállítási struktúrát. Ez azért előnyös, mert később a profil- és ranglistaoldal úgy tud működni, hogy nem kell mindenhol külön "van-e már stat rekord?" típusú fallback logikát írni.
+
+### Verifikációs kód ellenőrzés
+
+A verifikáció során a backend nemcsak azt nézi, hogy a kód numerikusan helyes-e, hanem azt is, hogy még időben érvényes-e. Ha a felhasználó már verifikált, a rendszer nem hibát dob, hanem idempotens módon sikeres állapotot is vissza tud adni. Ez felhasználóbarát és kliensoldali integráció szempontból is stabilabb.
+
+*[KÉP HELYE – G.2 registrationController validációs táblázat]*
+
+\newpage
+
+## G.3 `logoutController.php`
+
+Ez a kontroller látszólag egyszerű, de egy fontos feladata van: következetesen takarítani a session és az aktív webes token állapotot.
+
+Lépések:
+
+1. session változók kiolvasása,
+2. `Active_Web_Sessions` rekord törlési kísérlete,
+3. `$_SESSION` nullázása,
+4. `session_destroy()`,
+5. session cookie invalidálás.
+
+Ez azért fontos, mert ha csak a kliensoldali localStorage ürülne, a szerveroldali session még élhetne, ami inkonzisztens kijelentkezési állapotot eredményezne.
+
+## G.4 `profileController.php`
+
+Ez a fájl a bejelentkezett felhasználó teljes személyes dashboardját állítja össze.
+
+### Profiloldal felépítése
+
+A `getContent()` több egymásra épülő adatlekérést végez:
+
+1. user alapadatok,
+2. legfrissebb statisztikai rekord,
+3. teljes leaderboard lista a saját helyezés kiszámításához,
+4. összes elérhető avatar.
+
+Ez egy tudatos döntés: a profiloldal nem csak a saját rekordot mutatja, hanem összeveti a játékost a többiekkel is. Emiatt a rank számítás itt is történik, nem csak a leaderboard nézetben.
+
+### Avatar csere
+
+Az avatarcsere nem csupán egy UI művelet. A backend átállítja az `avatar_id` mezőt, a frontend pedig a localStorage-ban tárolt avatart és a fejlécet is frissíti. Ez egy jó példa a szerveroldali igazság és kliensoldali megjelenés szinkronjára.
+
+### Username és jelszó változtatás
+
+A névváltoztatásnál a backend cooldown vagy utolsó módosítási dátum logikával is dolgozhat, a jelszóváltoztatásnál pedig mindig szükség van a régi jelszó megerősítésére. Ez meggátolja, hogy egy nyitva hagyott sessionben valaki csendben átírja a jelszót.
+
+*[KÉP HELYE – G.4 profileController adatforrásai]*
+
+\newpage
+
+## G.5 `mapsController.php`
+
+Ez a kontroller egyszerre katalógus, könyvtár-integráció és moderációs belépési pont.
+
+### GET ág – aktív térképek listája
+
+Az SQL lekérdezés egyszerre hozza:
+
+1. a pálya adatait,
+2. a készítő nevét és szerepkörét,
+3. azt az információt, hogy az adott pálya benne van-e az aktuális user könyvtárában.
+
+Ez utóbbi azért fontos, mert így a frontend egyből tudja, hogy az "Add" gombot milyen állapotban jelenítse meg.
+
+### POST ág – add és delete műveletek
+
+Az `add_to_library` akció egyszerre két üzleti hatást hordoz:
+
+1. bekerül a kapcsolat a `User_Map_Library` táblába,
+2. nő a letöltésszám.
+
+Ez a gyakorlatban azt jelenti, hogy a rendszer a könyvtárba mentést használja letöltési/metrikai eseményként is.
+
+Törlésnél a státuszkezelés miatt nem minden esetben fizikai törlés történik. A rendszer inkább állapotot vált, hogy a moderáció és a visszaállítás lehetősége megmaradjon.
+
+## G.6 `myMapsController.php`
+
+Ez a kontroller talán az egyik legérdekesebb SQL oldalról, mert két külön forrásból épít egységes listát:
+
+1. a user saját pályái,
+2. a könyvtárába elmentett pályák.
+
+Az SQL feltétel emiatt összetett, hiszen más státuszkészlet vonatkozik a saját és a mentett térképekre. A különböző státuszok (`0`, `1`, `3`, `5`) azt biztosítják, hogy a játékos a számára releváns tartalmat akkor is lássa, ha annak életciklusa már eltér az eredeti publikált állapottól.
+
+Publish/unpublish esetén a backend üzleti állapotot vált, nem pusztán UI flag-et.
+
+*[KÉP HELYE – G.6 myMaps SQL logika ábra]*
+
+\newpage
+
+## G.7 `leaderboardController.php`
+
+Ez a fájl a játék versenylogikájának nyilvános reprezentációja.
+
+Legfontosabb döntései:
+
+1. minden userből csak a legfrissebb stat rekordot veszi,
+2. bannolt usereket kizárja,
+3. score szerint csökkenő sorrendben rendez,
+4. pontegyenlőség esetén név szerint rendez.
+
+Ez a működés megakadályozza, hogy régi stat sorok vagy törölt/bannolt játékosok torzítsák a rangsort.
+
+## G.8 `statisticsController.php`
+
+Ez a kontroller egyszerűbb, mert főleg view render szerepet lát el. Mégis fontos, mert külön statisztikai oldalt biztosít a rendszernek, így a játék teljesítményadatai nem csak a profil vagy leaderboard alá vannak beszórva.
+
+## G.9 `adminController.php`
+
+Ez a legnagyobb és legösszetettebb controller. Itt koncentrálódik a legtöbb üzleti és jogosultsági szabály.
+
+### Admin nézet felépítése
+
+A GET ág lekéri a felhasználókat, szerepköröket, avatart és a legfrissebb statisztikai rekordot. A keresés már itt, SQL szinten is támogatható.
+
+### Ban/unban logika
+
+Ez a blokk több kritikus szabályt tartalmaz:
+
+1. saját magát senki nem tilthatja ki,
+2. Engineer tiltása védett,
+3. Admin tiltása csak Engineer által történhet,
+4. ban indok megadása kötelező.
+
+Ez azt mutatja, hogy a rendszer nem csak funkcionálisan, hanem szervezeti hierarchiában is gondolkodik.
+
+### Role change
+
+A szerepkör-váltásnál a backendnek kell garantálnia, hogy a frontendről érkező gombkattintás ne tudja felülírni a szervezeti korlátokat.
+
+### User map műveletek
+
+Az admin képes egy user térképkönyvtárát megnézni, térképet átnevezni vagy eltávolítani. Ez moderációs és támogatási szempontból is fontos eszköz.
+
+### Hard delete
+
+Ez a legveszélyesebb művelet, ezért Engineer-only. Itt az alkalmazásnak különösen erős megerősítési mechanizmust kell használnia, mert a művelet visszafordíthatatlan lehet.
+
+### Site settings
+
+Az admin controller egyik különleges része, hogy nemcsak user- és map-adminisztrációt kezel, hanem CMS-szerű oldaltartalom-szerkesztést is. Ezzel a főoldal kulcsszövegei, trailer URL-je, letöltési linkje és egyéb tartalmi elemek kódmódosítás nélkül alakíthatók.
+
+*[KÉP HELYE – G.9 adminController alrendszerei]*
+
+\newpage
+
+## G.10 `gameLoginController.php`, `gameStatsController.php`, `gameUpdateStatsController.php`
+
+Ez a három kontroller együtt adja a játék–web integráció gerincét.
+
+### `gameLoginController.php`
+
+Feladata a játékkliens azonosítása és a token kiadása. A webes sessiontől független, dedikált játéktoken itt keletkezik.
+
+### `gameStatsController.php`
+
+Feladata a tokennel hitelesített lekérés a játék számára. Ez lehetőséget ad arra, hogy a kliens mindig a szerveroldali valós állapotból dolgozzon.
+
+### `gameUpdateStatsController.php`
+
+Ez a legfontosabb integrációs egység. A `troxan_stats_pick_int` helper alias-kulcsokból is tud dolgozni, így a backend toleránsabb többféle kliens JSON szerkezettel szemben. A snapshot metaadatok használata pedig megakadályozza a statok duplikált vagy hibás aggregálását.
+
+*[KÉP HELYE – G.10 Game API controller trio]*
+
+\newpage
+
+# Melléklet H – Frontend eseménykezelők teljes bontása
+
+## H.1 `main.js`
+
+Ez a modul nem egyszerűen betöltőfájl, hanem a kliensoldali navigáció és fejlécállapot egyik központi koordinátora.
+
+### Fontos viselkedések
+
+1. a különböző oldalmodulok importálása,
+2. a `loadContent()` segítségével dinamikus oldaltöltés,
+3. `updateHeader()` segítségével Login gomb és profil-avatar cseréje,
+4. localStorage alapú session-visszaállítás.
+
+Ha be van lépve a user, a `href="/login"` link helyére egy avataros profilblokk kerül. Mobilon külön profile link jön létre. Ha nincs bejelentkezve, ez a folyamat fordított irányban visszaépíti a login linkeket.
+
+## H.2 `basesite.js`
+
+Ez az egyik legsűrűbb frontend modul.
+
+### Tab eventek
+
+Az összes `.basesite-tab-btn` kattintás központi event delegationnel működik. A handler:
+
+1. azonosítja a target tabot,
+2. elrejti az összes tab contentet,
+3. aktiválja a megfelelőt,
+4. animációt futtat,
+5. scrollbar állapotot szinkronizál.
+
+### Alert/confirm modal eventek
+
+Különlegesség a capture-phase click listener, amely minden cancel/close/backdrop esemény előtt képes állapotot tisztítani. Ez a modal beragadás ellen kulcsfontosságú.
+
+### Patch note eventek
+
+Főbb gombok:
+
+1. lock/unlock,
+2. edit,
+3. save,
+4. delete,
+5. confirm cancel/ok.
+
+Állapotváltozók:
+
+1. `patchActionInProgress`,
+2. `activeEditPatchId`,
+3. `confirmCallback`.
+
+### Site settings editor
+
+Az edit gombra kattintva a rendszer runtime HTML editor mezőket generál. A save gomb ekkor már nem ugyanaz az állapot, hanem módosított ID-val és szereppel működik.
+
+*[KÉP HELYE – H.2 basesite event delegation térkép]*
+
+\newpage
+
+## H.3 `login.js`
+
+Ez a modul több egymásba ágyazott modal- és auth-flow-t kezel.
+
+Fő eseménycsoportok:
+
+1. login form submit,
+2. verification code modal submit,
+3. forgot password submit,
+4. forced password change submit.
+
+Itt különösen fontos a callback és Promise-szerű vezérlés, mert egy hibakódtól függően teljesen más UI ág nyílik meg.
+
+## H.4 `register.js`
+
+Itt a legfontosabb frontend feladat a felhasználó gyors, kliensoldali visszajelzésekkel történő segítése.
+
+Események:
+
+1. regisztrációs űrlap submit,
+2. modal kód beküldés,
+3. hibaállapotok vizuális megjelenítése.
+
+## H.5 `profile.js`
+
+Fő UI események:
+
+1. settings nyitása,
+2. logout modal nyitása,
+3. avatar modal nyitása,
+4. avatar elem kiválasztása,
+5. username change submit,
+6. password change submit,
+7. my maps navigáció,
+8. admin navigáció jogosultság esetén.
+
+Itt a modal nyitás-zárás animált osztályokkal történik, nem csak `display:none` szintű kapcsolással, ami felhasználói élmény szempontból sokkal kifinomultabb.
+
+*[KÉP HELYE – H.5 profile modal state-ek]*
+
+\newpage
+
+## H.6 `maps.js`
+
+Ez a modul egyszerre kereső, rendező, könyvtárkezelő és staff moderációs UI.
+
+### Fő események
+
+1. mobile menu toggle,
+2. live search input,
+3. Enter tiltása keresőben,
+4. sort dropdown nyitás/zárás,
+5. sort elem kiválasztás,
+6. help modal nyitás,
+7. trash modal nyitás,
+8. add to library,
+9. delete map,
+10. restore map.
+
+Különösen fontos, hogy a modul oldalspecifikus guardot használ:
+
+```js
+if (!document.querySelector('.maps-site')) return;
+```
+
+Ez megakadályozza, hogy más oldalakon is belefusson ugyanaz a globális click handler.
+
+### Add to library vizuális flow
+
+Siker esetén a modul azonnal lokálisan is frissíti:
+
+1. a downloads számlálót,
+2. a gomb feliratát,
+3. a gomb CSS osztályait,
+4. az állapotot jelző data attribútumot.
+
+Ez csökkenti a teljes újratöltés szükségességét és gyorsabbnak érződik az UI.
+
+## H.7 `myMaps.js`
+
+Fő események:
+
+1. keresés input,
+2. rendezés dropdown,
+3. rename confirm,
+4. remove_map confirm,
+5. publish,
+6. unpublish,
+7. modal ok/cancel műveletek.
+
+Ez a modul szintén saját alert/confirm megoldással és state-gépekkel dolgozik.
+
+## H.8 `leaderboard.js`
+
+Fő feladata a ranglista kliensoldali támogatása: adott esetben rendezési vagy megjelenítési logikák segítése. A nehéz logika azonban itt nem frontend oldalon, hanem backend oldalon történik.
+
+## H.9 `admin.js`
+
+Ez a frontend egyik legösszetettebb része.
+
+### Élő keresés
+
+Az `input` event azonnal szűri az `.admin-user-card` elemeket. A kódban külön kiszűrésre kerülhetnek a vizuális ikonok, például lakatjelölések, hogy a keresés ténylegesen a felhasználónévre vonatkozzon.
+
+### Action menu kezelés
+
+A hamburger gombokkal nyitható card-action menük egyik fontos mintája, hogy egyszerre csak egy menü marad nyitva, és külső kattintás mindent bezár.
+
+### Ban/role modal kezelések
+
+Az admin UI több globális state objektumot tart fenn, például:
+
+1. `currentBanTarget`,
+2. `currentAdminTargetUser`,
+3. `currentAdminRenameMap`,
+4. `currentHardDeleteTarget`,
+5. `currentLogsData`.
+
+Ezek a state-ek teszik lehetővé, hogy a több lépésből álló modalflow-k konzisztensen működjenek.
+
+*[KÉP HELYE – H.9 admin.js event/state diagram]*
+
+\newpage
+
+# Melléklet I – API hibakód-katalógus és válaszminták
+
+## I.1 `POST /api/login`
+
+### 400 – hiányzó mezők
+
+```json
+{
+	"status": "error",
+	"message": "All fields are required!"
+}
+```
+
+### 401 – hibás hitelesítő
+
+```json
+{
+	"status": "error",
+	"message": "Invalid email or password!"
+}
+```
+
+### 403 – nincs verifikálva
+
+```json
+{
+	"status": "error",
+	"code": "not_verified",
+	"message": "Your account is not verified yet."
+}
+```
+
+### 403 – kötelező jelszócsere
+
+```json
+{
+	"status": "error",
+	"code": "force_password_change",
+	"message": "You must change your password before accessing your account."
+}
+```
+
+## I.2 `POST /api/registration`
+
+### 400 – formátumhiba
+
+Lehetséges okok:
+
+1. hiányzó mező,
+2. hibás email,
+3. túl rövid jelszó,
+4. nem egyező jelszavak,
+5. tiltott username karakterek.
+
+### 409 – foglalt username vagy email
+
+```json
+{
+	"status": "error",
+	"message": "Username or email already taken!"
+}
+```
+
+### 403 – lejárt verifikációs kód
+
+```json
+{
+	"status": "error",
+	"message": "The verification code has expired. Please register again."
+}
+```
+
+## I.3 `POST /api/game_login`
+
+### 400 – hiányzó username/password
+### 401 – rossz hitelesítő
+### 403 – bannolt user
+### 405 – rossz HTTP metódus
+
+Példa:
+
+```json
+{
+	"status": "error",
+	"message": "A fiókod ki van tiltva a szerverről!"
+}
+```
+
+## I.4 `GET /api/game_stats`
+
+### 401 – hiányzó vagy hibás token
+### 403 – bannolt fiók
+### 405 – nem GET kérés
+
+## I.5 `POST /api/game_update_stats`
+
+### 400 – hibás JSON vagy hiányos stat szerkezet
+### 401 – invalid token
+### 403 – cheat gyanú / username mismatch / banned
+### 405 – rossz metódus
+
+Példa cheat-védelmi válasz:
+
+```json
+{
+	"status": "error",
+	"message": "Username mismatch or invalid token."
+}
+```
+
+## I.6 `GET/POST /api/profile`
+
+### 200 guest fallback
+
+Érdekesség, hogy nem minden nem-hitelesített hozzáférés kemény hibakód. Egyes ágak guest view-t adnak vissza, ami UX szempontból sokkal finomabb.
+
+### 401 – login required
+### 404 – user not found
+### 500 – SQL error
+
+## I.7 `GET/POST /api/maps`
+
+### 401 – login required
+### 403 – tiltott akció vagy staff-only művelet
+### 404 – pálya nem található
+
+## I.8 `GET/POST /api/my_maps`
+
+### 401 – login required
+### 403 – idegen pálya módosítása tiltott
+### 404 – map not found
+
+## I.9 `GET/POST /api/admin`
+
+### 401 – unauthorized access
+### 403 – insufficient role
+### 404 – user/map not found
+### 400 – validation hiba (pl. üres ban reason)
+### 500 – adatbázis vagy belső hiba
+
+Példák:
+
+```json
+{
+	"status": "error",
+	"message": "Only Admins and Engineers can access this area."
+}
+```
+
+```json
+{
+	"status": "error",
+	"message": "You cannot ban yourself."
+}
+```
+
+```json
+{
+	"status": "error",
+	"message": "Engineers cannot be banned."
+}
+```
+
+## I.10 Hibakódok dokumentálási javaslata a beadott Word fájlban
+
+Minden nagy endpoint blokkhoz érdemes külön mini táblázatot illeszteni az alábbi oszlopokkal:
+
+1. HTTP kód
+2. belső `status`
+3. opcionális `code`
+4. felhasználói üzenet
+5. kliensoldali reakció
+
+Ez vizuálisan is nagyon erősíti a dokumentáció szakmai hatását.
+
+*[KÉP HELYE – I. hibakód-katalógus táblázat]*
 
 \newpage
 
