@@ -1,176 +1,241 @@
-## 4. My Maps (könyvtár) — GET view + POST action CRUD + kliens oldali működés
+## 5. Profile — GET view + profile update/delete (action + RESTful methodok)
 
-### 4.1 Endpoint
-- View: `GET /app/api.php?path=my_maps`
-- Műveletek: `POST /app/api.php?path=my_maps` + `{ action: ... }`
+### 5.1 Endpoint
+- View: `GET /app/api.php?path=profile`
+- Update (vegyes):
+  - `POST /app/api.php?path=profile` + `action` (legacy mód)
+  - `PUT /app/api.php?path=profile` (REST-szerű update)
+  - `PATCH /app/api.php?path=profile` + `action` (legacy)
+- Delete account:
+  - `DELETE /app/api.php?path=profile` + `{ confirm_text: "CONFIRM" }`
 
-Backend controller: `app/controllers/api/myMapsController.php`  
-Frontend modul: `src/myMaps-src/myMaps.js`
+Backend: `app/controllers/api/profileController.php`  
+Frontend: `src/profile-src/profile.js`
 
 ---
 
-### 4.2 GET: My Maps lista lekérdezése + view render
-A My Maps oldal csak belépve érhető el:
+### 5.2 GET: profile view render + stat + rank + avatar lista
+Ha nincs bejelentkezés, a controller guest view-t ad vissza:
 
 ```php
-// app/controllers/api/myMapsController.php
+// app/controllers/api/profileController.php
 if (!isset($_SESSION['user_id'])) {
-  json_response(["status" => "error", "message" => "Login required"], 401);
+  ob_start();
+  require VIEWS . 'guest/guest.php';
+  $buffer = ob_get_clean();
+  json_response(["html" => $buffer, "status" => "success", "message" => "Redirected to guest"], 200);
   return;
 }
 ```
 
-A „mágikus” lekérdezés egyszerre hozza:
-1) a saját készítésű mapeket (status: 0 Draft, 1 Public, 3 Unpublished)
-2) a könyvtárba mentett mapeket (status: 1, 3, vagy 5 = creator által törölt, de a user library-ben megmaradhat)
+Bejelentkezve:
+1) user adatok (username/email/created_at/last_time_online/last_username_change + role + avatar)
+2) legutolsó Statistics sor a userhez (ORDER BY id DESC LIMIT 1)
+3) leaderboard rank számolás (összes user score → sort → pozíció)
+4) összes avatar lekérés a modálhoz
+5) view render: `views/profile/profile.php`
+
+User select:
 
 ```php
-// app/controllers/api/myMapsController.php (részlet)
-$query = "SELECT m.*, u.username as creator_name, r.role_name as creator_role,
-                 COALESCE(uml.added_at, m.created_at) as added_at
-          FROM `Maps` m
-          LEFT JOIN `User_Map_Library` uml ON m.id = uml.map_id AND uml.user_id = ?
-          JOIN `User` u ON m.creator_user_id = u.user_id
-          JOIN Roles r ON u.role_id = r.id
-          WHERE (
-              (m.creator_user_id = ? AND m.status IN (0, 1, 3))
-              OR
-              (uml.user_id = ? AND m.status IN (1, 3, 5))
-          )";
-$params = [$myUserId, $myUserId, $myUserId];
+$stmt = $pdo->prepare("
+  SELECT u.username, u.email, u.created_at, u.last_time_online, u.last_username_change,
+         r.role_name, a.avatar_picture
+  FROM `User` u
+  JOIN Roles r ON u.role_id = r.id
+  LEFT JOIN Avatars a ON u.avatar_id = a.id
+  WHERE u.user_id = ?
+");
+$stmt->execute([$userId]);
+$user = $stmt->fetch(PDO::FETCH_ASSOC);
 ```
 
-A view render:
+Legutolsó stat:
 
 ```php
-ob_start();
-require VIEWS . 'myMaps/myMaps.php';
-$buffer = ob_get_clean();
-json_response(["html" => $buffer, "status" => "success"], 200);
+$stmtStats = $pdo->prepare("
+  SELECT statistics_file, last_updated
+  FROM `Statistics`
+  WHERE user_id = ?
+  ORDER BY id DESC
+  LIMIT 1
+");
+$stmtStats->execute([$userId]);
 ```
 
 ---
 
-### 4.3 POST actions (CRUD műveletek)
+### 5.3 Profile update — két stílus (legacy action és REST)
+A controllerben több út is van a frissítésre.
 
-#### 4.3.1 Remove map a könyvtárból (`action: remove_map`)
-Ez a művelet:
-- törli a kapcsolatot a `User_Map_Library` táblából
-- ha tényleg törölt sort (`rowCount() > 0`), akkor csökkenti a `Maps.downloads` értéket `GREATEST(...,0)`-val
-- ha a user a creator is, akkor a map statusát 5-re állítja (Scrapped)
+#### 5.3.1 Legacy action alapú POST (példák: avatar, username, password)
+A `handlePostActionsLegacy()` a JSON body-ból `action`-t olvas:
 
 ```php
-// app/controllers/api/myMapsController.php (részlet)
-if ($action === 'remove_map') {
-  $stmt = $pdo->prepare("SELECT creator_user_id, status FROM `Maps` WHERE id = ?");
-  $stmt->execute([$mapId]);
-  $mapData = $stmt->fetch(PDO::FETCH_ASSOC);
+$input = json_decode(file_get_contents("php://input"), true);
+$action = $input['action'] ?? '';
+$userId = $_SESSION['user_id'];
+```
 
-  $delStmt = $pdo->prepare("DELETE FROM `User_Map_Library` WHERE user_id = ? AND map_id = ?");
-  $delStmt->execute([$currentUserId, $mapId]);
-
-  if ($delStmt->rowCount() > 0) {
-    $pdo->prepare("UPDATE `Maps` SET downloads = GREATEST(downloads - 1, 0) WHERE id = ?")->execute([$mapId]);
-  }
-
-  if ($mapData['creator_user_id'] == $currentUserId) {
-    $pdo->prepare("UPDATE `Maps` SET status = 5 WHERE id = ?")->execute([$mapId]);
-  }
-
-  json_response(["status" => "success", "message" => "Map removed from your library successfully!"], 200);
+##### a) Avatar csere (`action: change_avatar`)
+```php
+if ($action === 'change_avatar') {
+  $avatar_id = isset($input['avatar_id']) ? (int)$input['avatar_id'] : 0;
+  $stmt = $pdo->prepare("UPDATE `User` SET avatar_id = ? WHERE user_id = ?");
+  $stmt->execute([$avatar_id, $userId]);
+  json_response(["status" => "success", "message" => "Avatar updated successfully!"], 200);
 }
 ```
 
-#### 4.3.2 Publish / Unpublish (`action: toggle_publish`)
-Csak a creator publikálhatja a saját mapjét:
-- ha status=1 → 3 (Unpublished)
-- ha status=0 vagy 3 → 1 (Public)
+Frontend oldalon kattintásra elküldi:
+
+```js
+// src/profile-src/profile.js (részlet)
+fetch(profileUrl, {
+  method: 'POST',
+  credentials: 'include',
+  headers: { 'Content-Type': 'application/json' },
+  body: JSON.stringify({ action: 'change_avatar', avatar_id: selectedAvatarId })
+});
+```
+
+##### b) Username csere (`action: change_username`) + cooldown logika
+A backend:
+- ellenőrzi az ürességet
+- non-engineer esetén 4–12
+- non-engineer esetén 30 napos cooldown (`last_username_change`)
+- ellenőrzi foglaltságot
+- update + session username frissítés
+- email küldés
+
+Cooldown rész:
 
 ```php
-// app/controllers/api/myMapsController.php (részlet)
-} elseif ($action === 'toggle_publish') {
-  $stmt = $pdo->prepare("SELECT creator_user_id, status FROM `Maps` WHERE id = ?");
-  $stmt->execute([$mapId]);
-  $mapData = $stmt->fetch(PDO::FETCH_ASSOC);
+if (!$isEngineer && $userData['last_username_change'] !== null) {
+  $lastTimestamp = strtotime($userData['last_username_change']);
+  $nextAvailable = $lastTimestamp + (30 * 24 * 60 * 60);
 
-  if ($mapData['creator_user_id'] != $currentUserId) {
-    json_response(["status" => "error", "message" => "You can only publish your own maps."], 403);
+  if (time() < $nextAvailable) {
+    $daysLeft = ceil(($nextAvailable - time()) / (24 * 60 * 60));
+    json_response(["status" => "error", "message" => "You must wait {$daysLeft} more day(s) before changing your username again."], 403);
   }
-
-  $newStatus = ($mapData['status'] == 1) ? 3 : 1;
-  $pdo->prepare("UPDATE `Maps` SET status = ? WHERE id = ?")->execute([$newStatus, $mapId]);
-
-  json_response(["status" => "success", "message" => $msg, "new_status" => $newStatus], 200);
 }
 ```
 
-#### 4.3.3 Rename map (`action: edit_map_name`)
-Szabályok:
-- `new_name` nem üres
-- max 64 karakter
-- csak a creator VAGY staff (Admin/Moderator/Engineer) nevezheti át
-- status=5 (Scrapped) map nem nevezhető át
+Frontend oldalon (PATCH + action):
+
+```js
+fetch(profileUrl, {
+  method: 'PATCH',
+  credentials: 'include',
+  headers: { 'Content-Type': 'application/json' },
+  body: JSON.stringify({ action: 'change_username', new_username: newName.trim() })
+})
+```
+
+##### c) Password csere (`action: change_password`)
+A frontend POST-ban küldi:
+
+```js
+fetch(profileUrl, {
+  method: 'POST',
+  credentials: 'include',
+  headers: { 'Content-Type': 'application/json' },
+  body: JSON.stringify({
+    action: 'change_password',
+    old_password: oldPass,
+    new_password: newPass,
+    confirm_password: confirmPass
+  })
+})
+```
+
+A backend erősen validál (prioritásos üzenetek), majd hash + update:
 
 ```php
-// app/controllers/api/myMapsController.php (részlet)
-} elseif ($action === 'edit_map_name') {
-  if (mb_strlen($newName) > 64) {
-    json_response(["status" => "error", "message" => "Map name is too long (max 64 characters)."], 400);
-  }
-
-  $stmt = $pdo->prepare("SELECT creator_user_id, status FROM `Maps` WHERE id = ?");
-  $stmt->execute([$mapId]);
-  $mapData = $stmt->fetch(PDO::FETCH_ASSOC);
-
-  if ((int)$mapData['creator_user_id'] !== (int)$currentUserId && !$isStaff) {
-    json_response(["status" => "error", "message" => "Only the creator or staff can rename this map."], 403);
-  }
-
-  if ((int)$mapData['status'] === 5) {
-    json_response(["status" => "error", "message" => "Scrapped maps cannot be edited."], 400);
-  }
-
-  $pdo->prepare("UPDATE `Maps` SET map_name = ? WHERE id = ?")->execute([$newName, $mapId]);
-  json_response(["status" => "success", "message" => "Map name updated successfully!"], 200);
-}
+$newHashedPass = password_hash($newPass, PASSWORD_DEFAULT);
+$updateSql = $hasLastPasswordChange
+  ? "UPDATE `User` SET password = ?, last_password_change = NOW() WHERE user_id = ?"
+  : "UPDATE `User` SET password = ? WHERE user_id = ?";
+$update = $pdo->prepare($updateSql);
+$update->execute([$newHashedPass, $userId]);
 ```
 
 ---
 
-### 4.4 Frontend (My Maps JS) — hogyan hívja az API-t
+#### 5.3.2 REST-szerű update: `updateProfile()` (PUT vagy POST action nélkül)
+Ha a POST body-ban nincs `action`, akkor a controller `updateProfile()`-t hívja:
 
-#### 4.4.1 Endpoint konstans
-```js
-// src/myMaps-src/myMaps.js
-const myMapUrl = `/app/api.php?path=my_maps`;
+```php
+function handlePostActions()
+{
+  $input = json_decode(file_get_contents("php://input"), true) ?: $_POST;
+
+  if (isset($input['action']) && !empty($input['action'])) {
+    handlePostActionsLegacy();
+    return;
+  }
+
+  updateProfile();
+}
 ```
 
-#### 4.4.2 Rename mentés (POST edit_map_name)
-```js
-fetch(myMapUrl, {
-  method: 'POST',
-  credentials: 'include',
-  headers: { 'Content-Type': 'application/json' },
-  body: JSON.stringify({ action: 'edit_map_name', map_id: pendingRename.mapId, new_name: newName })
-})
+A `updateProfile()` dinamikusan épít SQL-t az alapján, mi van a body-ban:
+- avatar_id
+- username
+- old/new/confirm password
+
+SQL összeállítás:
+
+```php
+$sql = "UPDATE `User` SET " . implode(', ', $updates) . " WHERE user_id = ?";
+$stmt = $pdo->prepare($sql);
+$stmt->execute($params);
 ```
 
-#### 4.4.3 Publish/unpublish (POST toggle_publish)
-```js
-fetch(myMapUrl, {
-  method: 'POST',
-  credentials: 'include',
-  headers: { 'Content-Type': 'application/json' },
-  body: JSON.stringify({ action: 'toggle_publish', map_id: mapId })
-})
+---
+
+### 5.4 Delete profile: `DELETE /profile` + confirm
+A törléshez `confirm_text` kötelező:
+
+```php
+$confirmText = strtoupper(trim($input['confirm_text'] ?? ''));
+if ($confirmText !== 'CONFIRM') {
+  json_response(["status" => "error", "message" => "Type CONFIRM to delete your profile."], 400);
+  return;
+}
 ```
 
-#### 4.4.4 Remove (POST remove_map + confirm modal)
-```js
-fetch(myMapUrl, {
-  method: 'POST',
-  credentials: 'include',
-  headers: { 'Content-Type': 'application/json' },
-  body: JSON.stringify({ action: 'remove_map', map_id: mapId })
-})
+A törlés érinti:
+- Maps, amiket a user created (törli a library linkeket is)
+- User_Map_Library sorok a userhez
+- Statistics sorok
+- Active_Web_Sessions best effort
+- User sor
+
+```php
+$pdo->prepare("DELETE FROM `User_Map_Library` WHERE user_id = ?")->execute([$userId]);
+$pdo->prepare("DELETE FROM `Statistics` WHERE user_id = ?")->execute([$userId]);
+$pdo->prepare("DELETE FROM `User` WHERE user_id = ?")->execute([$userId]);
 ```
+
+A végén session destroy:
+
+```php
+session_unset();
+session_destroy();
+json_response(["status" => "success", "message" => "User account deleted."], 200);
+```
+
+---
+
+### 5.5 Profile „CRUD” összefoglaló (kódbeli műveletekkel)
+- Read:
+  - `GET /app/api.php?path=profile` (profile view + stat + rank)
+- Update:
+  - Avatar: `POST /profile` + `{ action:"change_avatar", avatar_id }`
+  - Username: `PATCH /profile` + `{ action:"change_username", new_username }`
+  - Password: `POST /profile` + `{ action:"change_password", old_password, new_password, confirm_password }`
+  - REST update: `PUT /profile` (body mezők alapján)
+- Delete:
+  - `DELETE /profile` + `{ confirm_text:"CONFIRM" }`
