@@ -1,417 +1,302 @@
-## 1. Alap architektúra és request flow (rewrite → api.php → router → controller → JSON → SPA render)
+## 2. API konvenciók és endpoint minták (GET view render vs POST action)
 
-### 1.1 Projekt „mentális modell” (mit kell fejlesztőként fejben tartani)
+### 2.1 Alapelv: minden az `/app/api.php?path=...` kapun megy be
+A Troxan-beta webes appban a backend belépési pontja az `app/api.php`. A kliens jellemzően így hív:
 
-#### 1.1.1 Egyetlen backend belépési pont
-A Troxan-beta webes alkalmazásban a kérések nagy része az `app/api.php` fájlon fut át. A szerveroldal a kéréstől függően:
-- vagy HTML-t generál (PHP view render), majd JSON-ban visszaküldi (`{ status, html }`),
-- vagy egy API műveletet futtat (jellemzően `POST` + `action`), és JSON választ ad.
+- Oldal (view) betöltés: `GET /app/api.php?path=<route>`
+- Műveletek: `POST /app/api.php?path=<route>` + JSON body (gyakran `action` mezővel)
+- Egyes helyeken: `PUT` / `PATCH` is előfordul (főleg auth jellegű folyamatoknál)
 
-Ez egy „front controller” jellegű minta: egy belépési pont + router + controllerek.
-
----
-
-### 1.2 URL átírás (Apache rewrite) → `api.php?path=...`
-
-#### 1.2.1 `.htaccess` szabály
-Az `app/.htaccess` gondoskodik arról, hogy a nem létező fájlokra/könyvtárakra érkező kérések átíródjanak az `api.php`-ra.
-
-Példa:
-- Eredeti URL: `/maps`
-- Rewrite után: `/app/api.php?path=maps`
-
-```apacheconf
-<IfModule mod_rewrite.c>
-    # URL átírás engedélyezése
-    RewriteEngine On
-
-    # Feltétel: Ha a fájl nem létezik
-    RewriteCond %{REQUEST_FILENAME} !-f
-
-    # Feltétel: Ha a könyvtár nem létezik
-    RewriteCond %{REQUEST_FILENAME} !-d
-
-    # Átírási szabály: a (.*) MINDENT elfogad, perjeleket is!
-    RewriteRule ^(.*)$ api.php?path=$1 [QSA,L]
-</IfModule>
-```
-
-Miért fontos?
-- A frontend használhat „szép URL-eket” (`/profile`, `/maps`), miközben a backend egyetlen routeren keresztül szolgál ki mindent.
-
----
-
-### 1.3 `app/api.php` — front controller: CORS + session + DB + router
-
-#### 1.3.1 Dinamikus CORS kezelés
-A `api.php` elején a kód dinamikusan beállítja az `Access-Control-Allow-Origin` headert az `HTTP_ORIGIN` alapján, majd engedélyezi a credential-öket és a HTTP methodokat.
+A route-ot a router a `path` paraméterből állítja elő, a controllert a `segment1` dönti el:
 
 ```php
-$origin = $_SERVER['HTTP_ORIGIN'] ?? '';
-
-if (!empty($origin)) {
-    header("Access-Control-Allow-Origin: $origin");
-}
-
-header("Access-Control-Allow-Credentials: true");
-header("Access-Control-Allow-Methods: GET, POST, PUT, DELETE, PATCH, OPTIONS");
-header("Access-Control-Allow-Headers: Content-Type, Authorization, X-Requested-With");
-
-if ($_SERVER['REQUEST_METHOD'] == 'OPTIONS') {
-    http_response_code(200);
-    exit();
-}
-```
-
-Megjegyzés:
-- Ez fejlesztési környezetben kényelmes, mert „bárhonnan” enged requestet, ahol van Origin fejléc.
-- Éles környezetben általában szűkíteni érdemes (whitelist).
-
----
-
-#### 1.3.2 Session cookie paraméterezés
-A session és cookie paraméterek 2 órás életciklusra vannak hangolva:
-
-```php
-ini_set('session.gc_maxlifetime', 7200); // 2 óra
-
-session_set_cookie_params([
-    'lifetime' => 7200,
-    'path' => '/',
-    'domain' => '',
-    'secure' => false,  // fejlesztés alatt false, élesben HTTPS esetén true
-    'httponly' => true,
-    'samesite' => 'Lax'
-]);
-
-if (session_status() === PHP_SESSION_NONE) {
-    session_start();
-}
-```
-
----
-
-#### 1.3.3 DB config + connection boot
-A config és a DB kapcsolat betöltése:
-
-```php
-require 'core/config.php';
-require 'core/connect.php';
-```
-
-`app/core/config.php` DB konstansok:
-
-```php
-const DB_HOST = "localhost";
-const DB_USER = "troxan_user";
-const DB_PASS = "TroxanServer123";
-const DB_NAME = "troxan_db";
-const DB_CHARSET = "utf8mb4";
-```
-
-`app/core/connect.php` PDO connection:
-
-```php
-$dsn = "mysql:host=" . DB_HOST . ";dbname=" . DB_NAME . ";charset=" . DB_CHARSET;
-
-$options = [
-    PDO::ATTR_ERRMODE            => PDO::ERRMODE_EXCEPTION,
-    PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
-    PDO::ATTR_EMULATE_PREPARES   => false,
-];
-
-$pdo = new PDO($dsn, DB_USER, DB_PASS, $options);
-```
-
----
-
-#### 1.3.4 `Active_Web_Sessions` token logika (multi-browser védelem)
-Ha a felhasználó be van lépve (`$_SESSION['user_id']` és `$_SESSION['logged_in']`), a `api.php` karbantartja a `Active_Web_Sessions` táblát és ellenőrzi a session tokent.
-
-A cél: ha a user másik böngészőben belép, a token eltér, és az API 401-et ad.
-
-Tipikus ág:
-
-```php
-if (!hash_equals((string)$dbToken, (string)$currentToken)) {
-    $_SESSION = [];
-    session_destroy();
-
-    json_response([
-        "status" => "error",
-        "message" => "Your account was used on another browser. Please log in again."
-    ], 401);
-    exit();
-}
-```
-
----
-
-#### 1.3.5 Router indítása
-A legvégén a vezérlés átmegy a routerre:
-
-```php
-require CORE . 'router.php';
-```
-
----
-
-### 1.4 `app/core/router.php` — path parsing + helper függvények
-
-#### 1.4.1 `path` feldarabolása
-A router a `path` paramétert feldarabolja, és a `segment1/2/3` mezőkbe teszi.
-
-```php
-$path = $_GET['path'] ?? '';
-$path = trim($path, '/');
+// app/core/router.php
+$path = trim($_GET['path'] ?? '', '/');
 $segments = ($path === '') ? [] : explode('/', $path);
-
 $method = $_SERVER['REQUEST_METHOD'];
 
 $route = [
-    'segment1' => $segments[0] ?? null,
-    'segment2' => $segments[1] ?? null,
-    'segment3' => $segments[2] ?? null,
+  'segment1' => $segments[0] ?? null,
+  'segment2' => $segments[1] ?? null,
+  'segment3' => $segments[2] ?? null,
 ];
 ```
 
+```php
+// app/core/router/api.php (részlet)
+switch ($route['segment1']) {
+  case "maps": load_controller($data, API_CONTROLLERS . 'mapsController.php'); break;
+  case "my_maps": load_controller($data, API_CONTROLLERS . 'myMapsController.php'); break;
+  case "login": load_controller($data, API_CONTROLLERS . 'loginController.php'); break;
+  case "registration": load_controller($data, API_CONTROLLERS . 'registrationController.php'); break;
+  case "profile": load_controller($data, API_CONTROLLERS . 'profileController.php'); break;
+  case "admin": load_controller($data, API_CONTROLLERS . 'adminController.php'); break;
+  // ...
+}
+```
+
 ---
 
-#### 1.4.2 `json_response()` helper
-Ez a projekt standard JSON válasz-küldője. Minden controller ezt használja.
+### 2.2 Standard válaszküldés: `json_response()`
+A projektben a controllerek a `json_response()` helperrel válaszolnak.
 
 ```php
+// app/core/router.php
 function json_response($data, int $statusCode = 200): void
 {
-    http_response_code($statusCode);
-    header('Content-Type: application/json');
-    echo json_encode($data, JSON_HEX_APOS | JSON_HEX_TAG | JSON_HEX_QUOT);
-    exit;
+  http_response_code($statusCode);
+  header('Content-Type: application/json');
+  echo json_encode($data, JSON_HEX_APOS | JSON_HEX_TAG | JSON_HEX_QUOT);
+  exit;
 }
 ```
 
-Miért fontos, hogy `exit` van a végén?
-- Megakadályozza, hogy a script tovább fusson és „ráírjon” a válaszra.
+A tipikus response mezők:
+- `status`: `"success" | "error" | "info"`
+- `message`: üzenet
+- `html`: HTML view string (amikor a GET oldalbetöltés HTML-t ad vissza)
+- domain specifikus: pl. `user`, `maps`, `logs`
 
 ---
 
-#### 1.4.3 `load_controller()` helper
-A router ezzel tölti be a controller fájlokat.
+### 2.3 Kliens oldali API hívások alapmintája (`credentials: include`)
+A beléptetett funkciók nagy részénél fontos, hogy a session cookie menjen a requesttel:
 
-```php
-function load_controller(array $data, string $file, int $statusCode = 200): void
-{
-    http_response_code($statusCode);
-
-    if (file_exists($file)) {
-        require $file;
-    } else {
-        http_response_code(500);
-        echo "Controller not found.";
-    }
-}
+```js
+fetch('/app/api.php?path=admin', {
+  method: 'POST',
+  credentials: 'include',
+  headers: { 'Content-Type': 'application/json' },
+  body: JSON.stringify({ action: 'get_logs', target_user_id: userId })
+}).then(res => res.json()).then(data => { /* ... */ });
 ```
 
----
+A `src/main.js` saját fetch wrapperrel kezeli az auth állapotot:
 
-### 1.5 `app/core/router/api.php` — endpoint dispatch + global ban check
-
-#### 1.5.1 Globális ban check
-Bejelentkezett usernél a router ellenőrzi a `User.is_banned` mezőt. Ha banned és nem `logout`, akkor a route átíródik `isBanned`-re.
-
-```php
-if (isset($_SESSION['user_id']) && isset($_SESSION['logged_in']) && $_SESSION['logged_in'] === true) {
-    $banStmt = $pdo->prepare("SELECT is_banned FROM `User` WHERE user_id = ?");
-    $banStmt->execute([$_SESSION['user_id']]);
-    $isBanned = $banStmt->fetchColumn();
-
-    if ($isBanned == 1 && $route['segment1'] !== 'logout') {
-        $route['segment1'] = 'isBanned';
-    }
-}
+```js
+// src/main.js (részlet)
+const isLoggedIn = localStorage.getItem('isLoggedIn') === 'true';
+credentials: isLoggedIn ? 'include' : 'omit'
 ```
 
-Miért jó ez?
-- Nem kell minden controller elejére külön ban-checket rakni.
-- A tiltott user automatikusan a kitiltás nézetet kapja.
+401 esetén loginra navigál:
 
----
-
-#### 1.5.2 Controller dispatch (`segment1` alapján)
-A router a `segment1` alapján dönt:
-
-```php
-switch ($route['segment1']) {
-    case "maps":
-        load_controller($data, API_CONTROLLERS . 'mapsController.php');
-        break;
-    case "my_maps":
-        load_controller($data, API_CONTROLLERS . 'myMapsController.php');
-        break;
-    case "login":
-        load_controller($data, API_CONTROLLERS . 'loginController.php');
-        break;
-    case "registration":
-        load_controller($data, API_CONTROLLERS . 'registrationController.php');
-        break;
-    case "profile":
-        load_controller($data, API_CONTROLLERS . 'profileController.php');
-        break;
-    case "admin":
-        load_controller($data, API_CONTROLLERS . 'adminController.php');
-        break;
-    // ...
-    default:
-        json_response(['error' => 'API endpoint not found'], 404);
+```js
+if (response.status === 401) {
+  clearClientAuthState();
+  navigateTo('login');
+  throw new Error('Session expired. Please log in again.');
 }
 ```
 
 ---
 
-### 1.6 Controller output minta: „GET = HTML view render JSON-ban”
-A webes nézetek általában GET-re HTML-t renderelnek, majd JSON-ban visszaadják.
+### 2.4 „GET = view render” minta (HTML JSON-ban)
+A legtöbb webes oldal GET-re HTML-t generál a view-ból, és JSON-ban visszaküldi.
 
-Példa: login GET:
+Példa: login (GET)
 
 ```php
+// app/controllers/api/loginController.php
 function getContent() {
-    ob_start();
-    require VIEWS . 'login/login.php';
-    $buffer = ob_get_clean();
-    json_response(["html" => $buffer, "status" => "success"], 200);
+  ob_start();
+  require VIEWS . 'login/login.php';
+  $buffer = ob_get_clean();
+  json_response(["html" => $buffer, "status" => "success"], 200);
 }
 ```
 
-A frontend ezt `result.html` mezőként kapja vissza, és beszúrja a DOM-ba.
+Példa: admin (GET) — jogosultság ellenőrzéssel, majd view render:
 
----
+```php
+// app/controllers/api/adminController.php (részlet)
+if (!isset($_SESSION['user_id']) || !isset($_SESSION['logged_in'])) {
+  json_response(["status" => "error", "message" => "Unauthorized access."], 401);
+  return;
+}
 
-### 1.7 SPA jellegű működés: `src/main.js`
+$checkStmt = $pdo->prepare("SELECT r.role_name FROM `User` u JOIN Roles r ON u.role_id = r.id WHERE u.user_id = ?");
+$checkStmt->execute([$_SESSION['user_id']]);
 
-#### 1.7.1 Vite bundler importok
-A `src/main.js` importálja az összes modul JS-t, hogy a bundler egy csomagba tegye.
+if (!in_array($checkStmt->fetchColumn(), ['Admin', 'Engineer'])) {
+  json_response(["status" => "error", "message" => "Only Admins and Engineers can access this area."], 403);
+  return;
+}
 
-```js
-import './admin-src/admin.js';
-import './basesite-src/basesite.js';
-import './leaderboard-src/leaderboard.js';
-import './maps-src/maps.js';
-import './myMaps-src/myMaps.js';
-import './login-src/login.js';
-import './register-src/register.js';
-import './profile-src/profile.js';
-import './isBanned-src/isBanned.js';
+ob_start();
+require VIEWS . 'admin/admin.php';
+$buffer = ob_get_clean();
+json_response(["html" => $buffer, "status" => "success"], 200);
 ```
 
 ---
 
-#### 1.7.2 Központi fetch wrapper: `fetchData()`
-A `fetchData()` kezeli:
-- `credentials` beállítást (include/omit)
-- 401 esetén session state törlés + loginra navigálás
-- response JSON parse + hibakezelés
+### 2.5 „POST = action” minta (RPC-szerű műveletek)
+A projekt több controllerében POST-ban az `action` kulcs dönti el, milyen művelet történjen.
 
-```js
-async function fetchData(url, options = {}) {
-  const isLoggedIn = localStorage.getItem('isLoggedIn') === 'true';
+#### 2.5.1 Maps: `POST /...maps` (delete/restore/add_to_library)
+A `mapsController.php` `handlePost()` beolvassa a JSON body-t:
 
-  const fetchOptions = {
-    ...options,
-    credentials: isLoggedIn ? 'include' : 'omit',
-    headers: {
-      ...options.headers,
-      "Content-Type": "application/json",
+```php
+// app/controllers/api/mapsController.php (részlet)
+$input = json_decode(file_get_contents('php://input'), true);
+$action = $input['action'] ?? '';
+$mapId = (int)($input['map_id'] ?? 0);
+```
+
+„Add to library” (CRUD: Create a User_Map_Library sor + Map downloads increment):
+
+```php
+// app/controllers/api/mapsController.php (részlet)
+} elseif ($action === 'add_to_library') {
+  $checkStmt = $pdo->prepare("SELECT 1 FROM `User_Map_Library` WHERE user_id = ? AND map_id = ?");
+  $checkStmt->execute([$currentUserId, $mapId]);
+
+  if ($checkStmt->fetchColumn()) {
+    json_response(["status" => "info", "message" => "This map is already in your My Maps library!"], 200);
+    return;
+  }
+
+  $pdo->prepare("UPDATE `Maps` SET downloads = downloads + 1 WHERE id = ?")->execute([$mapId]);
+  $libStmt = $pdo->prepare("INSERT INTO `User_Map_Library` (user_id, map_id) VALUES (?, ?)");
+  $libStmt->execute([$currentUserId, $mapId]);
+
+  json_response(["status" => "success", "message" => "Map successfully added to My Maps!"], 201);
+}
+```
+
+„Delete map” (CRUD: Update Maps.status, logika staff/engineer alapján):
+
+```php
+// app/controllers/api/mapsController.php (részlet)
+if ($action === 'delete_map') {
+  $stmt = $pdo->prepare("SELECT status FROM `Maps` WHERE id = ?");
+  $stmt->execute([$mapId]);
+  $currentStatus = $stmt->fetchColumn();
+
+  $newStatus = ($isStaff && $mapData['creator_user_id'] != $currentUserId) ? 4 : (($currentStatus == 0) ? 5 : 3);
+  $pdo->prepare("UPDATE `Maps` SET status = ? WHERE id = ?")->execute([$newStatus, $mapId]);
+
+  json_response(["status" => "success", "message" => "Map moved to trash!"], 200);
+}
+```
+
+„Restore map” (CRUD: Update Maps.status vissza 1-re, staff-only):
+
+```php
+// app/controllers/api/mapsController.php (részlet)
+} elseif ($action === 'restore_map' && $isStaff) {
+  $pdo->prepare("UPDATE `Maps` SET status = 1 WHERE id = ?")->execute([$mapId]);
+  json_response(["status" => "success", "message" => "Map restored successfully!"], 200);
+}
+```
+
+---
+
+#### 2.5.2 Admin: `POST /...admin` (több action ugyanazon endpointon)
+Az admin controller egy POST routert használ:
+
+```php
+// app/controllers/api/adminController.php (részlet)
+switch ($data["method"]) {
+  case 'POST':
+    $input = json_decode(file_get_contents('php://input'), true);
+    if (isset($input['action'])) {
+      if ($input['action'] === 'toggle_ban') toggleBan();
+      elseif ($input['action'] === 'change_role') changeRole();
+      elseif ($input['action'] === 'change_username') changeUserName();
+      elseif ($input['action'] === 'get_logs') getLogs();
+      elseif ($input['action'] === 'get_user_maps') getUserMaps();
+      elseif ($input['action'] === 'admin_remove_map') adminRemoveMap();
+      elseif ($input['action'] === 'admin_edit_map_name') adminEditMapName();
+      elseif ($input['action'] === 'hard_delete_user') hardDeleteUser();
+      else json_response(["status" => "error", "message" => "Ismeretlen POST akció"], 400);
+    } else {
+      json_response(["status" => "error", "message" => "Hiányzó action paraméter"], 400);
     }
-  };
-
-  const response = await fetch(url, fetchOptions);
-
-  if (response.status === 401) {
-    clearClientAuthState();
-    navigateTo('login');
-    throw new Error('Session expired. Please log in again.');
-  }
-
-  if (!response.ok) {
-    const errorData = await response.json().catch(() => ({}));
-    throw new Error(errorData.message || `HTTP error! Status: ${response.status}`);
-  }
-
-  return await response.json();
+    break;
 }
 ```
 
+**Következmény fejlesztői szemmel:**
+- Az „admin API” valójában több al-funkció (ban, role, logs, hard delete, maps library), és ezeket az `action` különíti el.
+
 ---
 
-#### 1.7.3 View betöltés: `loadContent(path)`
-A route betöltés lényege: `GET /app/api.php?path=<path>` és `result.html` DOM-ba.
+### 2.6 PUT/PATCH használat (auth jellegű folyamatoknál)
+A registration controller több methodot is támogat.
 
-```js
-async function loadContent(path) {
-  try {
-    const result = await fetchData(`/app/api.php?path=${path}`);
-    if (result.status === "success") {
-      appDiv.innerHTML = result.html;
-      fillClientLastUpdatedFields();
+```php
+// app/controllers/api/registrationController.php
+switch ($data["method"]) {
+  case 'GET':
+    getContent();
+    break;
+
+  case 'POST':
+    $input = json_decode(file_get_contents("php://input"), true) ?: $_POST;
+    if (isset($input['action']) && $input['action'] === 'verify_code') {
+      verifyRegistrationCode();
+    } else {
+      registerUser();
     }
-  } catch (error) {
-    appDiv.innerHTML = `<p class="troxan-error-message">Error: ${error.message}</p>`;
-  }
+    break;
+
+  case 'PUT':
+    verifyRegistrationCode();
+    break;
+
+  default:
+    json_response(["status" => "error", "message" => "Method not allowed"], 405);
+    break;
 }
 ```
 
----
-
-#### 1.7.4 Route guard: bizonyos oldalak csak belépve
-A kliens oldalon a route-ok egy része csak belépett állapotban töltődik (maps/my_maps/admin), különben a `guest` nézet jön.
-
-```js
-function loadRoute(routeName) {
-  const isLoggedIn = localStorage.getItem('isLoggedIn') === 'true';
-  switch (routeName) {
-    case 'maps': isLoggedIn ? getMapsContent() : getGuestContent(); break;
-    case 'my_maps': isLoggedIn ? getMyMapsContent() : getGuestContent(); break;
-    case 'admin': isLoggedIn ? getAdminContent() : getGuestContent(); break;
-    case 'profile': isLoggedIn ? getProfileContent() : getLoginContent(); break;
-    default: getMainPageContent(); break;
-  }
-}
-```
+Ezzel a flow-val:
+- `POST /registration` = user létrehozása
+- `POST /registration` + `{ action:"verify_code" }` = email verifikáció (action-os mód)
+- `PUT /registration` = email verifikáció (REST-szerű update)
 
 ---
 
-#### 1.7.5 Periodikus session check (5 percenként)
-Ha a localStorage szerint belépett, a kliens időnként `GET /profile`-lal validálja a sessiont.
+### 2.7 Rövid API „CRUD térkép” (a kódban ténylegesen látható műveletek)
+A projekt nem mindenhol tiszta REST (nem mindig `POST/PUT/DELETE` egy entity-re), ezért itt a „CRUD” mappinget a tényleges hívásokkal érdemes rögzíteni.
 
-```js
-async function periodicSessionCheck() {
-  const isLoggedIn = localStorage.getItem('isLoggedIn') === 'true';
-  if (!isLoggedIn) return;
+#### 2.7.1 Maps / User_Map_Library (kliens: Maps + My Maps)
+- Read (view):
+  - `GET /app/api.php?path=maps`
+- Create (library-be felvétel):
+  - `POST /app/api.php?path=maps` + `{ action:"add_to_library", map_id }`
+- Update (trash/restore):
+  - `POST /app/api.php?path=maps` + `{ action:"delete_map", map_id }`
+  - `POST /app/api.php?path=maps` + `{ action:"restore_map", map_id }` (staff)
 
-  try {
-    const response = await fetch('/app/api.php?path=profile', {
-      method: 'GET',
-      credentials: 'include',
-      headers: { 'Content-Type': 'application/json' }
-    });
+#### 2.7.2 Admin user management (User tábla)
+- Read (view):
+  - `GET /app/api.php?path=admin` (user list + view render)
+- Update:
+  - `POST /app/api.php?path=admin` + `{ action:"toggle_ban", target_user_id, reason }`
+  - `POST /app/api.php?path=admin` + `{ action:"change_role", role_action, target_user_id }`
+  - `POST /app/api.php?path=admin` + `{ action:"change_username", target_user_id, new_username, reason }`
+- Read (logs):
+  - `POST /app/api.php?path=admin` + `{ action:"get_logs", target_user_id }`
+- Delete (hard delete user):
+  - `POST /app/api.php?path=admin` + `{ action:"hard_delete_user", target_user_id, confirm_text:"CONFIRM" }`
 
-    const data = await response.json().catch(() => null);
-
-    if (response.status === 401 || !response.ok || !data || (data.status === 'success' && data.message === 'Redirected to guest')) {
-      clearClientAuthState();
-      navigateTo('login');
-    }
-  } catch (error) {
-    // hálózati hiba esetén nem léptetünk ki automatikusan
-  }
-}
-```
+#### 2.7.3 Admin maps library (User_Map_Library + Maps)
+- Read:
+  - `POST /app/api.php?path=admin` + `{ action:"get_user_maps", target_user_id }`
+- Delete (remove from library):
+  - `POST /app/api.php?path=admin` + `{ action:"admin_remove_map", target_user_id, map_id }`
+- Update (rename map):
+  - `POST /app/api.php?path=admin` + `{ action:"admin_edit_map_name", map_id, new_name }`
 
 ---
 
-### 1.8 Rövid összefoglaló
-- `.htaccess` átírja az útvonalakat `api.php?path=...` formára.
-- `app/api.php` inicializál (CORS, session, DB), majd meghívja a routert.
-- A router `segment1` alapján controller fájlt tölt be.
-- A controller GET-re view-t renderel JSON-ban, POST-ra action alapú műveleteket futtat.
-- A frontend SPA-szerűen a szervertől kapott HTML-t injektálja a `#main-content` konténerbe.
+### 2.8 Praktikus debug tippek (API fejlesztői szemmel)
+- Minden requestnél figyeld a Network tabon:
+  - URL: `/app/api.php?path=...`
+  - Status code: 200/201/400/401/403/404/409/500
+  - Response JSON: `status`, `message`, `html`, stb.
+- Session problémáknál a `src/main.js` 401 esetén törli a localStorage auth state-et és loginra navigál.
+- Banned user esetén a router oldalán route átírás történik `isBanned`-re, ami úgy néz ki a kliensnek, mintha „mást kapna vissza” ugyanarra a route-ra.
