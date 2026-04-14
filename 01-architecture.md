@@ -1,369 +1,350 @@
-## 7. Admin — jogosultságok + action-alapú admin API (ban/role/logs/maps/hard delete)
+## 8. game_* endpointok (a játék klienshez: token + stats sync)
 
-### 7.1 Endpoint és szerepe
-Az admin felület egyetlen controller alá van szervezve:
+### 8.1 Áttekintés: hol vannak bekötve?
+A `game_*` endpointok a normál routerben vannak bekötve (`app/core/router/api.php`), és a webes MVC controllerektől eltérően **nem `load_controller()`-ral** mennek, hanem közvetlen `require + handle...()` hívással.
 
-- View: `GET /app/api.php?path=admin`
-- Műveletek: `POST /app/api.php?path=admin` + `{ action: ... }`
+```php
+// app/core/router/api.php (részlet)
+case 'game_login':
+  require API_CONTROLLERS . 'gameLoginController.php';
+  handleGameLogin();
+  break;
 
-Backend: `app/controllers/api/adminController.php`  
-Frontend: `src/admin-src/admin.js` (UI: modálok, gombok, fetch hívások)
+case 'game_stats':
+  require API_CONTROLLERS . 'gameStatsController.php';
+  handleGameStats();
+  break;
+
+// Ez menti el a statokat
+case 'game_update_stats':
+  require API_CONTROLLERS . 'gameUpdateStatsController.php';
+  handleGameUpdateStats();
+  break;
+```
+
+Közös cél:
+- a játék (C# kliens) ne PHP sessionnel, hanem egy **Bearer token**-nel azonosítson
+- a webes rész és a játék rész ugyanazt a `User` + `Statistics` DB-t használja
 
 ---
 
-### 7.2 GET: admin oldal betöltése (role check + user lista)
-#### 7.2.1 Bejelentkezés check
+### 8.2 `POST /app/api.php?path=game_login` — játék login + token generálás
+
+#### 8.2.1 Method: csak POST
 ```php
-if (!isset($_SESSION['user_id']) || !isset($_SESSION['logged_in'])) {
-  json_response(["status" => "error", "message" => "Unauthorized access."], 401);
+if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+  json_response(["status" => "error", "message" => "Method not allowed"], 405);
   return;
 }
 ```
 
-#### 7.2.2 Admin area jogosultság: csak Admin és Engineer
+#### 8.2.2 Input: JSON body (username + password)
 ```php
-$checkStmt = $pdo->prepare("SELECT r.role_name FROM `User` u JOIN Roles r ON u.role_id = r.id WHERE u.user_id = ?");
-$checkStmt->execute([$_SESSION['user_id']]);
-if (!in_array($checkStmt->fetchColumn(), ['Admin', 'Engineer'])) {
-  json_response(["status" => "error", "message" => "Only Admins and Engineers can access this area."], 403);
+$input = json_decode(file_get_contents('php://input'), true);
+$username = trim($input['username'] ?? '');
+$password = $input['password'] ?? '';
+```
+
+Üres mezők:
+
+```php
+if (empty($username) || empty($password)) {
+  json_response(["status" => "error", "message" => "Hiányzó felhasználónév vagy jelszó!"], 400);
   return;
 }
 ```
 
-#### 7.2.3 User lista lekérdezés (search + latest statistics join)
-Az admin oldal a user listát úgy hozza, hogy a `Statistics` táblából a legutolsó sort köti a userhez:
+#### 8.2.3 Auth + banned check (User tábla)
+User lookup username alapján:
 
 ```php
-$query = "
-  SELECT u.user_id, u.username, u.email, u.created_at, u.last_time_online, u.is_banned,
-         u.role_id, r.role_name, a.avatar_picture, s.statistics_file,
-         {$lastUsernameSelect} as last_username_change,
-         {$lastPasswordSelect} as last_password_change
-  FROM `User` u
-  JOIN Roles r ON u.role_id = r.id
-  LEFT JOIN Avatars a ON u.avatar_id = a.id
-  LEFT JOIN `Statistics` s ON u.user_id = s.user_id
-    AND s.id = (
-      SELECT MAX(id)
-      FROM `Statistics` s2
-      WHERE s2.user_id = u.user_id
-    )
-";
+$stmt = $pdo->prepare("SELECT user_id, username, password, is_banned FROM `User` WHERE username = ?");
+$stmt->execute([$username]);
+$user = $stmt->fetch(PDO::FETCH_ASSOC);
 ```
 
-Search:
+Jelszó ellenőrzés:
 
 ```php
-if (!empty($searchTerm)) {
-  $query .= " WHERE u.username LIKE ?";
-  $params[] = "%" . $searchTerm . "%";
+if (!$user || !password_verify($password, $user['password'])) {
+  json_response(["status" => "error", "message" => "Hibás felhasználónév vagy jelszó!"], 401);
+  return;
 }
 ```
 
-Sort:
+Banned:
 
 ```php
-$query .= " ORDER BY r.id DESC, u.username ASC";
+if ($user['is_banned'] == 1) {
+  json_response(["status" => "error", "message" => "A fiókod ki van tiltva a szerverről!"], 403);
+  return;
+}
 ```
 
-View render:
+#### 8.2.4 Token generálás + mentés a User táblába
+A token egy random 32 byte (hex-ben 64 karakter):
 
 ```php
-ob_start();
-require VIEWS . 'admin/admin.php';
-$buffer = ob_get_clean();
-json_response(["html" => $buffer, "status" => "success"], 200);
+$token = bin2hex(random_bytes(32));
 ```
+
+Mentés + last online:
+
+```php
+$updateStmt = $pdo->prepare("UPDATE `User` SET user_token = ?, last_time_online = NOW() WHERE user_id = ?");
+$updateStmt->execute([$token, $user['user_id']]);
+```
+
+#### 8.2.5 Response: játék által várt forma
+```php
+json_response([
+  "status" => "success",
+  "message" => "Login successful!",
+  "data" => [
+    "user_id" => $user['user_id'],
+    "username" => $user['username'],
+    "token" => $token
+  ]
+], 200);
+```
+
+**Fejlesztői megjegyzés:**
+- a játék innentől a tokent tárolja, és a többi game endpointnál Bearer tokennel azonosít.
 
 ---
 
-### 7.3 POST: admin műveletek — `action` dispatcher
-Az admin controller POST esetén action alapján dispatch-el:
+### 8.3 `GET /app/api.php?path=game_stats` — játék stat lekérés tokennel
+
+#### 8.3.1 Method: csak GET
+```php
+if ($_SERVER['REQUEST_METHOD'] !== 'GET') {
+  json_response(["status" => "error", "message" => "Method not allowed"], 405);
+  return;
+}
+```
+
+#### 8.3.2 „Golyóálló” Bearer token kiolvasás (Authorization header)
+A controller több forrásból próbálja kiolvasni az Authorization headert (Apache/PHP környezetek miatt):
+
+```php
+$authHeader = '';
+if (isset($_SERVER['HTTP_AUTHORIZATION'])) {
+  $authHeader = trim($_SERVER['HTTP_AUTHORIZATION']);
+} elseif (isset($_SERVER['REDIRECT_HTTP_AUTHORIZATION'])) {
+  $authHeader = trim($_SERVER['REDIRECT_HTTP_AUTHORIZATION']);
+} elseif (function_exists('apache_request_headers')) {
+  $requestHeaders = apache_request_headers();
+  if (isset($requestHeaders['Authorization'])) {
+    $authHeader = trim($requestHeaders['Authorization']);
+  }
+}
+```
+
+Bearer parse:
+
+```php
+if (empty($authHeader) || !preg_match('/Bearer\s(\S+)/', $authHeader, $matches)) {
+  json_response(["status" => "error", "message" => "Missing or invalid token. Please log in again."], 401);
+  return;
+}
+$token = $matches[1];
+```
+
+#### 8.3.3 User lookup token alapján + banned check
+```php
+$stmt = $pdo->prepare("SELECT username, coins, level, is_banned FROM `User` WHERE user_token = ?");
+$stmt->execute([$token]);
+$user = $stmt->fetch(PDO::FETCH_ASSOC);
+
+if (!$user) {
+  json_response(["status" => "error", "message" => "Invalid or expired token."], 401);
+  return;
+}
+
+if ($user['is_banned'] == 1) {
+  json_response(["status" => "error", "message" => "Your account is banned."], 403);
+  return;
+}
+```
+
+#### 8.3.4 Response: explicit JSON encode (nem json_response)
+Itt a controller direkt `echo json_encode(...)`-ot csinál:
+
+```php
+header('Content-Type: application/json');
+echo json_encode([
+  "status" => "success",
+  "username" => $user['username'],
+  "coins" => (int)$user['coins'],
+  "level" => (int)$user['level']
+]);
+exit();
+```
+
+**Miért lehet ez így?**
+- a komment szerint „szigorú JSON formátum”, amit a kliens vár.
+- funkcionálisan a `json_response()` is jó lenne, de itt fixre van fogva.
+
+---
+
+### 8.4 `POST /app/api.php?path=game_update_stats` — coins/level + Statistics mentés (delta merge)
+
+#### 8.4.1 Method: csak POST + token
+Ugyanaz a „golyóálló token” kiolvasás, mint a `game_stats`-nál:
+
+```php
+if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+  json_response(["status" => "error", "message" => "Method not allowed"], 405);
+  return;
+}
+
+// token parse...
+if (empty($authHeader) || !preg_match('/Bearer\s(\S+)/', $authHeader, $matches)) {
+  json_response(["status" => "error", "message" => "Missing or invalid token."], 401);
+  return;
+}
+$token = $matches[1];
+```
+
+Input JSON:
 
 ```php
 $input = json_decode(file_get_contents('php://input'), true);
-if (isset($input['action'])) {
-  if ($input['action'] === 'toggle_ban') toggleBan();
-  elseif ($input['action'] === 'change_role') changeRole();
-  elseif ($input['action'] === 'change_username') changeUserName();
-  elseif ($input['action'] === 'get_logs') getLogs();
-  elseif ($input['action'] === 'get_user_maps') getUserMaps();
-  elseif ($input['action'] === 'admin_remove_map') adminRemoveMap();
-  elseif ($input['action'] === 'admin_edit_map_name') adminEditMapName();
-  elseif ($input['action'] === 'hard_delete_user') hardDeleteUser();
-  else json_response(["status" => "error", "message" => "Ismeretlen POST akció"], 400);
-} else {
-  json_response(["status" => "error", "message" => "Hiányzó action paraméter"], 400);
-}
-```
-
----
-
-### 7.4 Ban / Unban (`action: toggle_ban`)
-#### 7.4.1 Jogosultságok és tiltások
-- csak Admin/Engineer használhatja
-- nem bannolhatod magad
-- Engineer user nem bannolható
-- Admin bannolásához Engineer szükséges
-- bannolásnál a `reason` kötelező
-
-```php
-if (!in_array($myRole, ['Admin', 'Engineer'])) {
-  json_response(["status" => "error", "message" => "Only Admins and Engineers can use this feature."], 403);
-  return;
-}
-
-if ($targetUserId === $myUserId) {
-  json_response(["status" => "error", "message" => "You cannot ban yourself."], 400);
-  return;
-}
-
-if ($targetData['role_name'] === 'Engineer') {
-  json_response(["status" => "error", "message" => "Engineers cannot be banned."], 403);
-  return;
-}
-
-if ($targetData['role_name'] === 'Admin' && $myRole !== 'Engineer') {
-  json_response(["status" => "error", "message" => "A Engineer is required to ban Admins."], 403);
-  return;
-}
-
-if ($newStatus === 1 && empty($reason)) {
-  json_response(["status" => "error", "message" => "Ban reason is required."], 400);
+if (!$input) {
+  json_response(["status" => "error", "message" => "Invalid JSON format."], 400);
   return;
 }
 ```
 
-#### 7.4.2 DB update
+#### 8.4.2 User lookup token alapján + cheat check
 ```php
-$pdo->prepare("UPDATE `User` SET is_banned = ? WHERE user_id = ?")->execute([$newStatus, $targetUserId]);
-```
+$stmt = $pdo->prepare("SELECT user_id, username, is_banned FROM `User` WHERE user_token = ?");
+$stmt->execute([$token]);
+$user = $stmt->fetch(PDO::FETCH_ASSOC);
 
-#### 7.4.3 Email értesítés (best effort)
-Ha van email, a rendszer mailt küld (mailer.php).
-
-```php
-$subject = $newStatus == 1 ? "Troxan - You were banned" : "Troxan - You were unbanned";
-@sendTroxanMail($targetInfo['email'], $subject, $body);
-```
-
----
-
-### 7.5 Role change (`action: change_role`)
-#### 7.5.1 Szabályok
-- csak Admin/Engineer
-- nem módosíthatod a saját role-odat
-- Engineer role nem módosítható
-- más Admin role-ját csak Engineer módosíthatja
-- promote: Player → Moderator → Admin (utóbbi csak Engineer)
-- demote: Admin → Moderator → Player
-
-```php
-if ($targetUserId === $myUserId) {
-  json_response(["status" => "error", "message" => "You cannot modify your own role."], 400);
+if (!$user) {
+  json_response(["status" => "error", "message" => "Invalid or expired token."], 401);
   return;
 }
 
-if ($currentRole === 'Engineer') {
-  json_response(["status" => "error", "message" => "Engineers cannot have their role changed."], 403);
+if ($user['is_banned'] == 1) {
+  json_response(["status" => "error", "message" => "Your account is banned."], 403);
   return;
 }
 
-if ($currentRole === 'Admin' && $myRole !== 'Engineer') {
-  json_response(["status" => "error", "message" => "Only an Engineer can change another Admin's role."], 403);
+if (isset($input['username']) && $input['username'] !== $user['username']) {
+  json_response(["status" => "error", "message" => "Cheat detected: You cannot modify another player's stats!"], 403);
   return;
 }
 ```
 
-Role ID lookup + update:
-
+#### 8.4.3 User tábla frissítés (coins, level)
 ```php
-$roleIdStmt = $pdo->prepare("SELECT id FROM Roles WHERE role_name = ?");
-$roleIdStmt->execute([$newRoleName]);
-$newRoleId = $roleIdStmt->fetchColumn();
+$coins = isset($input['coins']) ? (int)$input['coins'] : 0;
+$level = isset($input['level']) ? (int)$input['level'] : 1;
 
-$pdo->prepare("UPDATE `User` SET role_id = ? WHERE user_id = ?")->execute([$newRoleId, $targetUserId]);
+$updateUser = $pdo->prepare("UPDATE `User` SET coins = ?, level = ? WHERE user_id = ?");
+$updateUser->execute([$coins, $level, $user['user_id']]);
 ```
 
----
+#### 8.4.4 Statistics mentés: „összegzett statok” + snapshot delta logika
+Ha érkezik `statistics` objektum, akkor:
+1) előző (legutolsó) Statistics sor lekérése
+2) `array_merge(previousStats, incomingStats)`
+3) kulcsok összehangolása aliasokkal (`score` vs `Experience points`, stb.)
+4) delta számítás `_meta_last_snapshot` alapján
+5) totals frissítés + alias kulcsok szinkronban tartása
+6) INSERT új sor a `Statistics` táblába (`minden mentés új sor`)
 
-### 7.6 Engineer-only rename user (`action: change_username`)
-Ez nem ugyanaz, mint a „Profile oldalon a user saját rename-je”. Ez kifejezetten admin tool jelleg.
-
-Szabályok:
-- csak Engineer
-- reason kötelező
-- Engineer target nem rename-elhető
-- foglaltság ellenőrzés
+Előző stat:
 
 ```php
-if ($myRole !== 'Engineer') {
-  json_response(["status" => "error", "message" => "Only Engineers can change usernames for others."], 403);
-  return;
-}
+$prevStmt = $pdo->prepare("SELECT statistics_file, last_updated FROM `Statistics` WHERE user_id = ? ORDER BY id DESC LIMIT 1");
+$prevStmt->execute([$user['user_id']]);
+$prevRow = $prevStmt->fetch(PDO::FETCH_ASSOC);
 
-if (empty($reason)) {
-  json_response(["status" => "error", "message" => "Reason is required."], 400);
-  return;
-}
-
-if ($targetData['role_name'] === 'Engineer') {
-  json_response(["status" => "error", "message" => "Engineers' names cannot be changed."], 403);
-  return;
+$previousStats = [];
+if ($prevRow && !empty($prevRow['statistics_file'])) {
+  $decodedPrev = json_decode($prevRow['statistics_file'], true);
+  if (is_array($decodedPrev)) $previousStats = $decodedPrev;
 }
 ```
 
-Update:
+Counter map (canonical key + aliasok):
 
 ```php
-$pdo->prepare($updateSql)->execute([$newUsername, $targetUserId]);
-```
-
-Email értesítés szintén best effort.
-
----
-
-### 7.7 Logs (`action: get_logs`) — Statistics history olvasása
-A Statistics táblában userenként több sor van. Az admin log lekérés az összes sort hozza `ORDER BY id DESC`.
-
-```php
-$stmt = $pdo->prepare("SELECT id, statistics_file, last_updated FROM `Statistics` WHERE user_id = ? ORDER BY id DESC");
-$stmt->execute([$targetUserId]);
-$logs = $stmt->fetchAll(PDO::FETCH_ASSOC);
-```
-
-A response-ben a logok „parszolt” formában vannak visszaadva:
-
-```php
-$parsedLogs[] = [
-  'id' => $log['id'],
-  'date' => troxan_format_db_datetime($log['last_updated'], 'Y.m.d H:i', 'Unknown'),
-  'score' => troxan_get_stat_score($stats),
-  'details' => [
-    'Enemies killed' => troxan_get_stat_int($stats, ['num_of_enemies_killed', 'Mobs killed'], 0),
-    'Deaths' => troxan_get_stat_int($stats, ['num_of_deaths', 'Deaths'], 0),
-    'Story finished' => troxan_get_stat_int($stats, ['num_of_story_finished', 'Story finished'], 0)
-  ]
+$counterMap = [
+  'num_of_story_finished' => ['num_of_story_finished', 'Story finished'],
+  'num_of_enemies_killed' => ['num_of_enemies_killed', 'Mobs killed'],
+  'num_of_deaths' => ['num_of_deaths', 'Deaths'],
+  'score' => ['score', 'Experience points']
 ];
 ```
 
----
-
-### 7.8 Admin maps list (`action: get_user_maps`)
-Ez a művelet nagyon hasonló a My Maps „mágikus lekérdezéséhez”, csak target userre.
+Snapshot és delta:
 
 ```php
-$query = "SELECT m.*, u.username as creator_name, r.role_name as creator_role,
-                 COALESCE(uml.added_at, m.created_at) as added_at
-          FROM `Maps` m
-          LEFT JOIN `User_Map_Library` uml ON m.id = uml.map_id AND uml.user_id = ?
-          JOIN `User` u ON m.creator_user_id = u.user_id
-          JOIN Roles r ON u.role_id = r.id
-          WHERE (
-              (m.creator_user_id = ? AND m.status IN (0, 1, 3))
-              OR
-              (uml.user_id = ? AND m.status IN (1, 3, 5))
-          )
-          ORDER BY added_at DESC";
-$stmt = $pdo->prepare($query);
-$stmt->execute([$targetUserId, $targetUserId, $targetUserId]);
-$maps = $stmt->fetchAll(PDO::FETCH_ASSOC);
-
-json_response(["status" => "success", "maps" => $maps], 200);
-```
-
----
-
-### 7.9 Admin remove map from library (`action: admin_remove_map`)
-Ez csak a library linket törli, és csökkenti a downloads számlálót.
-
-```php
-$delStmt = $pdo->prepare("DELETE FROM `User_Map_Library` WHERE user_id = ? AND map_id = ?");
-$delStmt->execute([$targetUserId, $mapId]);
-
-if ($delStmt->rowCount() <= 0) {
-  json_response(["status" => "error", "message" => "This map is not in the player's library."], 404);
-  return;
+$previousSnapshot = [];
+if (isset($previousStats['_meta_last_snapshot']) && is_array($previousStats['_meta_last_snapshot'])) {
+  $previousSnapshot = $previousStats['_meta_last_snapshot'];
 }
 
-$pdo->prepare("UPDATE `Maps` SET downloads = GREATEST(downloads - 1, 0) WHERE id = ?")->execute([$mapId]);
+$nextSnapshot = [];
+foreach ($counterMap as $canonicalKey => $aliases) {
+  $incomingValue = troxan_stats_pick_int($incomingStats, $aliases, 0);
+  $previousTotal = troxan_stats_pick_int($previousStats, $aliases, 0);
+  $previousSeen = isset($previousSnapshot[$canonicalKey]) ? (int)$previousSnapshot[$canonicalKey] : null;
 
-json_response(["status" => "success", "message" => "Map removed from player's library successfully!"], 200);
-```
+  if ($previousSeen === null) {
+    $delta = $incomingValue;
+  } elseif ($incomingValue >= $previousSeen) {
+    $delta = $incomingValue - $previousSeen;
+  } else {
+    // counter reset
+    $delta = $incomingValue;
+  }
 
----
+  if ($delta < 0) $delta = 0;
 
-### 7.10 Admin edit map name (`action: admin_edit_map_name`)
-```php
-$pdo->prepare("UPDATE `Maps` SET map_name = ? WHERE id = ?")->execute([$newName, $mapId]);
-json_response(["status" => "success", "message" => "Map name updated successfully!"], 200);
-```
+  $newTotal = $previousTotal + $delta;
+  $nextSnapshot[$canonicalKey] = $incomingValue;
 
----
-
-### 7.11 Hard delete user (`action: hard_delete_user`)
-#### 7.11.1 Biztonsági megerősítés
-```php
-if ($confirmText !== 'CONFIRM') {
-  json_response(["status" => "error", "message" => "Type CONFIRM to permanently delete this account."], 400);
-  return;
+  $mergedStats[$canonicalKey] = $newTotal;
 }
 ```
 
-#### 7.11.2 Jogosultság szabályok
-- csak Admin/Engineer
-- Engineer target nem törölhető
-- Admin target törléséhez Engineer kell
-- nem törölheted saját magad innen
+Alias kulcsok szinkron:
 
 ```php
-if (!in_array($myRole, ['Admin', 'Engineer'])) { ...403... }
-if ($targetData['role_name'] === 'Engineer') { ...403... }
-if ($targetData['role_name'] === 'Admin' && $myRole !== 'Engineer') { ...403... }
-if ($targetUserId === $myUserId) { ...400... }
+$mergedStats['Story finished'] = $mergedStats['num_of_story_finished'];
+$mergedStats['Mobs killed'] = $mergedStats['num_of_enemies_killed'];
+$mergedStats['Deaths'] = $mergedStats['num_of_deaths'];
+$mergedStats['Experience points'] = $mergedStats['score'];
+$mergedStats['_meta_last_snapshot'] = $nextSnapshot;
 ```
 
-#### 7.11.3 Törlés transaction-ben (több tábla érintett)
-A törlés fő lépései:
-- a target user által created mapek ID-i
-- törli a created mapekhez tartozó library linkeket + magukat a mapeket
-- törli a target user library linkjeit és statjait
-- best effort `Active_Web_Sessions` cleanup
-- végül `User` törlés
+INSERT új Statistics sor:
 
 ```php
-$mapIdsStmt = $pdo->prepare("SELECT id FROM `Maps` WHERE creator_user_id = ?");
-$mapIdsStmt->execute([$targetUserId]);
-$createdMapIds = $mapIdsStmt->fetchAll(PDO::FETCH_COLUMN);
+$statsJson = json_encode($mergedStats);
+$insertStat = $pdo->prepare("INSERT INTO `Statistics` (user_id, statistics_file, last_updated) VALUES (?, ?, NOW())");
+$insertStat->execute([$user['user_id'], $statsJson]);
+```
 
-if (!empty($createdMapIds)) {
-  $placeholders = implode(',', array_fill(0, count($createdMapIds), '?'));
-  $pdo->prepare("DELETE FROM `User_Map_Library` WHERE map_id IN ($placeholders)")->execute($createdMapIds);
-  $pdo->prepare("DELETE FROM `Maps` WHERE id IN ($placeholders)")->execute($createdMapIds);
-}
-
-$pdo->prepare("DELETE FROM `User_Map_Library` WHERE user_id = ?")->execute([$targetUserId]);
-$pdo->prepare("DELETE FROM `Statistics` WHERE user_id = ?")->execute([$targetUserId]);
-
-try {
-  $pdo->prepare("DELETE FROM `Active_Web_Sessions` WHERE user_id = ?")->execute([$targetUserId]);
-} catch (Exception $e) {}
-
-$pdo->prepare("DELETE FROM `User` WHERE user_id = ?")->execute([$targetUserId]);
+#### 8.4.5 Response
+```php
+json_response([
+  "status" => "success",
+  "message" => "Stats updated successfully!"
+], 200);
 ```
 
 ---
 
-### 7.12 Admin „CRUD” összefoglaló
-- Read:
-  - `GET /app/api.php?path=admin` (user lista + view)
-  - `POST /admin action=get_logs` (Statistics history)
-  - `POST /admin action=get_user_maps` (user maps/library list)
-- Update:
-  - `POST /admin action=toggle_ban`
-  - `POST /admin action=change_role`
-  - `POST /admin action=change_username`
-  - `POST /admin action=admin_edit_map_name`
-- Delete:
-  - `POST /admin action=admin_remove_map` (library link delete)
-  - `POST /admin action=hard_delete_user` (hard delete, több tábla)
+### 8.5 game_* „CRUD” összefoglaló
+- Create (token létrehozás és mentés):
+  - `POST /game_login` → `User.user_token` update
+- Read (stats lekérés):
+  - `GET /game_stats` + `Authorization: Bearer <token>` → `User.username/coins/level`
+- Update (coins/level + stat history):
+  - `POST /game_update_stats` + `Authorization: Bearer <token>` → `User` update + `Statistics` insert (új sor)
