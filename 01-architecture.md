@@ -1,484 +1,176 @@
-## 3. Auth flows (registration + login + logout + kliens session state)
+## 4. My Maps (könyvtár) — GET view + POST action CRUD + kliens oldali működés
 
-### 3.1 Közös fogalmak: mi számít „bejelentkezett” állapotnak?
+### 4.1 Endpoint
+- View: `GET /app/api.php?path=my_maps`
+- Műveletek: `POST /app/api.php?path=my_maps` + `{ action: ... }`
 
-#### 3.1.1 Szerver oldali auth (PHP session)
-A backend oldalon a bejelentkezés alapjai (tipikusan):
-- `$_SESSION['user_id']`
-- `$_SESSION['username']`
-- `$_SESSION['role_name']`
-- `$_SESSION['logged_in'] = true`
-
-A `loginController.php` sikeres login után állítja be ezeket.
-
-```php
-// app/controllers/api/loginController.php (részlet)
-$_SESSION['user_id']   = $user['user_id'];
-$_SESSION['username']  = $user['username'];
-$_SESSION['role_name'] = $user['role_name'] ?? 'Player';
-$_SESSION['logged_in'] = true;
-```
-
-#### 3.1.2 Kliens oldali auth (localStorage)
-A kliens oldalon a UI állapot (header, route guard) localStorage-ból megy:
-- `isLoggedIn` (string: `"true"|"false"`)
-- `username`
-- `userAvatar`
-
-Sikeres login után ezt a `src/login-src/login.js` állítja:
-
-```js
-// src/login-src/login.js (részlet)
-if (response.ok) {
-  localStorage.setItem('isLoggedIn', 'true');
-  if (result.user && result.user.username) {
-    localStorage.setItem('username', result.user.username);
-  }
-  if (result.user && result.user.avatar) {
-    localStorage.setItem('userAvatar', result.user.avatar);
-  }
-}
-```
-
-A header frissítése a `src/main.js`-ben lévő `updateHeader()`-rel történik:
-
-```js
-// src/main.js (részlet)
-export function updateHeader() {
-  const username = localStorage.getItem('username');
-  const isLoggedIn = localStorage.getItem('isLoggedIn') === 'true';
-  const userAvatar = localStorage.getItem('userAvatar') || 'https://picsum.photos/id/1025/200/200';
-  // ... UI csere Login ↔ Avatar/Profile
-}
-```
+Backend controller: `app/controllers/api/myMapsController.php`  
+Frontend modul: `src/myMaps-src/myMaps.js`
 
 ---
 
-### 3.2 Registration flow (`/app/api.php?path=registration`)
-
-#### 3.2.1 GET: registration view render
-A registration controller GET esetben a `views/registration/registration.php`-t rendereli HTML-ként és JSON-ban visszaküldi.
+### 4.2 GET: My Maps lista lekérdezése + view render
+A My Maps oldal csak belépve érhető el:
 
 ```php
-// app/controllers/api/registrationController.php (részlet)
-function getContent()
-{
-  ob_start();
-  require VIEWS . 'registration/registration.php';
-  $buffer = ob_get_clean();
-
-  json_response([
-    "html" => $buffer,
-    "status" => "success",
-    "message" => ""
-  ], 200);
-}
-```
-
-#### 3.2.2 POST: register (user létrehozás + Settings + Statistics + email verification code)
-A `registerUser()` több táblát érint (transaction-ben):
-
-- `Settings` INSERT
-- `User` INSERT (`role_id`, `avatar_id` default)
-- `Statistics` INSERT
-- `User` UPDATE: `verification_code`, `verification_expires`, `is_verified = 0`
-- email küldés (mailer)
-
-Fontos validációk:
-- username: 4–12 karakter + alfanumerikus
-- email format
-- password min 8 + confirm egyezzen
-
-```php
-// app/controllers/api/registrationController.php (részlet)
-if (strlen($username) > 12 || strlen($username) < 4 || !preg_match('/^[a-zA-Z0-9]+$/', $username)) {
-  json_response(["status" => "error", "message" => "Username must be 4-12 characters and contain only letters and numbers!"], 400);
-}
-
-if (strlen($password) < 8) {
-  json_response(["status" => "error", "message" => "Password must be at least 8 characters long!"], 400);
-}
-
-if ($password !== $passwordConfirm) {
-  json_response(["status" => "error", "message" => "Passwords do not match!"], 400);
-}
-```
-
-Transaction és insert-ek:
-
-```php
-// app/controllers/api/registrationController.php (részlet)
-$pdo->beginTransaction();
-
-// 1. Create Settings
-$stmtSettings = $pdo->prepare("INSERT INTO Settings (settings_file) VALUES (?)");
-$stmtSettings->execute([$defaultJson]);
-$settingsId = $pdo->lastInsertId();
-
-// 2. Create User
-$stmtUser = $pdo->prepare("INSERT INTO User (username, email, password, savestate_file, role_id, settings_id, avatar_id) VALUES (?, ?, ?, ?, ?, ?, ?)");
-$stmtUser->execute([$username, $email, $hashedPassword, $defaultJson, $defaultRoleId, $settingsId, $defaultAvatarId]);
-$userId = $pdo->lastInsertId();
-
-// 3. Create Statistics
-$stmtStats = $pdo->prepare("INSERT INTO Statistics (user_id, statistics_file) VALUES (?, ?)");
-$stmtStats->execute([$userId, $defaultJson]);
-
-// 4. Generate verification code + expiry and save
-$verificationCode = str_pad((string)random_int(100000, 999999), 6, '0', STR_PAD_LEFT);
-$verificationExpires = date('Y-m-d H:i:s', strtotime('+1 hour'));
-
-$stmtUpdate = $pdo->prepare("UPDATE `User` SET is_verified = 0, verification_code = ?, verification_expires = ? WHERE user_id = ?");
-$stmtUpdate->execute([$verificationCode, $verificationExpires, $userId]);
-
-$pdo->commit();
-```
-
-Sikeres response:
-
-```php
-json_response([
-  "status" => "success",
-  "message" => "Registration successful! Please verify your email address with the code you received."
-], 201);
-```
-
-#### 3.2.3 Email verification: POST action `verify_code` vagy PUT
-A registration controller a verifikációt kétféleképp tudja:
-- `POST /registration` + `{ action: "verify_code", email, verification_code }`
-- `PUT /registration` (ugyanaz a logika)
-
-```php
-// app/controllers/api/registrationController.php (részlet)
-if (isset($input['action']) && $input['action'] === 'verify_code') {
-  verifyRegistrationCode();
-} else {
-  registerUser();
-}
-```
-
-A `verifyRegistrationCode()` ellenőrzi:
-- user létezik-e
-- már verified-e
-- code egyezik-e
-- expiry nem járt-e le
-
-```php
-// app/controllers/api/registrationController.php (részlet)
-if ($user['verification_code'] !== $code) {
-  json_response(['status' => 'error', 'message' => 'Invalid verification code.'], 401);
-}
-
-if (!empty($user['verification_expires']) && strtotime($user['verification_expires']) < time()) {
-  json_response(['status' => 'error', 'message' => 'The verification code has expired. Please register again.'], 403);
-}
-
-$update = $pdo->prepare('UPDATE `User` SET is_verified = 1, verification_code = NULL, verification_expires = NULL WHERE user_id = ?');
-$update->execute([$user['user_id']]);
-```
-
-Siker:
-
-```php
-json_response(['status' => 'success', 'message' => 'Email verified successfully. You can now log in.'], 200);
-```
-
----
-
-### 3.3 Login flow (`/app/api.php?path=login`)
-
-#### 3.3.1 GET: login view
-```php
-// app/controllers/api/loginController.php
-function getContent() {
-  ob_start(); require VIEWS . 'login/login.php'; $buffer = ob_get_clean();
-  json_response(["html" => $buffer, "status" => "success"], 200);
-}
-```
-
-#### 3.3.2 POST: normal login (email + password)
-A controller lekéri a usert + role + avatar-t, majd:
-- `password_verify()`
-- `is_verified` ellenőrzés
-- `has_temp_password` ellenőrzés
-- session változók beállítása
-- `Active_Web_Sessions` token létrehozása + DB upsert
-- válaszban user minimal adat (username + avatar)
-
-DB select:
-
-```php
-// app/controllers/api/loginController.php (részlet)
-$stmt = $pdo->prepare("
-  SELECT u.user_id, u.username, u.password, u.is_verified, u.has_temp_password, u.temp_password_expires,
-         r.role_name, a.avatar_picture
-  FROM `User` u
-  LEFT JOIN `Avatars` a ON u.avatar_id = a.id
-  LEFT JOIN `Roles` r ON u.role_id = r.id
-  WHERE u.email = ?
-");
-$stmt->execute([$email]);
-$user = $stmt->fetch(PDO::FETCH_ASSOC);
-```
-
-Not verified eset:
-
-```php
-if (isset($user['is_verified']) && $user['is_verified'] == 0) {
-  json_response([
-    "status" => "error",
-    "code" => "not_verified",
-    "message" => "Your account is not verified yet. Please check your email and enter the verification code."
-  ], 403);
-}
-```
-
-Temporary password eset:
-
-```php
-if (isset($user['has_temp_password']) && $user['has_temp_password'] == 1) {
-  if (!empty($user['temp_password_expires']) && strtotime($user['temp_password_expires']) < time()) {
-    json_response(["status" => "error", "code" => "temp_password_expired", "message" => "Your temporary password has expired. Please request a new password reset."], 403);
-  }
-
-  json_response([
-    "status" => "error",
-    "code" => "force_password_change",
-    "message" => "You must change your password before accessing your account.",
-    "user_id" => $user['user_id']
-  ], 403);
-}
-```
-
-Sikeres login: session + token:
-
-```php
-$_SESSION['user_id']   = $user['user_id'];
-$_SESSION['username']  = $user['username'];
-$_SESSION['role_name'] = $user['role_name'] ?? 'Player';
-$_SESSION['logged_in'] = true;
-
-$webSessionToken = bin2hex(random_bytes(32));
-$_SESSION['web_session_token'] = $webSessionToken;
-
-$sessionStmt = $pdo->prepare("INSERT INTO `Active_Web_Sessions` (user_id, session_token) VALUES (?, ?) ON DUPLICATE KEY UPDATE session_token = VALUES(session_token), updated_at = NOW()");
-$sessionStmt->execute([$user['user_id'], $webSessionToken]);
-```
-
----
-
-### 3.4 Kliens oldali login UX: `src/login-src/login.js`
-
-#### 3.4.1 Login form submit
-A login form elküldi az adatokat JSON-ban:
-
-```js
-const response = await fetch(loginUrl, {
-  method: 'POST',
-  credentials: 'include',
-  headers: { 'Content-Type': 'application/json' },
-  body: JSON.stringify(data)
-});
-
-const result = await response.json();
-```
-
-Siker esetén:
-- `localStorage.isLoggedIn = true`
-- `localStorage.username`
-- `localStorage.userAvatar`
-- header frissül
-- redirect `/profile`
-
-```js
-if (response.ok) {
-  localStorage.setItem('isLoggedIn', 'true');
-  if (result.user && result.user.username) localStorage.setItem('username', result.user.username);
-  if (result.user && result.user.avatar) localStorage.setItem('userAvatar', result.user.avatar);
-
-  updateHeader();
-  showNotification('Success', 'Welcome to Troxan!', () => {
-    window.location.href = '/profile';
-  });
-}
-```
-
-#### 3.4.2 not_verified flow (verification code modal + registration verify_code)
-Ha a backend `code: not_verified`-et ad, akkor a kliens megnyit egy kódbeviteli modált, majd `POST /registration action=verify_code`.
-
-```js
-} else if (result.code === 'not_verified') {
-  const verificationCode = await showCodeInputModal();
-
-  if (verificationCode) {
-    const verifyResponse = await fetch('/app/api.php?path=registration', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        action: 'verify_code',
-        email: data.email,
-        verification_code: verificationCode
-      })
-    });
-
-    const verifyResult = await verifyResponse.json();
-
-    if (verifyResponse.ok) {
-      showNotification('Verified', 'Email verified successfully! You can now log in.', () => {
-        form.dispatchEvent(new Event('submit', { cancelable: true }));
-      });
-    } else {
-      showNotification('Error', verifyResult.message || 'Invalid verification code.');
-    }
-  }
-}
-```
-
-#### 3.4.3 force_password_change flow (modal + login action force_password_change)
-Ha a backend `code: force_password_change`, akkor a kliens modált nyit, és `POST /login action=force_password_change`-t hív.
-
-```js
-} else if (result.code === 'force_password_change') {
-  const tempPassword = data.password;
-
-  const changeResult = await showForcePasswordChangeModal(result.user_id, result.username, tempPassword);
-
-  if (changeResult && changeResult.success) {
-    showNotification('Success', 'Password changed successfully! You can now log in.', () => {
-      // automatikus új login a friss jelszóval
-      form.dispatchEvent(new Event('submit', { cancelable: true }));
-    });
-  }
-}
-```
-
-A modal belsejében a request:
-
-```js
-const response = await fetch(loginUrl, {
-  method: 'POST',
-  headers: { 'Content-Type': 'application/json' },
-  body: JSON.stringify({
-    action: 'force_password_change',
-    user_id: userId,
-    old_password: tempPassword,
-    new_password: newPassword,
-    confirm_password: confirmPassword
-  })
-});
-```
-
----
-
-### 3.5 Logout flow (`/app/api.php?path=logout`)
-
-#### 3.5.1 Backend: `logoutController.php` csak POST
-A backend törli az `Active_Web_Sessions` sort (best effort), majd session-t destroyol.
-
-```php
-// app/controllers/api/logoutController.php (részlet)
-$userId = $_SESSION['user_id'] ?? null;
-$sessionToken = $_SESSION['web_session_token'] ?? null;
-
-if (!empty($userId) && !empty($sessionToken)) {
-  $stmt = $pdo->prepare("DELETE FROM `Active_Web_Sessions` WHERE user_id = ? AND session_token = ?");
-  $stmt->execute([$userId, $sessionToken]);
-}
-
-$_SESSION = [];
-
-if (ini_get("session.use_cookies")) {
-  $params = session_get_cookie_params();
-  setcookie(session_name(), '', time() - 42000,
-    $params["path"], $params["domain"],
-    $params["secure"], $params["httponly"]
-  );
-}
-session_destroy();
-
-json_response(["status" => "success", "message" => "Logged out successfully"], 200);
-```
-
-Method guard:
-
-```php
-if ($data["method"] === 'POST') {
-  logout();
-} else {
-  json_response(["status" => "error", "message" => "Method not allowed"], 405);
-}
-```
-
-#### 3.5.2 Frontend: `performLogout()` (src/main.js)
-A kliens meghívja a logout API-t, majd törli a localStorage-t és login oldalra navigál.
-
-```js
-// src/main.js (részlet)
-const logoutUrl = '/app/api.php?path=logout';
-
-async function performLogout() {
-  try {
-    await fetch(logoutUrl, { method: 'POST', credentials: 'include' });
-  } catch (err) {
-    console.warn('Logout API call failed, continuing anyway.', err);
-  }
-  localStorage.clear();
-  window.location.href = '/login';
-}
-```
-
----
-
-### 3.6 Profil endpoint „auth ellenőrzésre” is használva (`/profile`)
-A `profileController.php` GET esetben:
-- ha nincs session user: guest view-t ad vissza `message: Redirected to guest`
-- ha van: profile view-t renderel
-
-```php
-// app/controllers/api/profileController.php (részlet)
+// app/controllers/api/myMapsController.php
 if (!isset($_SESSION['user_id'])) {
-  ob_start();
-  require VIEWS . 'guest/guest.php';
-  $buffer = ob_get_clean();
-  json_response(["html" => $buffer, "status" => "success", "message" => "Redirected to guest"], 200);
+  json_response(["status" => "error", "message" => "Login required"], 401);
   return;
 }
 ```
 
-Ezért használja a kliens a profile GET-et session checkre is:
+A „mágikus” lekérdezés egyszerre hozza:
+1) a saját készítésű mapeket (status: 0 Draft, 1 Public, 3 Unpublished)
+2) a könyvtárba mentett mapeket (status: 1, 3, vagy 5 = creator által törölt, de a user library-ben megmaradhat)
 
-```js
-// src/main.js (részlet)
-const response = await fetch('/app/api.php?path=profile', {
-  method: 'GET',
-  credentials: 'include',
-  headers: { 'Content-Type': 'application/json' }
-});
+```php
+// app/controllers/api/myMapsController.php (részlet)
+$query = "SELECT m.*, u.username as creator_name, r.role_name as creator_role,
+                 COALESCE(uml.added_at, m.created_at) as added_at
+          FROM `Maps` m
+          LEFT JOIN `User_Map_Library` uml ON m.id = uml.map_id AND uml.user_id = ?
+          JOIN `User` u ON m.creator_user_id = u.user_id
+          JOIN Roles r ON u.role_id = r.id
+          WHERE (
+              (m.creator_user_id = ? AND m.status IN (0, 1, 3))
+              OR
+              (uml.user_id = ? AND m.status IN (1, 3, 5))
+          )";
+$params = [$myUserId, $myUserId, $myUserId];
+```
 
-const data = await response.json().catch(() => null);
+A view render:
 
-if (!response.ok || !data) {
-  clearClientAuthState();
-  return;
+```php
+ob_start();
+require VIEWS . 'myMaps/myMaps.php';
+$buffer = ob_get_clean();
+json_response(["html" => $buffer, "status" => "success"], 200);
+```
+
+---
+
+### 4.3 POST actions (CRUD műveletek)
+
+#### 4.3.1 Remove map a könyvtárból (`action: remove_map`)
+Ez a művelet:
+- törli a kapcsolatot a `User_Map_Library` táblából
+- ha tényleg törölt sort (`rowCount() > 0`), akkor csökkenti a `Maps.downloads` értéket `GREATEST(...,0)`-val
+- ha a user a creator is, akkor a map statusát 5-re állítja (Scrapped)
+
+```php
+// app/controllers/api/myMapsController.php (részlet)
+if ($action === 'remove_map') {
+  $stmt = $pdo->prepare("SELECT creator_user_id, status FROM `Maps` WHERE id = ?");
+  $stmt->execute([$mapId]);
+  $mapData = $stmt->fetch(PDO::FETCH_ASSOC);
+
+  $delStmt = $pdo->prepare("DELETE FROM `User_Map_Library` WHERE user_id = ? AND map_id = ?");
+  $delStmt->execute([$currentUserId, $mapId]);
+
+  if ($delStmt->rowCount() > 0) {
+    $pdo->prepare("UPDATE `Maps` SET downloads = GREATEST(downloads - 1, 0) WHERE id = ?")->execute([$mapId]);
+  }
+
+  if ($mapData['creator_user_id'] == $currentUserId) {
+    $pdo->prepare("UPDATE `Maps` SET status = 5 WHERE id = ?")->execute([$mapId]);
+  }
+
+  json_response(["status" => "success", "message" => "Map removed from your library successfully!"], 200);
 }
+```
 
-if (data.status === 'success' && data.message === 'Redirected to guest') {
-  clearClientAuthState();
+#### 4.3.2 Publish / Unpublish (`action: toggle_publish`)
+Csak a creator publikálhatja a saját mapjét:
+- ha status=1 → 3 (Unpublished)
+- ha status=0 vagy 3 → 1 (Public)
+
+```php
+// app/controllers/api/myMapsController.php (részlet)
+} elseif ($action === 'toggle_publish') {
+  $stmt = $pdo->prepare("SELECT creator_user_id, status FROM `Maps` WHERE id = ?");
+  $stmt->execute([$mapId]);
+  $mapData = $stmt->fetch(PDO::FETCH_ASSOC);
+
+  if ($mapData['creator_user_id'] != $currentUserId) {
+    json_response(["status" => "error", "message" => "You can only publish your own maps."], 403);
+  }
+
+  $newStatus = ($mapData['status'] == 1) ? 3 : 1;
+  $pdo->prepare("UPDATE `Maps` SET status = ? WHERE id = ?")->execute([$newStatus, $mapId]);
+
+  json_response(["status" => "success", "message" => $msg, "new_status" => $newStatus], 200);
+}
+```
+
+#### 4.3.3 Rename map (`action: edit_map_name`)
+Szabályok:
+- `new_name` nem üres
+- max 64 karakter
+- csak a creator VAGY staff (Admin/Moderator/Engineer) nevezheti át
+- status=5 (Scrapped) map nem nevezhető át
+
+```php
+// app/controllers/api/myMapsController.php (részlet)
+} elseif ($action === 'edit_map_name') {
+  if (mb_strlen($newName) > 64) {
+    json_response(["status" => "error", "message" => "Map name is too long (max 64 characters)."], 400);
+  }
+
+  $stmt = $pdo->prepare("SELECT creator_user_id, status FROM `Maps` WHERE id = ?");
+  $stmt->execute([$mapId]);
+  $mapData = $stmt->fetch(PDO::FETCH_ASSOC);
+
+  if ((int)$mapData['creator_user_id'] !== (int)$currentUserId && !$isStaff) {
+    json_response(["status" => "error", "message" => "Only the creator or staff can rename this map."], 403);
+  }
+
+  if ((int)$mapData['status'] === 5) {
+    json_response(["status" => "error", "message" => "Scrapped maps cannot be edited."], 400);
+  }
+
+  $pdo->prepare("UPDATE `Maps` SET map_name = ? WHERE id = ?")->execute([$newName, $mapId]);
+  json_response(["status" => "success", "message" => "Map name updated successfully!"], 200);
 }
 ```
 
 ---
 
-### 3.7 Auth „mini-CRUD” összefoglaló (a kódban látható műveletekkel)
-- Create (account):
-  - `POST /app/api.php?path=registration` → `registerUser()` (User + Settings + Statistics + verification code)
-- Update (verify email):
-  - `POST /app/api.php?path=registration` + `{ action: "verify_code", email, verification_code }`
-  - vagy `PUT /app/api.php?path=registration`
-- Read (login view / registration view):
-  - `GET /app/api.php?path=login`
-  - `GET /app/api.php?path=registration`
-- Update (force password change temp password esetén):
-  - `POST /app/api.php?path=login` + `{ action: "force_password_change", ... }`
-- Delete (session):
-  - `POST /app/api.php?path=logout` → session destroy + Active_Web_Sessions cleanup
+### 4.4 Frontend (My Maps JS) — hogyan hívja az API-t
+
+#### 4.4.1 Endpoint konstans
+```js
+// src/myMaps-src/myMaps.js
+const myMapUrl = `/app/api.php?path=my_maps`;
+```
+
+#### 4.4.2 Rename mentés (POST edit_map_name)
+```js
+fetch(myMapUrl, {
+  method: 'POST',
+  credentials: 'include',
+  headers: { 'Content-Type': 'application/json' },
+  body: JSON.stringify({ action: 'edit_map_name', map_id: pendingRename.mapId, new_name: newName })
+})
+```
+
+#### 4.4.3 Publish/unpublish (POST toggle_publish)
+```js
+fetch(myMapUrl, {
+  method: 'POST',
+  credentials: 'include',
+  headers: { 'Content-Type': 'application/json' },
+  body: JSON.stringify({ action: 'toggle_publish', map_id: mapId })
+})
+```
+
+#### 4.4.4 Remove (POST remove_map + confirm modal)
+```js
+fetch(myMapUrl, {
+  method: 'POST',
+  credentials: 'include',
+  headers: { 'Content-Type': 'application/json' },
+  body: JSON.stringify({ action: 'remove_map', map_id: mapId })
+})
+```
